@@ -2,6 +2,7 @@
 TFTP server component of Vinegar.
 """
 
+import abc
 import io
 import logging
 import re
@@ -22,7 +23,7 @@ from vinegar.utils.socket import socket_address_to_str
 # Logger used by this module
 logger = logging.getLogger(__name__)
 
-class TftpRequestHandler:
+class TftpRequestHandler(abc.ABC):
     """
     Interface for a request handler. A request handler should be derived from
     this class and implement the ``can_handle`` and ``handle`` methods.
@@ -40,6 +41,7 @@ class TftpRequestHandler:
     to be done twice.
     """
 
+    @abc.abstractmethod
     def can_handle(
             self,
             filename: str,
@@ -59,9 +61,13 @@ class TftpRequestHandler:
             host address and the second element is the client's port number.
         :param context:
             context object that was returned by ``prepare_context``.
+        :return:
+            ``True`` if this request handler can handle the specified request,
+            ``False`` if the request should be deferred to the next handler.
         """
         return False
 
+    @abc.abstractmethod
     def handle(
             self,
             filename: str,
@@ -80,6 +86,9 @@ class TftpRequestHandler:
             host address and the second element is the client's port number.
         :param context:
             context object that was returned by ``prepare_context``.
+        :return:
+            file-like object that provides the data that is transferred to the
+            client. The file-like object must provide binary data.
         """
         raise NotImplementedError()
 
@@ -105,6 +114,8 @@ class TftpRequestHandler:
             client address. The structure of the tuple depends on the address
             family in use, but typically the first element is the client's
             host address and the second element is the client's port number.
+        :return:
+            context object that is passed to ``can_handle`` and ``handle``.
         """
         return None
 
@@ -188,6 +199,9 @@ class TftpServer:
             wraps. In the context of PXE boot, most clients seem to expect 0, so
             that is what we use by default.
         """
+        for request_handler in request_handlers:
+            if not isinstance(request_handler, TftpRequestHandler):
+                raise ValueError('All request handlers must implement the TftpRequestHandler interface.')
         self._request_handlers = request_handlers
         self._bind_address = bind_address
         self._bind_port = bind_port

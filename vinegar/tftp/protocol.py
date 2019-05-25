@@ -99,6 +99,8 @@ class Opcode(enum.IntEnum):
         :param offset:
             offset into the sequence of bytes. Default is zero (read from the
             start of the sequence).
+        :return:
+            ``Opcode`` represented by the two bytes at the specified ``offset``.
         """
         (opcode_num,) = struct.unpack_from('!H', data, offset)
         return Opcode(opcode_num)
@@ -132,6 +134,8 @@ class TransferMode(enum.IntEnum):
 
         :param mode:
             string identifying the transfer mode.
+        :return:
+            TFTP transfer mode represented by the specified string.
         """
         mode_lower = mode.lower()
         if mode_lower == 'netascii':
@@ -164,6 +168,8 @@ def data_packet(block_number: int, data: bytes) -> bytes:
         consecutive number of the block being sent.
     :param data:
         data to be transferred in this block.
+    :return:
+        byte sequence representing a data packet.
     """
     return Opcode.DATA.to_bytes() + struct.pack('!H', block_number) + data
 
@@ -176,6 +182,8 @@ def decode_ack(data: bytes) -> int:
 
     :param data:
         data representing the packet.
+    :return:
+        acknowledged block number specified by the packet.
     """
     if Opcode.from_bytes(data) != Opcode.ACK:
         raise ValueError(
@@ -197,6 +205,9 @@ def decode_error(data: bytes) -> typing.Tuple[ErrorCode, str]:
 
     :param data:
         data representing the packet.
+    :return:
+        tuple where the first element is the error code and the second element
+        is the error message sent by the peer.
     """
     if len(data) < 4:
         return (None, '')
@@ -221,6 +232,10 @@ def decode_read_request(data: bytes) \
 
     :param data:
         data representing the packet.
+    :return:
+        tuple where the first element is the requested filename, the second
+        element is the requested transfer-mode, and the thir element are
+        additional options that have been specified by the client.
     """
     if Opcode.from_bytes(data) != Opcode.READ_REQUEST:
         raise ValueError(
@@ -257,6 +272,8 @@ def error_packet(error_code: ErrorCode, error_message: str = '') -> bytes:
         code that indicates the kind of error.
     :param error_message:
         optional error message.
+    :return:
+        sequence of bytes representing the error packet.
     """
     return (Opcode.ERROR.to_bytes() + error_code.to_bytes()
         + error_message.encode('ascii') + b'\0')
@@ -269,6 +286,8 @@ def options_ack_packet(options: typing.Mapping[str, str]) -> bytes:
         options that shall be acknowledged. Options are mappings from
         option name strings to value strings. Option names must be non-empty
         strings and there must be at least one option present.
+    :return:
+        sequence of bytes representing the options acknowledgement packet.
     """
     if not options:
         raise ValueError('The options mapping must not be empty.')
