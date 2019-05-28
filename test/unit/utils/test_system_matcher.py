@@ -13,12 +13,35 @@ class TestMatch(unittest.TestCase):
 
     def test_case_sensitive(self):
         """
-        Tests that the ``case_sensitive`` option has the expected results.
+        Test that the ``case_sensitive`` option has the expected results.
         """
         self.assertTrue(match('aBc', 'abc'))
         self.assertTrue(match('aBc', 'abc', False))
         self.assertFalse(match('aBc', 'abc', True))
         self.assertTrue(match('aBc', 'aBc', True))
+
+    def test_invalid_syntax(self):
+        """
+        Test that providing an invalid expression results in an exception.
+        """
+        def try_empty_expression():
+            match('some-name', '')
+        self.assertRaises(ValueError, try_empty_expression)
+        def try_consecutive_operators():
+            match('some-name', 'some-* or and abc')
+        self.assertRaises(ValueError, try_consecutive_operators)
+        def try_operator_at_beginning():
+            match('some-name', 'and some-*')
+        self.assertRaises(ValueError, try_operator_at_beginning)
+        def try_operator_at_end():
+            match('some-name', 'some-* or')
+        self.assertRaises(ValueError, try_operator_at_end)
+        def try_unclosed_parenthesis():
+            match('some-name', 'some-* or (abc')
+        self.assertRaises(ValueError, try_unclosed_parenthesis)
+        def try_unopened_parenthesis():
+            match('some-name', 'some-* or abc)')
+        self.assertRaises(ValueError, try_unopened_parenthesis)
 
     def test_operator_precedence(self):
         """
@@ -36,7 +59,7 @@ class TestMatch(unittest.TestCase):
 
     def test_wildcards(self):
         """
-        Tests wildcard expressions.
+        Test wildcard expressions.
         """
         pattern = '*.example.com'
         self.assertTrue(match('abc.example.com', pattern))
@@ -72,7 +95,7 @@ class TestMatcher(unittest.TestCase):
 
     def test_basic_usage(self):
         """
-        Tests basic functions like creating a matcher. All the low-level details
+        Test basic functions like creating a matcher. All the low-level details
         are identical to the `match` function, so that we do not have to test
         them. We also test case-sensitivity because in theory, this information
         could get lost if the paremeter is not passed on.
