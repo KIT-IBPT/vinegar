@@ -24,24 +24,18 @@ class TestMatch(unittest.TestCase):
         """
         Test that providing an invalid expression results in an exception.
         """
-        def try_empty_expression():
+        with self.assertRaises(ValueError):
             match('some-name', '')
-        self.assertRaises(ValueError, try_empty_expression)
-        def try_consecutive_operators():
+        with self.assertRaises(ValueError):
             match('some-name', 'some-* or and abc')
-        self.assertRaises(ValueError, try_consecutive_operators)
-        def try_operator_at_beginning():
+        with self.assertRaises(ValueError):
             match('some-name', 'and some-*')
-        self.assertRaises(ValueError, try_operator_at_beginning)
-        def try_operator_at_end():
+        with self.assertRaises(ValueError):
             match('some-name', 'some-* or')
-        self.assertRaises(ValueError, try_operator_at_end)
-        def try_unclosed_parenthesis():
+        with self.assertRaises(ValueError):
             match('some-name', 'some-* or (abc')
-        self.assertRaises(ValueError, try_unclosed_parenthesis)
-        def try_unopened_parenthesis():
+        with self.assertRaises(ValueError):
             match('some-name', 'some-* or abc)')
-        self.assertRaises(ValueError, try_unopened_parenthesis)
 
     def test_operator_precedence(self):
         """
