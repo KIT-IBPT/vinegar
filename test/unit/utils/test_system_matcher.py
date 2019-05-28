@@ -1,10 +1,10 @@
 """
-Tests for `vinegar.utils.name_matcher`.
+Tests for `vinegar.utils.system_matcher`.
 """
 
 import unittest
 
-from vinegar.utils.name_matcher import match, matcher
+from vinegar.utils.system_matcher import match, matcher
 
 class TestMatch(unittest.TestCase):
     """

@@ -1,5 +1,6 @@
 """
-Extended version of `fnmatch` supporting compound expressions.
+Expression matcher for targeting systems. This matcher extends the basic
+`fnmatch` pattern syntax with expressions combining several patterns.
 
 A string can be matched against a pattern using the `match` function. If the
 same pattern is used repeatedly, a `Matcher` can be retrieved using the
@@ -75,7 +76,7 @@ def match(name: str, pattern: str, case_sensitive: bool = False) -> bool:
         name to be matched against ``pattern``.
     :param pattern:
         pattern to be compiled. Please refer to the
-        `module documentation <vinegar.utils.name_matcher>` for details about
+        `module documentation <vinegar.utils.system_matcher>` for details about
         the pattern format.
     :param case_sensitive:
         if ``True``, ``name`` is treated as case sensitive, otherwise case is
@@ -100,7 +101,7 @@ def matcher(pattern: str, case_sensitive: bool = False) -> Matcher:
 
     :param pattern:
         pattern to be compiled. Please refer to the
-        `module documentation <vinegar.utils.name_matcher>` for details about
+        `module documentation <vinegar.utils.system_matcher>` for details about
         the pattern format.
     :param case_sensitive:
         if ``True``, the matcher will be case sensitive, otherwise case is
