@@ -104,6 +104,8 @@ class LRUCache(Cache[KeyType, ValueType]):
         if cache_size < 1:
             raise ValueError('Cache size must be strictly positive.')        
         self._cache_size = cache_size
+        # We cannot use vinegar.utils.odict.OrderedDict here because we need the
+        # move_to_end method.
         self._data = collections.OrderedDict()
         self._mark_on_update = mark_on_update
 
