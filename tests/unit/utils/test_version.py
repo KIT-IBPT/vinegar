@@ -69,10 +69,17 @@ class TestVersionModule(unittest.TestCase):
             # its modified time. We also sleep for a short amount of time
             # because the precision of the time stamp stored in the file system
             # might be limited.
-            time.sleep(1.1)
-            with open(test_file_path, mode='w') as file:
-                file.write('test')
-            version5 = version_for_file_path(test_file_path)
+            # We actually try several times with increasing sleep times. On
+            # systems, where the time stamp is very precise, the test finishes
+            # quickly, on other ones it takes a bit longer.
+            sleep_time = 0.01
+            while sleep_time < 3.0:
+                with open(test_file_path, mode='w') as file:
+                    file.write('test')            
+                version5 = version_for_file_path(test_file_path)
+                if version5 != version4:
+                    break
+                time.sleep(sleep_time)
             self.assertTrue(len(version5) > 0)
             self.assertNotEqual(version1, version5)
             self.assertNotEqual(version4, version5)
