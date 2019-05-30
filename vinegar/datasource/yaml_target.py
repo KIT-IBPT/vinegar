@@ -188,8 +188,8 @@ class YamlTargetSource(DataSource):
 
         :param config:
             configuration for this data source. Please refer to the
-            `module documentation <vinegar.datasource.yaml>` for a list of
-            supported options.
+            `module documentation <vinegar.datasource.yaml_target>` for a list
+            of supported options.
         """
         self._allow_empty_top = config.get('allow_empty_top', False)
         self._root_dir_path = pathlib.Path(config['root_dir'])
