@@ -61,7 +61,7 @@ class DataSource(abc.ABC):
     """
 
     @abc.abstractmethod
-    def find_system(self, lookup_key: str, lookup_value: str) -> str:
+    def find_system(self, lookup_key: str, lookup_value: Any) -> str:
         """
         Find a system given the specified key and value.
 

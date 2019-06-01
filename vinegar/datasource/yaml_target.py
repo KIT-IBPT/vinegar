@@ -219,7 +219,7 @@ class YamlTargetSource(DataSource):
                 config.get('template', 'jinja'),
                 config.get('template_config', {}))
 
-    def find_system(self, lookup_key: str, lookup_value: str) -> str:
+    def find_system(self, lookup_key: str, lookup_value: Any) -> str:
         # Due to the fact that we use patterns to identify systems, there is
         # absolutely now way to find a system given a key and a value, so we
         # always return None.

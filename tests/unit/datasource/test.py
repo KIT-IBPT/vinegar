@@ -90,7 +90,7 @@ class _DummyDataSource(DataSource):
         self._data = data
         self._system_id = system_id
 
-    def find_system(self, lookup_key: str, lookup_value: str) -> str:
+    def find_system(self, lookup_key: str, lookup_value: Any) -> str:
         try:
             if self._data[lookup_key] == lookup_value:
                 return self._system_id
