@@ -141,7 +141,7 @@ class DataStore:
         with self._lock:
             cursor = self._connection.execute(
                 'SELECT system_id FROM system_data WHERE key=? AND value=? '
-                'ORDER BY system_id;', (key, value))
+                'ORDER BY system_id;', (key, json.dumps(value)))
             try:
                 cursor.arraysize = 16
                 rows = cursor.fetchall()

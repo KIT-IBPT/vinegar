@@ -66,6 +66,7 @@ class TestDataStore(unittest.TestCase):
             system_id2 = 'system2'
             store.set_value(system_id1, 'a', 123)
             store.set_value(system_id1, 'b', 456)
+            store.set_value(system_id1, 'c', 'abc')
             store.set_value(system_id2, 'a', 123)
             store.set_value(system_id2, 'b', 1234)
             # We should not find any system for key 'c', as there is no such key
@@ -81,6 +82,10 @@ class TestDataStore(unittest.TestCase):
             # system_id1.
             self.assertEqual(
                 [system_id1], store.find_systems('b', 456))
+            # Looking for key 'c' and a value of 'abc' should only return
+            # system_id1.
+            self.assertEqual(
+                [system_id1], store.find_systems('c', 'abc'))
             # Looking for key 'b' and a value of 1234 should only return
             # system_id2.
             self.assertEqual(
