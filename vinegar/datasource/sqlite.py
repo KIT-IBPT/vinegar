@@ -116,7 +116,7 @@ class SQLiteSource(DataSource):
 
     def close(self):
         """
-        Closes the data store backing this data source. All operations that
+        Close the data store backing this data source. All operations that
         involve the data store will fail by raising an exception after calling
         this method.
 
@@ -167,6 +167,6 @@ def get_instance(config: Mapping[Any, Any]) -> SQLiteSource:
     :param config:
         configuration for the data source.
     :return:
-        sqlite data source using the specified configuration.
+        SQLite data source using the specified configuration.
     """
     return SQLiteSource(config)
