@@ -30,6 +30,23 @@ def add_suffix(value: str, suffix: str) -> str:
     """
     return value + suffix
 
+def split(value: str, sep: str = None, maxsplit: int = -1) -> str:
+    """
+    Splits a string into a list of strings using the specified separator.
+
+    :param value:
+        value to be transformed.
+    :param sep:
+        separator along which to split. If ``None`` the string is split along
+        sequences of whitespace.
+    :param maxsplit:
+        max. number of elements into which the string should be split. If ``-1``
+        (the default), there is no limit.
+    :return:
+        ``value.split(sep, maxsplit)``
+    """
+    return value.split(sep, maxsplit)
+
 def to_lower(value: str) -> str:
     """
     Return lower-case version of the string.
