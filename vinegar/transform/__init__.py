@@ -32,10 +32,9 @@ def apply_transformation(name: str, *args, **kwargs) -> Any:
     Transform a value using the specified transformation.
 
     The name of the transformation function that shall be used is specified in
-    the form ``module_name.function_name``, where ``module_name`` is either the
-    name of one of the modules in the ``vinegar.transform`` package or the fully
-    qualified name of a Python module, and ``function_name`` is the name of the
-    transformation function in that module.
+    the form ``module_name.function_name``, where ``module_name`` is the name of
+    one of the modules in the ``vinegar.transform`` package and
+    ``function_name`` is the name of the transformation function in that module.
 
     Typically, transformation functions take the value to be transformed as
     their first positional argument.
@@ -139,10 +138,9 @@ def get_transformation_function(name: str) -> Callable:
     Return a transformation by name.
 
     The name of the transformation function that shall be used is specified in
-    the form ``module_name.function_name``, where ``module_name`` is either the
-    name of one of the modules in the ``vinegar.transform`` package or the fully
-    qualified name of a Python module, and ``function_name`` is the name of the
-    transformation function in that module.
+    the form ``module_name.function_name``, where ``module_name`` is the name of
+    one of the modules in the ``vinegar.transform`` package and
+    ``function_name`` is the name of the transformation function in that module.
 
     If the specified module cannot be found, a ``ModuleNotFoundError`` is
     raised. If the module is found, but the transformation function does not
@@ -164,8 +162,12 @@ def get_transformation_function(name: str) -> Callable:
     if not module_name:
         raise ValueError(
             'Missing module name in transformation name: {0}'.format(name))
-    if '.' not in module_name:
-        module_name = '{0}.{1}'.format(__name__, module_name)
+    # TODO Only allow module names in the vinegar.transform package and chage
+    # the documentation accordingly.
+    if '.' in module_name:
+        raise ValueError(
+            'Module name must not contain a dot: {0}'.format(module_name))
+    module_name = '{0}.{1}'.format(__name__, module_name)
     transform_module = importlib.import_module(module_name)
     transform_function = getattr(transform_module, function_name)
     if not isinstance(transform_function, collections.abc.Callable):
