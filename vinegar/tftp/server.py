@@ -130,6 +130,7 @@ class TftpServer:
 
     The server internally uses a daemon thread that processes incoming requests.
     For each request, it creates a new thread that processes this request and
+    sends the requested data to the client.
     """
 
     def __init__(
