@@ -23,6 +23,31 @@ from vinegar.utils.socket import socket_address_to_str
 # Logger used by this module
 logger = logging.getLogger(__name__)
 
+class TftpError(Exception):
+    """
+    Exception raised by `TftpRequestHandler.handle` to indicate that it cannot
+    proceed with processing a request.
+
+    This exception can be constructed with an optional ``message`` and an
+    optional ``error_code`` that must be an instance of `ErrorCode`.
+    """
+
+    # Error code that shall be sent to the client.
+    error_code = ErrorCode.NOT_DEFINED
+
+    # Message that shall be sent to the client.
+    message = ''
+
+    def __init__(
+        self,
+        message: str = '', error_code: ErrorCode = ErrorCode.NOT_DEFINED):
+        if message:
+            super().__init__(message)
+        else:
+            super().__init__()
+        self.message = message
+        self.error_code = error_code
+
 class TftpRequestHandler(abc.ABC):
     """
     Interface for a request handler. A request handler should be derived from
@@ -45,7 +70,6 @@ class TftpRequestHandler(abc.ABC):
     def can_handle(
             self,
             filename: str,
-            client_address: typing.Tuple,
             context: typing.Any) -> bool:
         """
         Tell whether the request can be handled by this request handler.
@@ -55,10 +79,6 @@ class TftpRequestHandler(abc.ABC):
 
         :param filename:
             filename that has been requested by the client.
-        :param client_address:
-            client address. The structure of the tuple depends on the address
-            family in use, but typically the first element is the client's
-            host address and the second element is the client's port number.
         :param context:
             context object that was returned by ``prepare_context``.
         :return:
@@ -78,6 +98,10 @@ class TftpRequestHandler(abc.ABC):
         the data for the requested file can be read. The returned file-like
         object must supply its data in binary form.
 
+        If the request handler detects that it actually cannot send data to the
+        client (e.g. because the client lacks the required permissions), it
+        should signal that by raising a `TftpError`.
+
         :param filename:
             filename that has been requested by the client.
         :param client_address:
@@ -94,8 +118,7 @@ class TftpRequestHandler(abc.ABC):
 
     def prepare_context(
             self,
-            filename: str,
-            client_address: typing.Tuple) -> typing.Any:
+            filename: str) -> typing.Any:
         """
         Prepare a context object for use by ``can_handle`` and ``handle``. This
         method is called for each request before calling ``can_handle``.
@@ -110,10 +133,6 @@ class TftpRequestHandler(abc.ABC):
 
         :param filename:
             filename that has been requested by the client.
-        :param client_address:
-            client address. The structure of the tuple depends on the address
-            family in use, but typically the first element is the client's
-            host address and the second element is the client's port number.
         :return:
             context object that is passed to ``can_handle`` and ``handle``.
         """
@@ -359,9 +378,8 @@ class TftpServer:
         # We try the request handlers in order until we find one that can handle
         # the request.
         for request_handler in self._request_handlers:
-            handler_context = request_handler.prepare_context(
-                filename, req_addr)
-            if request_handler.can_handle(filename, req_addr, handler_context):
+            handler_context = request_handler.prepare_context(filename)
+            if request_handler.can_handle(filename, handler_context):
                 self._handle_read(
                     filename,
                     transfer_mode,
@@ -784,6 +802,22 @@ class _TftpReadRequest:
             try:
                 self._file = self._handler_function(
                     self._filename, self._client_address, self._handler_context)
+            except TftpError as e:
+                # A TftpError is not necessarily a "real" error, so we only log
+                # it with a level of info.
+                logger.info(
+                    'Request handler for read request for file "%s" from '
+                    'client %s signalled an error with error code %s and '
+                    'message "%s".',
+                    self._filename,
+                    socket_address_to_str(self._client_address),
+                    e.error_code,
+                    e.message)
+                data = error_packet(e.error_code, e.message)
+                # When sending the error, we want to use a fresh timeout value.
+                self._socket.settimeout(self._timeout)
+                self._send(data)
+                return
             except:
                 logger.exception(
                     'Request handler for read request for file "%s" from '
