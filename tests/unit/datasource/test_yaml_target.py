@@ -66,7 +66,7 @@ class TestYamlTargetSource(unittest.TestCase):
     def test_cache_invalidation(self):
         """
         Test that files are reread when they have changed (instead of reusing)
-        caches values. This also tests that resulting version numbers change
+        cached values. This also tests that resulting version numbers change
         when files change.
         """
         with TemporaryDirectory() as tmpdir:
