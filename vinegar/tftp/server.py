@@ -691,7 +691,7 @@ class _TftpReadRequest:
                 'Exception while processing read request for file "%s" from '
                 'client %s.',
                 self._filename,
-                self._client_address)
+                socket_address_to_str(self._client_address))
             data = error_packet(
                 ErrorCode.NOT_DEFINED,
                 'An internal error occurred while trying to fulfill the '
@@ -776,7 +776,7 @@ class _TftpReadRequest:
                 'Error creating socket for read request for file "%s" from '
                 'client %s.',
                 self._filename,
-                self._client_address)
+                socket_address_to_str(self._client_address))
         # We want to make sure that we always close the socket, so we use it in
         # a with statement.
         with self._socket:
@@ -789,7 +789,7 @@ class _TftpReadRequest:
                     'Request handler for read request for file "%s" from '
                     'client %s raised an exception.',
                     self._filename,
-                    self._client_address)
+                    socket_address_to_str(self._client_address))
                 data = error_packet(
                     ErrorCode.NOT_DEFINED,
                     'An internal error occurred while trying to fulfill the '
