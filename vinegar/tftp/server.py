@@ -888,3 +888,81 @@ class _TftpReadRequest:
 # We use this regular expression to verify that an option that must be a
 # positive integer has been specified correctly.
 _REGEXP_POSITIVE_INT = re.compile('[1-9][0-9]*')
+
+def create_tftp_server(
+        request_handlers: typing.List[TftpRequestHandler],
+        bind_address: str = '::',
+        bind_port: int = 69,
+        default_timeout: float = 10.0,
+        max_timeout: float = 30.0,
+        max_retries: int = 3,
+        max_block_size: int = MAX_BLOCK_SIZE,
+        block_counter_wrap_value: int = 0):
+    """
+    Create a new TFTP server. The server is not started and its socket
+    is not opened or bound when constructing the server object. Instead,
+    `~TftpServer.start() must be called to start the server.
+
+    :param request_handlers:
+        List of request handlers than can handle read requests for this
+        server. The request handlers are tried in order. The first request
+        handler that can handle a request is used. If no request handler
+        that can handle the request is found, an error is signaled to the
+        client.
+    :param bind_address:
+        Address of the interface on which the TFTP server shall listen for
+        incoming connections. By default, the server listens on all local
+        interfaces.
+    :param bind_port:
+        Number of the UDP port on which the TFTP server shall listen for
+        incoming connections. By default, the server listens on UDP port 69,
+        this is the officially registered port for TFTP.
+    :param default_timeout:
+        Timeout (in seconds) that is used for connections if the client does
+        not specify a timeout.  This number must be greater than or equal to
+        1 and less than ``max_timeout``. If it it is outside this range, it
+        is silently changed to be within this range. The default is 10.
+    :param max_timeout:
+        Max. timeout interval (in seconds) that may be specified by a
+        client. If a client requests a timeout that is greater, the timeout
+        is limited to this number. This number must be greater than or equal
+        to 1 and less than or equal to 255. The default is 30.
+    :param max_retries:
+        Max. number of attempts to resend a packet before giving up. This
+        limit is important because it keeps a connection (and the associated
+        thread) from stalling forever when the connection to a client is
+        lost. This number must be greater than or equal to 1. The default
+        value is 3.
+    :param max_block_size:
+        Max. size of a single block (in bytes). This setting is only used
+        when a client requests a different than the default block size (512
+        bytes). In that case, if the client requests a block size that is
+        greater than this setting, the block size is reduces to this
+        setting. This can be useful when a client requests a block size that
+        would result in IP fragmentation, but IP fragmentation is not
+        desired. This setting must be a number between 512 (the default
+        block size) and 65464 (the max. block size allowed by the protocol).
+        The default value is 65464.
+    :param block_counter_wrap_value:
+        Block at which to start counting again after reaching the max.
+        possible block count. This value should be 0 or 1. As the TFTP
+        standard (RFC 1350) does not specify what should happen if the block
+        count range is exceeded, some clients expect it to wrap around to 0
+        while other expect it to wrap around to 1. If this parameter is set
+        to ``None``, the block counter will never wrap which means that
+        large files cannot be transferred. This is only necessary if dealing
+        with clients that show unexpected behavior when the block counter
+        wraps. In the context of PXE boot, most clients seem to expect 0, so
+        that is what we use by default.
+    :return:
+        server object that is ready to be started.
+    """
+    return TftpServer(
+        request_handlers,
+        bind_address,
+        bind_port,
+        default_timeout,
+        max_timeout,
+        max_retries,
+        max_block_size,
+        block_counter_wrap_value)
