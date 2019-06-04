@@ -70,6 +70,59 @@ class TestJinjaEngine(unittest.TestCase):
             self.assertEqual(
                 'some text', engine.render(template_path.as_posix(), {}))
 
+    def test_config_provide_transform_functions(self):
+        """
+        Test the ``provide_transform_functions`` configuration option.
+        """
+        with TemporaryDirectory() as tmpdir:
+            # We have to generate a template file that can be read by the
+            # template engine.
+            tmpdir_path = pathlib.Path(tmpdir)
+            template_path = tmpdir_path / 'test.jinja'
+            _write_file(
+                template_path,
+                """
+                {{ transform['string.to_upper']('Some text') }}
+                """)
+            engine = JinjaEngine({})
+            self.assertEqual(
+                'SOME TEXT',
+                engine.render(template_path.as_posix(), {}))
+            # Explicitly setting proide_transform_functions should not make a
+            # difference.
+            engine = JinjaEngine({'provide_transform_functions': True})
+            self.assertEqual(
+                'SOME TEXT',
+                engine.render(template_path.as_posix(), {}))
+            # If provide our own transform object in the context, this should
+            # override the automatically provided transform object.
+            _write_file(
+                template_path,
+                """
+                {{ transform }}
+                """)
+            self.assertEqual(
+                'text from context',
+                engine.render(
+                    template_path.as_posix(),
+                    {'transform': 'text from context'}))
+            # The "is defined" check should succeed if there is a transform
+            # object, and fail if there is none.
+            _write_file(
+                template_path,
+                """
+                {{ transform is defined }}
+                """)
+            self.assertEqual(
+                'True',
+                engine.render(template_path.as_posix(), {}))
+            # Now, we set provide_transform_functions to False, which should
+            # remove the transform object from the context.
+            engine = JinjaEngine({'provide_transform_functions': False})
+            self.assertEqual(
+                'False',
+                engine.render(template_path.as_posix(), {}))
+
     def test_config_relative_includes_and_root_dir(self):
         """
         Test the ``relative_includes`` and ``root_dir`` configuration options.

@@ -20,7 +20,7 @@ whole chain of transformations that shall be applied one after the other.
 import collections.abc
 import importlib
 
-from typing import Any, Mapping, Sequence, Union
+from typing import Any, Callable, Mapping, Sequence, Union
 
 # Type of the transformation chain passed to `apply_transformation_chain`.
 #
@@ -52,21 +52,10 @@ def apply_transformation(name: str, *args, **kwargs) -> Any:
     :param kwargs:
         keyword arguments. This arguments are simply passed on to the
         transformation function.
+    :return:
+        value returned by the transformation function.
     """
-    # If there are two components, we assume that the first component is a
-    # sub-module name in vinegar.transform and the second one is the function
-    # name.
-    # If there are more than two components, we assume that all but the last
-    # component form the module name and the last one is the function name.
-    # If there are less than two components, this is considered an error.
-    module_name, _, function_name = name.rpartition('.')
-    if not module_name:
-        raise ValueError(
-            'Missing module name in transformation name: {0}'.format(name))
-    if '.' not in module_name:
-        module_name = '{0}.{1}'.format(__name__, module_name)
-    transform_module = importlib.import_module(module_name)
-    transform_function = getattr(transform_module, function_name)
+    transform_function = get_transformation_function(name)
     return transform_function(*args, **kwargs)
 
 def apply_transformation_chain(chain: TransformationChain, value: Any) -> Any:
@@ -144,3 +133,43 @@ def apply_transformation_chain(chain: TransformationChain, value: Any) -> Any:
             args = [config]
         value = apply_transformation(name, value, *args, **kwargs)
     return value
+
+def get_transformation_function(name: str) -> Callable:
+    """
+    Return a transformation by name.
+
+    The name of the transformation function that shall be used is specified in
+    the form ``module_name.function_name``, where ``module_name`` is either the
+    name of one of the modules in the ``vinegar.transform`` package or the fully
+    qualified name of a Python module, and ``function_name`` is the name of the
+    transformation function in that module.
+
+    If the specified module cannot be found, a ``ModuleNotFoundError`` is
+    raised. If the module is found, but the transformation function does not
+    exist, an ``AttributeError`` is raised. If an object by the specified name
+    exists, but it is not a ``Callable``, a ``TypeError`` is raised.
+
+    :param name:
+        name of the transformation that shall be returned.
+    :return:
+        transformation function for the specified name.
+    """
+    # If there are two components, we assume that the first component is a
+    # sub-module name in vinegar.transform and the second one is the function
+    # name.
+    # If there are more than two components, we assume that all but the last
+    # component form the module name and the last one is the function name.
+    # If there are less than two components, this is considered an error.
+    module_name, _, function_name = name.rpartition('.')
+    if not module_name:
+        raise ValueError(
+            'Missing module name in transformation name: {0}'.format(name))
+    if '.' not in module_name:
+        module_name = '{0}.{1}'.format(__name__, module_name)
+    transform_module = importlib.import_module(module_name)
+    transform_function = getattr(transform_module, function_name)
+    if not isinstance(transform_function, collections.abc.Callable):
+        raise TypeError(
+            '\'{0}\' object is not callable'.format(
+                type(transform_function).__name__))
+    return transform_function

@@ -17,6 +17,10 @@ Jinja 2 library. Please refer to the
 `Jinja 2 documentation <http://jinja.pocoo.org/docs/>`_ to learn more about how to
 write Jinja templates.
 
+Unless disabled by setting ``provide_transform_functions`` to ``False``, this
+template engine provides a ``transform`` object that can be used to access
+functions from the ``vinegar.transform`` package.
+
 Configuration options
 ---------------------
 
@@ -31,6 +35,17 @@ options that can be passed through the ``config`` dictionary that is passed to
     ``autoescape`` is set to ``False`` and ``keep_trailing_newline`` is set to
     ``True``. The ``loader`` is also created automatically based on the
     ``root_dir`` configuration option.
+
+:``provide_transform_functions``:
+    This option (a ``bool``) specifies whether an object with the name
+    ``transform`` is added to the context. If ``True`` (the default), the
+    ``transform`` object allows easy access to the transformation functions
+    provided by `vinegar.transform`. The ``transform`` object is not added if
+    there is an object using that key in the context that is passed to
+    `~JinjaEngine.render`. If ``provide_transform_functions`` is ``False``, the
+    ``transform`` object is not added to the context. The ``transform`` object
+    can be used like in the following example:
+    ``transform['string.to_upper']('This is all converted to upper case.')``
 
 :``relative_includes``:
     This option (a ``bool``) specifies whether included templates (these are
@@ -55,6 +70,7 @@ import typing
 import jinja2
 
 from vinegar.template import TemplateEngine
+from vinegar.transform import get_transformation_function
 from vinegar.utils.version import version_for_file_path
 
 class JinjaEngine(TemplateEngine):
@@ -115,6 +131,20 @@ class JinjaEngine(TemplateEngine):
 
             return file_contents, template, up_to_date
 
+    class _TransformHelper:
+        """
+        Object that is added to the context under the ``transform`` key. This
+        object allows access to transformation functions by passing the module
+        and function name as an index to this object.
+
+        Example::
+        
+            transform['string.to_upper']('Convert this to upper case.')
+        """
+
+        def __getitem__(self, key):
+            return get_transformation_function(key)
+
     def __init__(self, config: typing.Mapping[typing.Any, typing.Any]):
         """
         Create a Jinja template engine using the specified configuration.
@@ -153,13 +183,18 @@ class JinjaEngine(TemplateEngine):
             self._environment = self._Environment(**env_options)
         else:
             self._environment = jinja2.Environment(**env_options)
+        self._base_context = {}
+        if config.get('provide_transform_functions', True):
+            self._base_context['transform'] = self._TransformHelper()
 
     def render(
             self,
             template_path: str,
             context: typing.Mapping[str, typing.Any]) -> str:
         template = self._environment.get_template(template_path)
-        return template.render(**context)
+        merged_context = self._base_context.copy()
+        merged_context.update(context)
+        return template.render(**merged_context)
 
 def get_instance(config: typing.Mapping[typing.Any, typing.Any]) -> JinjaEngine:
     """
