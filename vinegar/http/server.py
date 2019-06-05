@@ -176,6 +176,15 @@ class HttpServer:
         def _delegate_request(self):
             try:
                 response_started = False
+                # No sane HTTP client will ever send a request path that does
+                # not start with a slash or contains a null byte. We do not
+                # check that the request path does not contain a null byte after
+                # decoding, this is the job of the handler that does the
+                # decoding.
+                if (not self.path.startswith('/')) or ('\0' in self.path):
+                    response_started = True
+                    self.send_error(http.HTTPStatus.BAD_REQUEST)
+                    return
                 for handler in self.server.real_request_handlers:
                     context = handler.prepare_context(self.path)
                     if handler.can_handle(self.path, context):
@@ -207,7 +216,6 @@ class HttpServer:
                                 and (body is None)):
                             self.send_error(status)
                             return
-                        response_started = True
                         self.send_response(status)
                         for header_name, header_value in headers.items():
                             self.send_header(header_name, header_value)
