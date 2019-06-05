@@ -3,11 +3,16 @@ Tests for `vinegar.datasource`.
 """
 
 import unittest
+import unittest.mock
 
 from typing import Any, Mapping, Tuple
 
 from vinegar.datasource import (
-    DataSource, get_composite_data_source, merge_data_trees)
+    DataSource,
+    DataSourceAware,
+    get_composite_data_source,
+    inject_data_source,
+    merge_data_trees)
 
 class TestDataSourceModule(unittest.TestCase):
     """
@@ -50,6 +55,24 @@ class TestDataSourceModule(unittest.TestCase):
         self.assertEqual(system_id2, composite.find_system('a', 3))
         # For a == 2, we do not find any system at all.
         self.assertIsNone(composite.find_system('a', 2))
+
+    def test_inject_data_source(self):
+        """
+        Test the `inject_data_source` function.
+        """
+        # We need a mock data source that we can inject.
+        data_source = unittest.mock.Mock(spec=DataSource)
+        # First, we create an object that is not data-source aware. The
+        # set_data_source method should not be called on this object.
+        obj1 = unittest.mock.Mock()
+        inject_data_source(obj1, data_source)
+        obj1.set_data_source.assert_not_called()
+        # Second we create an object that is data-source aware. The
+        # set_data_source method should be called on this object, providing the
+        # mock data source.
+        obj2 = unittest.mock.Mock(spec=DataSourceAware)
+        inject_data_source(obj2, data_source)
+        obj2.set_data_source.assert_called_with(data_source)
 
     def test_merge_data_trees(self):
         """

@@ -131,6 +131,44 @@ class DataSource(abc.ABC):
         """
         raise NotImplementedError()
 
+class DataSourceAware(abc.ABC):
+    """
+    Marker interface indicating that a component needs access to a `DataSource`.
+
+    An object can implement this interface in order to indicate to the creating
+    code that it wants a data source to be injected into it through the
+    `set_data_source` method.
+
+    This is useful when there are several different implementations of a
+    component and some of them require a data source and others do not. The
+    container creating the components can decouple the logic (and configuration)
+    for creating them from the logic that injects the data source.
+
+    In general, a component that implements this interface should still try to
+    provide as much of its functionality as reasonably possible, if no data
+    source has been injected into it.
+
+    Code wanting to inject a data source into a component that might possibly
+    need it can use the `inject_data_source` helper function.
+    """
+
+    def set_data_source(self, data_source: DataSource) -> None:
+        """
+        Set the data source to be used by this component.
+
+        Calling `inject_data_source` might be preferable to calling this method
+        directly.
+
+        In general, code using this method should not assume that this method is
+        thread safe, even if the object that implements it is considered safe in
+        general. This means that this method should typically be called only
+        once, directly after creating an object.
+
+        :param data_source:
+            data source to be injected.
+        """
+        pass
+
 class _CompositeDataSource(DataSource):
     """
     Data source that chains multiple data sources.
@@ -224,6 +262,27 @@ def get_data_source(name: str, config: Mapping[Any, Any]) -> DataSource:
     module_name = name if '.' in name else '{0}.{1}'.format(__name__, name)
     data_source_module = importlib.import_module(module_name)
     return data_source_module.get_instance(config)
+
+def inject_data_source(obj: Any, data_source: DataSource) -> None:
+    """
+    Inject a data source into an object.
+
+    This data source is only injected if ``obj`` is an instance of
+    `DataSourceAware`, so it is safe to call this function for any object.
+
+    In general, code using this function should not assume that it is thread
+    safe, even if the object that is the target of the injection is considered
+    thread safe in general. This means that this function should typically be
+    called only once, directly after creating an object.
+
+    :param obj:
+        object that might or might not be an instance of `DataSourceAware`.
+    :param data_source:
+        data source to be injected. It is only injected if ``obj`` is
+        `DataSourceAware`.
+    """
+    if isinstance(obj, DataSourceAware):
+        obj.set_data_source(data_source)
 
 def merge_data_trees(
         tree1: Mapping[Any, Any],
