@@ -184,6 +184,29 @@ class TestJinjaEngine(unittest.TestCase):
             with self.assertRaises(FileNotFoundError):
                 engine.render(template_path.as_posix(), {})
 
+    def test_file_permission_denied(self):
+        """
+        Test that the `~JinjaEngine.render` method raises a ``PermissionError``
+        if the template file is not readable.
+
+        This test is limited to platforms where we can actually make the file
+        not readable (where ``chmod`` works).
+        """
+        engine = JinjaEngine({})
+        with TemporaryDirectory() as tmpdir:
+            tmpdir_path = pathlib.Path(tmpdir)
+            template_path = tmpdir_path / 'test.jinja'
+            _write_file(template_path, 'We do not care about the content')
+            template_path.chmod(0)
+            try:
+                with open(template_path.as_posix(), 'rb'):
+                    file_readable = True
+            except PermissionError:
+                file_readable = False
+            if not file_readable:
+                with self.assertRaises(PermissionError):
+                    engine.render(template_path.as_posix(), {})
+
     def test_get_instance(self):
         """
         Test that the template engine can be instantiated via
