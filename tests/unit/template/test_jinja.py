@@ -172,6 +172,18 @@ class TestJinjaEngine(unittest.TestCase):
                 'this is from the included template',
                 engine.render('/testdir/test.jinja', {}))
 
+    def test_file_not_found(self):
+        """
+        Test that the `~JinjaEngine.render` method raises a
+        ``FileNotFoundError`` if the template file does not exist.
+        """
+        engine = JinjaEngine({})
+        with TemporaryDirectory() as tmpdir:
+            tmpdir_path = pathlib.Path(tmpdir)
+            template_path = tmpdir_path / 'test.jinja'
+            with self.assertRaises(FileNotFoundError):
+                engine.render(template_path.as_posix(), {})
+
     def test_get_instance(self):
         """
         Test that the template engine can be instantiated via

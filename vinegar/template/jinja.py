@@ -191,10 +191,16 @@ class JinjaEngine(TemplateEngine):
             self,
             template_path: str,
             context: typing.Mapping[str, typing.Any]) -> str:
-        template = self._environment.get_template(template_path)
+        try:
+            template = self._environment.get_template(template_path)
+        except jinja2.TemplateNotFound as e:
+            raise FileNotFoundError() from e
         merged_context = self._base_context.copy()
         merged_context.update(context)
-        return template.render(**merged_context)
+        try:
+            return template.render(**merged_context)
+        except jinja2.TemplateNotFound as e:
+            raise FileNotFoundError() from e
 
 def get_instance(config: typing.Mapping[typing.Any, typing.Any]) -> JinjaEngine:
     """
