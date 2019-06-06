@@ -271,6 +271,10 @@ class TftpServer:
                 # This timeout specifies how quickly we can shutdown the server.
                 self._socket.settimeout(0.1)
                 self._socket.bind((self._bind_address, self._bind_port))
+                logger.info(
+                    'TFTP server is listening on %s.',
+                    socket_address_to_str(
+                        (self._bind_address, self._bind_port)))
                 self._main_thread = threading.Thread(
                     target=self._run, daemon=True)
                 self._main_thread.start()
@@ -298,6 +302,7 @@ class TftpServer:
         try:
             self._main_thread.join()
             self._main_thread = None
+            logger.info('TFTP server has been shutdown.')
         finally:
             with self._running_lock:
                 self._running = False

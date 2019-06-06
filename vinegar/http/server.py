@@ -299,6 +299,9 @@ class HttpServer:
 
             self._server = self._ThreadingHTTPServer(
                 (self._bind_address, self._bind_port), self._DelegatingRequestHandler)
+            logger.info(
+                'HTTP server is listening on %s.',
+                socket_address_to_str((self._bind_address, self._bind_port)))
             self._server.real_request_handlers = self._request_handlers
             self._main_thread = threading.Thread(
                 target=self._run, daemon=True)
@@ -315,6 +318,7 @@ class HttpServer:
             if not self._running:
                 return
             self._server.shutdown()
+            logger.info('HTTP server has been shutdown.')
             self._running = False
 
     def _run(self):
