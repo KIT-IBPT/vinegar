@@ -326,7 +326,6 @@ class HttpServer:
         self._server.serve_forever(0.1)
 
 def create_http_server(
-        self,
         request_handlers: typing.List[HttpRequestHandler],
         bind_address: str = '::',
         bind_port: int = 80):
