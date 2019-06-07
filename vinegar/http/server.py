@@ -333,7 +333,7 @@ def create_http_server(
     """
     Create a new HTTP server. The server is not started and its socket is not
     opened or bound when constructing the server object. Instead,
-    `~HttpServer.start must be called to start the server.
+    `~HttpServer.start` must be called to start the server.
 
     :param request_handlers:
         List of request handlers than can handle read requests for this server.

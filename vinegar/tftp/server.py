@@ -940,7 +940,7 @@ def create_tftp_server(
     """
     Create a new TFTP server. The server is not started and its socket
     is not opened or bound when constructing the server object. Instead,
-    `~TftpServer.start() must be called to start the server.
+    `~TftpServer.start()` must be called to start the server.
 
     :param request_handlers:
         List of request handlers than can handle read requests for this
