@@ -162,8 +162,6 @@ def get_transformation_function(name: str) -> Callable:
     if not module_name:
         raise ValueError(
             'Missing module name in transformation name: {0}'.format(name))
-    # TODO Only allow module names in the vinegar.transform package and chage
-    # the documentation accordingly.
     if '.' in module_name:
         raise ValueError(
             'Module name must not contain a dot: {0}'.format(module_name))
