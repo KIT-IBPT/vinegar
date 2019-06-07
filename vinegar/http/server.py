@@ -217,9 +217,10 @@ class HttpServer:
                             self.send_error(status)
                             return
                         self.send_response(status)
-                        for header_name, header_value in headers.items():
-                            self.send_header(header_name, header_value)
-                            self.end_headers()
+                        if headers is not None:
+                            for header_name, header_value in headers.items():
+                                self.send_header(header_name, header_value)
+                                self.end_headers()
                         if body is not None:
                             shutil.copyfileobj(body, self.wfile)
                         return
