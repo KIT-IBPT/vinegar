@@ -982,7 +982,7 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
         self.call_handle(
             handler,
             prefix + '/root.txt%00',
-            expect_status=HTTPStatus.NOT_FOUND)
+            expect_can_handle=False)
         # Next, we try double-encoded characters.
         self.call_handle(
             handler,

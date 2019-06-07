@@ -381,9 +381,6 @@ class FileRequestHandlerBase(DataSourceAware):
         return context['matches']
 
     def prepare_context(self, filename: str) -> Any:
-        # We do not use urllib.parse.urlsplit beause that function produces
-        # unexpected results if the filename is not well-formed.
-        path, _, _ = filename.partition('?')
         # We initialize the context so that it signals a mismatch if returned
         # without changing it.
         context = {
@@ -394,8 +391,11 @@ class FileRequestHandlerBase(DataSourceAware):
         # If the original filename contains a null byte, someone is trying
         # something nasty and we do not consider the path to match. The same is
         # true if the null byte is present in URL encoded form.
-        if '\0' in filename or '\0' in path:
+        if '\0' in filename or '%00' in filename:
             return context
+        # We do not use urllib.parse.urlsplit beause that function produces
+        # unexpected results if the filename is not well-formed.
+        path, _, _ = filename.partition('?')
         path = urllib.parse.unquote(path)
         # We need special handling for the case where both the configured and
         # the actual request path is "/" and this handler is registered for a
