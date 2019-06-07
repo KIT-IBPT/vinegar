@@ -113,7 +113,9 @@ option, or templating can be disabled completely by setting that option to
 The data source provides two context objects to the template engine: The ``id``
 object contains the system ID (as a ``str``) and the ``data`` objects contains
 the data that has been passed to the `~YamlTargetSource.get_data` method as
-``preceding_data``.
+``preceding_data``. The ``data`` object is passed as a
+`~vinegar.utils.smart_dict.SmartLookupOrderedDict` to make it easier to get
+nested values.
 
 Configuration options
 ---------------------
@@ -170,6 +172,7 @@ from typing import Any, Mapping, Tuple
 from vinegar.datasource import DataSource, merge_data_trees
 from vinegar.utils import oyaml as yaml
 from vinegar.utils.odict import OrderedDict
+from vinegar.utils.smart_dict import SmartLookupOrderedDict
 from vinegar.utils.version import aggregate_version, version_for_file_path
 
 class YamlTargetSource(DataSource):
@@ -471,7 +474,9 @@ class YamlTargetSource(DataSource):
         return data_files
 
     def _render(self, template_path, system_id, preceding_data):
-        context = {'id': system_id, 'data': preceding_data}
+        context = {
+            'id': system_id,
+            'data': SmartLookupOrderedDict(preceding_data)}
         if self._template_engine is None:
             with open(template_path, 'r', encoding='utf-8') as file:
                 return file.read()

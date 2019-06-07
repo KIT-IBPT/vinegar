@@ -491,6 +491,35 @@ class TestYamlTargetSource(unittest.TestCase):
             self.assertTrue(
                 str(assertion.exception).startswith('Recursion loop detected'))
 
+    def test_template_context(self):
+        """
+        Test that the template gets the expected context objects.
+
+        """
+        with TemporaryDirectory() as tmpdir:
+            ds = YamlTargetSource({'root_dir': tmpdir})
+            # We have to fill the configuration directory with files that the
+            # data source can read.
+            root_dir_path = pathlib.Path(tmpdir)
+            _write_file(
+                root_dir_path / 'top.yaml',
+                """
+                '*':
+                    - a
+                """)
+            _write_file(
+                root_dir_path / 'a.yaml',
+                """
+                id: {{ id }}
+                data: {{ data.get('abc:def:ghi') }}
+                """)
+            # We use nested dicts for the input data so that we can test that
+            # the data object is indeed a smart lookup dict.
+            input_data = {'abc': {'def': {'ghi': 123}}}
+            self.assertEqual(
+                {'id': 'dummy', 'data': 123},
+                ds.get_data('dummy', input_data, '1')[0])
+
     def test_top_targeting(self):
         """
         Tests that the targeting mechanism in ``top.yaml`` works.
