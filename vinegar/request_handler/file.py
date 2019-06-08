@@ -303,7 +303,7 @@ import urllib.parse
 from http import HTTPStatus
 from typing import Any, Mapping, Tuple
 
-from vinegar.datasource import DataSource, DataSourceAware
+from vinegar.data_source import DataSource, DataSourceAware
 from vinegar.http.server import HttpRequestHandler
 from vinegar.template import get_template_engine
 from vinegar.tftp.protocol import ErrorCode as TftpErrorCode

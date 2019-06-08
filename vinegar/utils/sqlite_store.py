@@ -1,11 +1,11 @@
 """
-Data store used by the `~vinegar.datasource.sqlite` data source.
+Data store used by the `~vinegar.data_source.sqlite` data source.
 
 This data store uses the ``sqlite3`` package for accessing a database file that
 stores information associated with systems.
 
 The data store provided by this module is primarily intended to serve as the
-backend of the `~vinegar.datasource.sqlite` data source. This means that the
+backend of the `~vinegar.data_source.sqlite` data source. This means that the
 storage structure used by this data store has been designed with that use in
 mind and is probably not very useful for other applications.
 

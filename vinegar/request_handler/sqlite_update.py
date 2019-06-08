@@ -138,7 +138,7 @@ import urllib.parse
 from http import HTTPStatus
 from typing import Any, Mapping, Tuple
 
-from vinegar.datasource import DataSource, DataSourceAware
+from vinegar.data_source import DataSource, DataSourceAware
 from vinegar.request_handler import HttpRequestHandler
 from vinegar.utils.smart_dict import SmartLookupDict
 from vinegar.utils.sqlite_store import open_data_store

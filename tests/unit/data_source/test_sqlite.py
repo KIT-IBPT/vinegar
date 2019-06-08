@@ -1,16 +1,16 @@
 """
-Tests for `vinegar.datasource.sqlite`.
+Tests for `vinegar.data_source.sqlite`.
 """
 
 import os.path
 import unittest
 
-import vinegar.datasource
+import vinegar.data_source
 
 from contextlib import contextmanager
 from tempfile import TemporaryDirectory
 
-from vinegar.datasource.sqlite import SQLiteSource
+from vinegar.data_source.sqlite import SQLiteSource
 
 class TestSQLiteSource(unittest.TestCase):
     """

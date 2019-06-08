@@ -1,17 +1,17 @@
 """
-Tests for `vinegar.datasource.yaml_target`.
+Tests for `vinegar.data_source.yaml_target`.
 """
 
 import inspect
 import pathlib
 import unittest
 
-import vinegar.datasource
-import vinegar.datasource.yaml_target
+import vinegar.data_source
+import vinegar.data_source.yaml_target
 
 from tempfile import TemporaryDirectory
 
-from vinegar.datasource.yaml_target import YamlTargetSource
+from vinegar.data_source.yaml_target import YamlTargetSource
 from vinegar.utils.odict import OrderedDict
 
 class TestYamlTargetSource(unittest.TestCase):
@@ -300,10 +300,10 @@ class TestYamlTargetSource(unittest.TestCase):
     def test_get_instance(self):
         """
         Test that the data source can be instantiated via
-        `vinegar.datasource.get_data_source`.
+        `vinegar.data_source.get_data_source`.
         """
         with TemporaryDirectory() as tmpdir:
-            ds = vinegar.datasource.get_data_source(
+            ds = vinegar.data_source.get_data_source(
                 'yaml_target', {'root_dir': tmpdir})
             self.assertIsInstance(ds, YamlTargetSource)
 

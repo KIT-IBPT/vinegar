@@ -1,5 +1,5 @@
 """
-Tests for `vinegar.datasource`.
+Tests for `vinegar.data_source`.
 """
 
 import unittest
@@ -7,7 +7,7 @@ import unittest.mock
 
 from typing import Any, Mapping, Tuple
 
-from vinegar.datasource import (
+from vinegar.data_source import (
     DataSource,
     DataSourceAware,
     get_composite_data_source,

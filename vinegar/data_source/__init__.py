@@ -2,7 +2,7 @@
 Sources providing configuration information associated with each system.
 
 Different sources can be used to fill retrieve configuration information for
-systems. A very flexible one is `vinegar.datasource.yaml_target`, which fills
+systems. A very flexible one is `vinegar.data_source.yaml_target`, which fills
 the configuration tree by parsing a central YAML file specifies target
 information (which files apply to which system) and the YAML files specified by
 this central file in order to retrieve the actual data.
@@ -12,7 +12,7 @@ Multiple data sources can easily be chained by using the
 
 All source implementations have in common that they must specify a
 `get_instance` function that takes a `dict` with configuration data as its only
-parameter. This function must return an instance of `DataSource`.
+parameter. This function must return an instance of `data_source`.
 
 Data sources are thread safe.
 """
@@ -252,7 +252,7 @@ def get_data_source(name: str, config: Mapping[Any, Any]) -> DataSource:
     :param name:
         name of the data source. If the name contains a dot, it is treated as an
         absolute module name. Otherwise it is treated as a name of one of the
-        modules inside the `vinegar.datasource` module.
+        modules inside the `vinegar.data_source` module.
     :param: config:
         configuration data for the data source. The meaning of that data is up
         to the implementation of the data source.

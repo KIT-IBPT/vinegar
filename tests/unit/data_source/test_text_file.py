@@ -1,5 +1,5 @@
 """
-Tests for `vinegar.datasource.text_file`.
+Tests for `vinegar.data_source.text_file`.
 """
 
 import inspect
@@ -7,11 +7,11 @@ import os.path
 import unittest
 import unittest.mock
 
-import vinegar.datasource
+import vinegar.data_source
 
 from tempfile import TemporaryDirectory
 
-from vinegar.datasource.text_file import TextFileSource
+from vinegar.data_source.text_file import TextFileSource
 
 class TestTextFileSource(unittest.TestCase):
     """
@@ -36,7 +36,7 @@ class TestTextFileSource(unittest.TestCase):
             # default to warn.
             ds = TextFileSource(config)
             with unittest.mock.patch(
-                    'vinegar.datasource.text_file.logger',
+                    'vinegar.data_source.text_file.logger',
                     autospec=True) as mock_logger:
                 ds.get_data('system', {}, '')
                 mock_logger.warning.assert_called_once()
@@ -50,7 +50,7 @@ class TestTextFileSource(unittest.TestCase):
             config['duplicate_system_id_action'] = 'ignore'
             ds = TextFileSource(config)
             with unittest.mock.patch(
-                    'vinegar.datasource.text_file.logger',
+                    'vinegar.data_source.text_file.logger',
                     autospec=True) as mock_logger:
                 ds.get_data('system', {}, '')
                 mock_logger.warning.assert_not_called()
@@ -59,7 +59,7 @@ class TestTextFileSource(unittest.TestCase):
             config['duplicate_system_id_action'] = 'warn'
             ds = TextFileSource(config)
             with unittest.mock.patch(
-                    'vinegar.datasource.text_file.logger',
+                    'vinegar.data_source.text_file.logger',
                     autospec=True) as mock_logger:
                 ds.get_data('system', {}, '')
                 mock_logger.warning.assert_called_once()
@@ -115,7 +115,7 @@ class TestTextFileSource(unittest.TestCase):
             # warning about the line with the invalid MAC address.
             ds = TextFileSource(config)
             with unittest.mock.patch(
-                    'vinegar.datasource.text_file.logger',
+                    'vinegar.data_source.text_file.logger',
                     autospec=True) as mock_logger:
                 ds.get_data('system', {}, '')
                 mock_logger.warning.assert_called_once()
@@ -128,7 +128,7 @@ class TestTextFileSource(unittest.TestCase):
             config['mismatch_action'] = 'ignore'
             ds = TextFileSource(config)
             with unittest.mock.patch(
-                    'vinegar.datasource.text_file.logger',
+                    'vinegar.data_source.text_file.logger',
                     autospec=True) as mock_logger:
                 ds.get_data('system', {}, '')
                 mock_logger.warning.assert_not_called()
@@ -137,7 +137,7 @@ class TestTextFileSource(unittest.TestCase):
             config['mismatch_action'] = 'warn'
             ds = TextFileSource(config)
             with unittest.mock.patch(
-                    'vinegar.datasource.text_file.logger',
+                    'vinegar.data_source.text_file.logger',
                     autospec=True) as mock_logger:
                 ds.get_data('system', {}, '')
                 mock_logger.warning.assert_called_once()
@@ -162,7 +162,7 @@ class TestTextFileSource(unittest.TestCase):
             # first.
             ds = TextFileSource(config)
             with unittest.mock.patch(
-                    'vinegar.datasource.text_file.logger',
+                    'vinegar.data_source.text_file.logger',
                     autospec=True) as mock_logger:
                 ds.get_data('system', {}, '')
                 mock_logger.warning.assert_not_called()
@@ -171,7 +171,7 @@ class TestTextFileSource(unittest.TestCase):
             config['regular_expression_ignore'] = None
             ds = TextFileSource(config)
             with unittest.mock.patch(
-                    'vinegar.datasource.text_file.logger',
+                    'vinegar.data_source.text_file.logger',
                     autospec=True) as mock_logger:
                 ds.get_data('system', {}, '')
                 self.assertEqual(2, mock_logger.warning.call_count)

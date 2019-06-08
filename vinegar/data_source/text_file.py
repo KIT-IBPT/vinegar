@@ -320,7 +320,7 @@ import threading
 
 from typing import Any, Mapping, Tuple
 
-from vinegar.datasource import DataSource
+from vinegar.data_source import DataSource
 from vinegar.transform import apply_transformation_chain
 from vinegar.utils.odict import OrderedDict
 from vinegar.utils.version import version_for_file_path, version_for_str
@@ -334,7 +334,7 @@ class TextFileSource(DataSource):
 
     For information about the configuration options supported by this data
     source, please refer to the
-    `module documentation <vinegar.datasource.text_file>`.
+    `module documentation <vinegar.data_source.text_file>`.
     """
     
     def __init__(self, config: Mapping[Any, Any]):
@@ -343,7 +343,7 @@ class TextFileSource(DataSource):
 
         :param config:
             configuration for this data source. Please refer to the
-            `module documentation <vinegar.datasource.text_file>` for a list of
+            `module documentation <vinegar.data_source.text_file>` for a list of
             supported options.
         """
         self._cache_enabled = config.get('cache_enabled', True)
@@ -590,7 +590,7 @@ def get_instance(config: Mapping[Any, Any]) -> TextFileSource:
     Create a text file data source.
 
     For information about the configuration options supported by that source,
-    please refer to the `module documentation <vinegar.datasource.text_file>`.
+    please refer to the `module documentation <vinegar.data_source.text_file>`.
 
     :param config:
         configuration for the data source.

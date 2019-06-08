@@ -84,7 +84,7 @@ import json
 
 from typing import Any, Mapping, Tuple
 
-from vinegar.datasource import DataSource
+from vinegar.data_source import DataSource
 from vinegar.utils.sqlite_store import open_data_store
 from vinegar.utils.version import version_for_str
 
@@ -97,7 +97,7 @@ class SQLiteSource(DataSource):
 
     For information about the configuration options supported by this data
     source, please refer to the
-    `module documentation <vinegar.datasource.sqlite>`.
+    `module documentation <vinegar.data_source.sqlite>`.
     """
     
     def __init__(self, config: Mapping[Any, Any]):
@@ -106,7 +106,7 @@ class SQLiteSource(DataSource):
 
         :param config:
             configuration for this data source. Please refer to the
-            `module documentation <vinegar.datasource.sqlite>` for a list of
+            `module documentation <vinegar.data_source.sqlite>` for a list of
             supported options.
         """
         db_file = config['db_file']
@@ -162,7 +162,7 @@ def get_instance(config: Mapping[Any, Any]) -> SQLiteSource:
     Create a SQLite data source.
 
     For information about the configuration options supported by that source,
-    please refer to the `module documentation <vinegar.datasource.sqlite>`.
+    please refer to the `module documentation <vinegar.data_source.sqlite>`.
 
     :param config:
         configuration for the data source.

@@ -13,7 +13,7 @@ from http import HTTPStatus
 from http.client import HTTPMessage
 from tempfile import TemporaryDirectory
 
-from vinegar.datasource import DataSource
+from vinegar.data_source import DataSource
 from vinegar.request_handler.file import (
     HttpFileRequestHandler,
     TftpFileRequestHandler,

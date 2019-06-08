@@ -97,7 +97,7 @@ configuration option.
 Please note that this data source does never merge the data passed to its
 `~YamlTargetSource.get_data` method (through the ``preceding_data`` argument)
 into the resulting data. If this is desired, a composite data source (see
-`vinegar.datasource.get_composite_data_source`) should be used.
+`vinegar.data_source.get_composite_data_source`) should be used.
 
 Using Templating
 ----------------
@@ -145,7 +145,7 @@ specified. All other options have default values.
 :``merge_lists``:
     If ``True``, lists are merged when merging data from different data files.
     If ``False`` (the default), lists are not merged, but replaced. Please refer
-    to the documentation for `~vinegar.datasource.merge_data_trees` for details
+    to the documentation for `~vinegar.data_source.merge_data_trees` for details
     about the effects of this option.
 
 :``template``:
@@ -169,7 +169,7 @@ import vinegar.utils.system_matcher
 
 from typing import Any, Mapping, Tuple
 
-from vinegar.datasource import DataSource, merge_data_trees
+from vinegar.data_source import DataSource, merge_data_trees
 from vinegar.utils import oyaml as yaml
 from vinegar.utils.odict import OrderedDict
 from vinegar.utils.smart_dict import SmartLookupOrderedDict
@@ -182,7 +182,7 @@ class YamlTargetSource(DataSource):
 
     For information about the configuration options supported by this data
     source, please refer to the
-    `module documentation <vinegar.datasource.yaml_target>`.
+    `module documentation <vinegar.data_source.yaml_target>`.
     """
     
     def __init__(self, config: Mapping[Any, Any]):
@@ -191,7 +191,7 @@ class YamlTargetSource(DataSource):
 
         :param config:
             configuration for this data source. Please refer to the
-            `module documentation <vinegar.datasource.yaml_target>` for a list
+            `module documentation <vinegar.data_source.yaml_target>` for a list
             of supported options.
         """
         self._allow_empty_top = config.get('allow_empty_top', False)
@@ -488,7 +488,8 @@ def get_instance(config: Mapping[Any, Any]) -> YamlTargetSource:
     Create a YAML data source supporting targeting.
 
     For information about the configuration options supported by that source,
-    please refer to the `module documentation <vinegar.datasource.yaml_target>`.
+    please refer to the
+    `module documentation <vinegar.data_source.yaml_target>`.
 
     :param config:
         configuration for the data source.
