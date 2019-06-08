@@ -7,8 +7,10 @@ file system.
 
 All handler modules have in common that they must specify a ``get_instance_http``
 or ``get_instance_tftp`` function (or both). Each of these functions takes a
-`dict` with configuration data as its only argument. These functions must return
-an instance of `HttpRequestHandler` or `TftpRequestHandler`.
+``dict`` with configuration data as its only argument. These functions must
+return an instance of `HttpRequestHandler` or `TftpRequestHandler`. The key
+``name`` in that configuration ``dict`` is reserved for use by the calling code
+and should be ignored by the request handler.
 
 Request handlers are thread safe.
 """

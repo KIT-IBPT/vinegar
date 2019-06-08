@@ -11,8 +11,10 @@ Multiple data sources can easily be chained by using the
 `get_composite_data_source` function.
 
 All source implementations have in common that they must specify a
-`get_instance` function that takes a `dict` with configuration data as its only
-parameter. This function must return an instance of `data_source`.
+`get_instance` function that takes a ``dict`` with configuration data as its
+only parameter. This function must return an instance of `data_source`. The key
+``name`` in that configuration ``dict`` is reserved for use by the calling code
+and should be ignored by the data source.
 
 Data sources are thread safe.
 """
