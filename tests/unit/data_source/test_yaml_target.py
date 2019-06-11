@@ -136,7 +136,9 @@ class TestYamlTargetSource(unittest.TestCase):
         Test the 'allow_empty_top' configuration option.
         """
         with TemporaryDirectory() as tmpdir:
-            ds = YamlTargetSource({'root_dir': tmpdir})
+            # We disable the cache for this test because it causes problems when
+            # we rapidly make changes to the files.
+            ds = YamlTargetSource({'cache_size': 0, 'root_dir': tmpdir})
             # We have to fill the configuration directory with files that the
             # data source can read.
             root_dir_path = pathlib.Path(tmpdir)
@@ -149,7 +151,8 @@ class TestYamlTargetSource(unittest.TestCase):
             with self.assertRaises(TypeError):
                 ds.get_data('dummy', {}, '')
             # Now we enable the option and test again.
-            ds = YamlTargetSource({'root_dir': tmpdir, 'allow_empty_top': True})
+            ds = YamlTargetSource(
+                {'cache_size': 0, 'root_dir': tmpdir, 'allow_empty_top': True})
             ds.get_data('dummy', {}, '')
             # A top file that is invalid (e.g. provides a list instead of a
             # dict) should still result in a type error.
