@@ -36,7 +36,7 @@ options that can be passed through the ``config`` dictionary that is passed to
     can make sense if files are changed rapidly and the time stamps provided by
     the file system do not provide sufficient precision. This option is actually
     handled by the loader, so it will have no effect when supplying a custom
-    loader through the ``loader``environment option.
+    loader through the ``loader`` environment option.
 
 :``env``:
     This option is used to specify a dict that is used when creating the
