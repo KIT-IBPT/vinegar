@@ -28,6 +28,16 @@ The template engine provded by this module supports the following configuration
 options that can be passed through the ``config`` dictionary that is passed to
 `get_instance`:
 
+:``cache_enabled``:
+    This option (a ``bool``) specifies whether caching is enabled. If ``True``
+    (the default), templates are only recompiled when the corresponding file has
+    been modified. Modification is detected by comparing the file's ``ctime``
+    and ``mtime``. If ``False`` the template is recompiled on each request. This
+    can make sense if files are changed rapidly and the time stamps provided by
+    the file system do not provide sufficient precision. This option is actually
+    handled by the loader, so it will have no effect when supplying a custom
+    loader through the ``loader``environment option.
+
 :``env``:
     This option is used to specify a dict that is used when creating the
     `~jinja2.Environment`. By default three options are passed to the
@@ -81,6 +91,16 @@ class JinjaEngine(TemplateEngine):
     engine, please refer to the `module documentation <vinegar.template.jinja>`.
     """
 
+    class _NoCacheFileSystemLoader(jinja2.FileSystemLoader):
+        """
+        Variant of the file-system loader that always considers a file as
+        modified.
+        """
+
+    def get_source(self, *args, **kwargs):
+        contents, filename, _ = super().get_source(*args, **kwargs)
+        return contents, filename, lambda _: False
+
     class _Environment(jinja2.Environment):
         """
         Environment used to resolve includes relative to their parent template.
@@ -107,8 +127,9 @@ class JinjaEngine(TemplateEngine):
         the filesystem.
         """
 
-        def __init__(self, encoding='utf-8'):
+        def __init__(self, cache_enabled=True, encoding='utf-8'):
             self._encoding = encoding
+            self._cache_enabled = cache_enabled
 
         def get_source(self, environment, template):
             # We make the template path absolute, so that we can later resolve
@@ -125,9 +146,13 @@ class JinjaEngine(TemplateEngine):
             except (FileNotFoundError, IsADirectoryError):
                 raise jinja2.TemplateNotFound(template)
 
-            def up_to_date():
-                current_file_version = version_for_file_path(template)
-                return current_file_version == file_version
+            if self._cache_enabled:
+                def up_to_date():
+                    current_file_version = version_for_file_path(template)
+                    return current_file_version == file_version
+            else:
+                def up_to_date():
+                    return False
 
             return file_contents, template, up_to_date
 
@@ -170,9 +195,14 @@ class JinjaEngine(TemplateEngine):
         # represent an absolute path are used as is, other template names are
         # resolved relative to the current working directory.
         if root_dir is None:
-            loader = self._Loader(config.get('encoding', 'utf-8'))
+            loader = self._Loader(
+                config.get('cache_enabled', True),
+                config.get('encoding', 'utf-8'))
         else:
-            loader = jinja2.FileSystemLoader(root_dir)
+            if config.get('cache_enabled', True):
+                loader = jinja2.FileSystemLoader(root_dir)
+            else:
+                loader = self._NoCacheFileSystemLoader(root_dir)
         env_options = {
             'autoescape': False,
             'keep_trailing_newline': True,

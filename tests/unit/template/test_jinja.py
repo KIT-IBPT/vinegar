@@ -94,13 +94,16 @@ class TestJinjaEngine(unittest.TestCase):
                 """
                 {{ transform['string.to_upper']('Some text') }}
                 """)
-            engine = JinjaEngine({})
+            # We disable the cache for this test because it causes problems when
+            # we rapidly change files.
+            engine = JinjaEngine({'cache_enabled': False})
             self.assertEqual(
                 'SOME TEXT',
                 engine.render(template_path.as_posix(), {}))
             # Explicitly setting proide_transform_functions should not make a
             # difference.
-            engine = JinjaEngine({'provide_transform_functions': True})
+            engine = JinjaEngine(
+                {'cache_enabled': False, 'provide_transform_functions': True})
             self.assertEqual(
                 'SOME TEXT',
                 engine.render(template_path.as_posix(), {}))
@@ -128,7 +131,8 @@ class TestJinjaEngine(unittest.TestCase):
                 engine.render(template_path.as_posix(), {}))
             # Now, we set provide_transform_functions to False, which should
             # remove the transform object from the context.
-            engine = JinjaEngine({'provide_transform_functions': False})
+            engine = JinjaEngine(
+                {'cache_enabled': False, 'provide_transform_functions': False})
             self.assertEqual(
                 'False',
                 engine.render(template_path.as_posix(), {}))
