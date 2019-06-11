@@ -137,8 +137,13 @@ class TestYamlTargetSource(unittest.TestCase):
         """
         with TemporaryDirectory() as tmpdir:
             # We disable the cache for this test because it causes problems when
-            # we rapidly make changes to the files.
-            ds = YamlTargetSource({'cache_size': 0, 'root_dir': tmpdir})
+            # we rapidly make changes to the files. We also have to disable the
+            # template cache, because that could cause problems, too.
+            ds = YamlTargetSource(
+                {
+                    'cache_size': 0,
+                    'root_dir': tmpdir,
+                    'template_config': {'cache_enabled': False}})
             # We have to fill the configuration directory with files that the
             # data source can read.
             root_dir_path = pathlib.Path(tmpdir)
@@ -152,7 +157,11 @@ class TestYamlTargetSource(unittest.TestCase):
                 ds.get_data('dummy', {}, '')
             # Now we enable the option and test again.
             ds = YamlTargetSource(
-                {'cache_size': 0, 'root_dir': tmpdir, 'allow_empty_top': True})
+                {
+                    'allow_empty_top': True,
+                    'cache_size': 0,
+                    'root_dir': tmpdir,
+                    'template_config': {'cache_enabled': False}})
             ds.get_data('dummy', {}, '')
             # A top file that is invalid (e.g. provides a list instead of a
             # dict) should still result in a type error.

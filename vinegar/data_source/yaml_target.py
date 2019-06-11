@@ -140,7 +140,10 @@ specified. All other options have default values.
     ``LRUCache`` so that the process of compiling the data for a specific system
     does not have to be repeated for every call to `~YamlTargetSource.get_data`.
     By default, this cache stores up to 64 entries. If set to zero, the cache is
-    disabled completely.
+    disabled completely. Please note that this will not disable the cache of the
+    template engine that is used. Please refer to the documentation for the
+    template engine in use to see whether it uses a cache and how it can be
+    disabled.
 
 :``merge_lists``:
     If ``True``, lists are merged when merging data from different data files.
