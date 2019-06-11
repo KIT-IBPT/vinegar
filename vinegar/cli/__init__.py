@@ -1,0 +1,3 @@
+"""
+Vinegar command-line interfaces.
+"""
