@@ -94,6 +94,7 @@ import vinegar.data_source
 import vinegar.http.server
 import vinegar.request_handler
 import vinegar.tftp.server
+import vinegar.version
 
 from vinegar.utils import oyaml as yaml
 
@@ -109,7 +110,15 @@ def main():
         '--config-file',
         dest='config_file',
         help='path to the configuration file')
+    parser.add_argument(
+        '--version',
+        action='store_true',
+        dest='version',
+        help='show program\'s version number and exit')
     args = parser.parse_args()
+    if args.version:
+        print('Vinegar server %s' % vinegar.version.version_string)
+        sys.exit(0)
     config_file = args.config_file
     config = read_server_config(config_file)
     run_server(config)
