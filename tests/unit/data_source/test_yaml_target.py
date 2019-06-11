@@ -4,6 +4,7 @@ Tests for `vinegar.data_source.yaml_target`.
 
 import inspect
 import pathlib
+import time
 import unittest
 
 import vinegar.data_source
@@ -88,27 +89,45 @@ class TestYamlTargetSource(unittest.TestCase):
             (data, version1) = ds.get_data('dummy', {}, '')
             self.assertEqual({'key': 1}, data)
             # Now we update a.yaml.
-            _write_file(
-                root_dir_path / 'a.yaml',
-                """
-                key: 2
-                """)
-            (data, version2) = ds.get_data('dummy', {}, '')
+            # We actually try several times with increasing sleep times. On
+            # systems, where the time stamp is very precise, the test finishes
+            # quickly, on other ones it takes a bit longer.
+            sleep_time = 0.01
+            while sleep_time < 3.0:
+                _write_file(
+                    root_dir_path / 'a.yaml',
+                    """
+                    key: 2
+                    """)
+                (data, version2) = ds.get_data('dummy', {}, '')
+                if version1 != version2:
+                    break
+                time.sleep(sleep_time)
+                sleep_time *= 2
             self.assertEqual({'key': 2}, data)
             self.assertNotEqual(version1, version2)
             # Now we update top.yaml.
-            _write_file(
-                root_dir_path / 'top.yaml',
-                """
-                '*':
-                    - b
-                """)
-            _write_file(
-                root_dir_path / 'b.yaml',
-                """
-                key: 3
-                """)
-            (data, version3) = ds.get_data('dummy', {}, '')
+            # We actually try several times with increasing sleep times. On
+            # systems, where the time stamp is very precise, the test finishes
+            # quickly, on other ones it takes a bit longer.
+            sleep_time = 0.01
+            while sleep_time < 3.0:
+                _write_file(
+                    root_dir_path / 'top.yaml',
+                    """
+                    '*':
+                        - b
+                    """)
+                _write_file(
+                    root_dir_path / 'b.yaml',
+                    """
+                    key: 3
+                    """)
+                (data, version3) = ds.get_data('dummy', {}, '')
+                if version2 != version3:
+                    break
+                time.sleep(sleep_time)
+                sleep_time *= 2
             self.assertEqual({'key': 3}, data)
             self.assertNotEqual(version2, version3)
 

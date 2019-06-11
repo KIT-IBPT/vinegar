@@ -4,6 +4,7 @@ Tests for `vinegar.data_source.text_file`.
 
 import inspect
 import os.path
+import time
 import unittest
 import unittest.mock
 
@@ -285,22 +286,31 @@ class TestTextFileSource(unittest.TestCase):
             # systems, but changes the line for system1. This should result in
             # a change of the version number for that system only.
             data_file = os.path.join(tmpdir, 'test.txt')
-            _write_file(
-                data_file,
-                """
-                02:00:00:00:00:01;192.168.0.6;System1
-                02:00:00:00:00:02;192.168.0.2;system2,alias1,Alias2
-                02:00:00:00:00:0a;192.168.000.3;system3
-                02:00:00:00:00:0A;192.168.0.4;system4
-                """)
+            # We actually try several times with increasing sleep times. On
+            # systems, where the time stamp is very precise, the test finishes
+            # quickly, on other ones it takes a bit longer.
+            sleep_time = 0.01
+            while sleep_time < 3.0:
+                _write_file(
+                    data_file,
+                    """
+                    02:00:00:00:00:01;192.168.0.6;System1
+                    02:00:00:00:00:02;192.168.0.2;system2,alias1,Alias2
+                    02:00:00:00:00:0a;192.168.000.3;system3
+                    02:00:00:00:00:0A;192.168.0.4;system4
+                    """)
+                data, version1b = ds.get_data(
+                    'system1.mydomain.example.com', {}, '')
+                if version1a != version1b:
+                    break
+                time.sleep(sleep_time)
+                sleep_time *= 2
             expected_data1b = {
                 'net': {
                     'fqdn': 'system1.mydomain.example.com',
                     'hostname': 'system1',
                     'ipv4_addr': '192.168.0.6',
                     'mac_addr': '02:00:00:00:00:01'}}
-            data, version1b = ds.get_data(
-                'system1.mydomain.example.com', {}, '')
             self.assertEqual(expected_data1b, data)
             self.assertNotEqual(version1a, version1b)
             data, version2b = ds.get_data(

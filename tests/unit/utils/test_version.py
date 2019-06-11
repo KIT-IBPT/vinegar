@@ -80,6 +80,7 @@ class TestVersionModule(unittest.TestCase):
                 if version5 != version4:
                     break
                 time.sleep(sleep_time)
+                sleep_time *= 2
             self.assertTrue(len(version5) > 0)
             self.assertNotEqual(version1, version5)
             self.assertNotEqual(version4, version5)

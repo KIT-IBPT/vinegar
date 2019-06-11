@@ -5,6 +5,7 @@ Tests for `vinegar.template.jinja`.
 import inspect
 import os.path
 import pathlib
+import time
 import unittest
 
 import vinegar.template
@@ -37,13 +38,22 @@ class TestJinjaEngine(unittest.TestCase):
             self.assertEqual(
                 'some text', engine.render(template_path.as_posix(), {}))
             # Now we change the template.
-            _write_file(
-                template_path,
-                """
-                {{ 'other text' }}
-                """)
-            self.assertEqual(
-                'other text', engine.render(template_path.as_posix(), {}))
+            # We actually try several times with increasing sleep times. On
+            # systems, where the time stamp is very precise, the test finishes
+            # quickly, on other ones it takes a bit longer.
+            sleep_time = 0.01
+            while sleep_time < 3.0:
+                _write_file(
+                    template_path,
+                    """
+                    {{ 'other text' }}
+                    """)
+                new_render_result = engine.render(template_path.as_posix(), {})
+                if 'some text' != new_render_result:
+                    break
+                time.sleep(sleep_time)
+                sleep_time *= 2
+            self.assertEqual('other text', new_render_result)
 
     def test_config_env(self):
         """
