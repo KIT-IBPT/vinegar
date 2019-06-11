@@ -38,6 +38,13 @@ options that can be passed through the ``config`` dictionary that is passed to
     handled by the loader, so it will have no effect when supplying a custom
     loader through the ``loader`` environment option.
 
+:``context``:
+    This options (a ``dict``) provides extra objects that are made available in
+    the template's context. These objects are provided in addition to the
+    objects passed through the ``context`` parameter of the
+    `~JinjaEngine.render` method. In case of a key collision, objects specified
+    via this option take precedence over objects parsed to ``render``.
+
 :``env``:
     This option is used to specify a dict that is used when creating the
     `~jinja2.Environment`. By default three options are passed to the
@@ -216,6 +223,7 @@ class JinjaEngine(TemplateEngine):
         self._base_context = {}
         if config.get('provide_transform_functions', True):
             self._base_context['transform'] = self._TransformHelper()
+        self._base_context.update(config.get('context', {}))
 
     def render(
             self,
@@ -225,8 +233,8 @@ class JinjaEngine(TemplateEngine):
             template = self._environment.get_template(template_path)
         except jinja2.TemplateNotFound as e:
             raise FileNotFoundError() from e
-        merged_context = self._base_context.copy()
-        merged_context.update(context)
+        merged_context = context.copy()
+        merged_context.update(self._base_context)
         try:
             return template.render(**merged_context)
         except jinja2.TemplateNotFound as e:

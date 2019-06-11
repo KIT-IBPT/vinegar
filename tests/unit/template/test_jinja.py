@@ -55,6 +55,31 @@ class TestJinjaEngine(unittest.TestCase):
                 sleep_time *= 2
             self.assertEqual('other text', new_render_result)
 
+    def test_config_context(self):
+        """
+        Test the that context objects passed through the ``context``
+        configuration option are made available.
+        """
+        config = {'context': {'abc': 123, 'def': 456}}
+        engine = JinjaEngine(config)
+        with TemporaryDirectory() as tmpdir:
+            # We have to generate a template file that can be read by the
+            # template engine.
+            tmpdir_path = pathlib.Path(tmpdir)
+            template_path = tmpdir_path / 'test.jinja'
+            _write_file(
+                template_path,
+                """
+                {{ abc ~ def }}
+                """)
+            self.assertEqual(
+                '123456', engine.render(template_path.as_posix(), {}))
+            # Context objects supplied to render should not override the context
+            # objects from the configuration.
+            self.assertEqual(
+                '123456',
+                engine.render(template_path.as_posix(), {'abc': 789}))
+
     def test_config_env(self):
         """
         Test the that options passed through ``config['env']`` are actually
@@ -100,22 +125,17 @@ class TestJinjaEngine(unittest.TestCase):
             self.assertEqual(
                 'SOME TEXT',
                 engine.render(template_path.as_posix(), {}))
-            # Explicitly setting proide_transform_functions should not make a
+            # Explicitly setting provide_transform_functions should not make a
             # difference.
             engine = JinjaEngine(
                 {'cache_enabled': False, 'provide_transform_functions': True})
             self.assertEqual(
                 'SOME TEXT',
                 engine.render(template_path.as_posix(), {}))
-            # If provide our own transform object in the context, this should
-            # override the automatically provided transform object.
-            _write_file(
-                template_path,
-                """
-                {{ transform }}
-                """)
+            # If we provide our own transform object in the context, this should
+            # be hidden by the transform object provided by the template engine.
             self.assertEqual(
-                'text from context',
+                'SOME TEXT',
                 engine.render(
                     template_path.as_posix(),
                     {'transform': 'text from context'}))
@@ -136,6 +156,18 @@ class TestJinjaEngine(unittest.TestCase):
             self.assertEqual(
                 'False',
                 engine.render(template_path.as_posix(), {}))
+            # If we provide our own transform object, that object should be
+            # available.
+            _write_file(
+                template_path,
+                """
+                {{ transform }}
+                """)
+            self.assertEqual(
+                'text from context',
+                engine.render(
+                    template_path.as_posix(),
+                    {'transform': 'text from context'}))
 
     def test_config_relative_includes_and_root_dir(self):
         """
