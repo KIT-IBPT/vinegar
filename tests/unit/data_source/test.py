@@ -99,6 +99,18 @@ class TestDataSourceModule(unittest.TestCase):
         expected_result = {0: [1, 3, 4, 2, 5]}
         result = merge_data_trees(d1, d2, merge_lists=True)
         self.assertEqual(expected_result, result)
+        # We also test that sets are only merged if merge_sets is True
+        # (which is the default).
+        d1 = {0: {1, 2, 3}}
+        d2 = {0: {2, 4, 5}}
+        expected_result = {0: {1, 2, 3, 4, 5}}
+        result = merge_data_trees(d1, d2)
+        self.assertEqual(expected_result, result)
+        result = merge_data_trees(d1, d2, merge_sets=True)
+        self.assertEqual(expected_result, result)
+        expected_result = {0: {2, 4, 5}}
+        result = merge_data_trees(d1, d2, merge_sets=False)
+        self.assertEqual(expected_result, result)
 
 class _DummyDataSource(DataSource):
     """

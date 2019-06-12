@@ -151,6 +151,12 @@ specified. All other options have default values.
     to the documentation for `~vinegar.data_source.merge_data_trees` for details
     about the effects of this option.
 
+:``merge_sets``:
+    If ``True`` (thedefault), sets are merged when merging data from different
+    data files. If ``False``, sets are not merged, but replaced. Please refer
+    to the documentation for `~vinegar.data_source.merge_data_trees` for details
+    about the effects of this option.
+
 :``template``:
     name of the template engine (as a ``str``) that shall be used for rending
     the ``top.yaml`` and the data files. The default is ``jinja``. This name is
@@ -200,6 +206,7 @@ class YamlTargetSource(DataSource):
         self._allow_empty_top = config.get('allow_empty_top', False)
         self._root_dir_path = pathlib.Path(config['root_dir'])
         self._merge_lists = config.get('merge_lists', False)
+        self._merge_sets = config.get('merge_sets', True)
         # We need the path to the top file frequently, so it makes sense to keep
         # it as an instance variable. We use absolute paths everywhere in this
         # class so that we can detect it more easily when two path names refer
@@ -352,7 +359,10 @@ class YamlTargetSource(DataSource):
             # the merge data.
             del file_data['include']
             return merge_data_trees(
-                include_data, file_data, merge_lists=self._merge_lists)
+                include_data,
+                file_data,
+                merge_lists=self._merge_lists,
+                merge_sets=self._merge_sets)
         # If the includes come somewhere in the middle of the file, we have to
         # split the data between the part that comes before the includes and the
         # part that comes after the includes.
@@ -368,14 +378,20 @@ class YamlTargetSource(DataSource):
                     system_id,
                     preceding_data)
                 data_before = merge_data_trees(
-                    data_before, include_data, merge_lists=self._merge_lists)
+                    data_before,
+                    include_data,
+                    merge_lists=self._merge_lists,
+                    merge_sets=self._merge_sets)
                 before_include = False
             elif before_include:
                 data_before[key] = value
             else:
                 data_after[key] = value
         return merge_data_trees(
-            data_before, data_after, merge_lists=self._merge_lists)
+            data_before,
+            data_after,
+            merge_lists=self._merge_lists,
+            merge_sets=self._merge_sets)
 
     def _process_data_files(
             self,
@@ -436,7 +452,10 @@ class YamlTargetSource(DataSource):
             # We merge the file's data into the data that we already have from
             # processing earlier files.
             data = merge_data_trees(
-                data, data_file_data, merge_lists=self._merge_lists)
+                data,
+                data_file_data,
+                merge_lists=self._merge_lists,
+                merge_sets=self._merge_sets)
         return data
 
     def _process_top(self, system_id, preceding_data):

@@ -35,12 +35,24 @@ them are optional):
     for the list of ``data_sources``. The composite data source merges the data
     returned by each data source with the data from the previous data sources.
     This happens by merging mappings, preserving keys that are present in the
-    previous data, but not the data from the next data source. This process also
-    applies to nested mappings. If ``data_sources_merge_lists`` is set to
+    previous data, but not in the data from the next data source. This process
+    also applies to nested mappings. If ``data_sources_merge_lists`` is set to
     ``True``, sequences are also merged, meaning that elements that are not
     present in the list in the previous data are added to the list. If ``False``
     (the default), sequences replace each other, removing all elements that were
     only present in the previous data.
+
+:``data_sources_merge_sets``:
+    Flag controlling the behavior of the composite data source that is created
+    for the list of ``data_sources``. The composite data source merges the data
+    returned by each data source with the data from the previous data sources.
+    This happens by merging mappings, preserving keys that are present in the
+    previous data, but not in the data from the next data source. This process
+    also applies to nested mappings. If ``data_sources_merge_sets`` is set to
+    ``True`` (the default), sets are also merged, meaning that the resulting set
+    is the union of the set in the previous data and the set returned by the
+    data source. If ``False``, sets replace each other, removing all elements
+    that were only present in the previous data.
 
 :``http``:
     Dictionary of configuration options for the HTTP server. The options are
@@ -222,8 +234,9 @@ def _run_server_internal(config):
                 data_source_config['name'], data_source_config))
         value = next(iter(data_source_config.values()))
     data_sources_merge_lists = config.get('data_sources_merge_lists', False)
+    data_sources_merge_sets = config.get('data_sources_merge_sets', True)
     data_source = vinegar.data_source.get_composite_data_source(
-        data_sources, data_sources_merge_lists)
+        data_sources, data_sources_merge_lists, data_sources_merge_sets)
     # Configure the HTTP server.
     http_config = config.get('http', {})
     if not isinstance(http_config, collections.abc.Mapping):

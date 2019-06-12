@@ -208,7 +208,8 @@ class _CompositeDataSource(DataSource):
 
 def get_composite_data_source(
         data_sources: Sequence[Union[Tuple[str, Mapping[Any, Any]], DataSource]],
-        merge_lists: bool = False)-> DataSource:
+        merge_lists: bool = False,
+        merge_sets: bool = True) -> DataSource:
     """
     Return a data source that is a composite of the specified data sources.
 
@@ -289,7 +290,8 @@ def inject_data_source(obj: Any, data_source: DataSource) -> None:
 def merge_data_trees(
         tree1: Mapping[Any, Any],
         tree2: Mapping[Any, Any],
-        merge_lists: bool = False) -> Mapping[Any, Any]:
+        merge_lists: bool = False,
+        merge_sets: bool = True) -> Mapping[Any, Any]:
     """
     Merge two mappings, returning the resulting dictionary.
 
@@ -306,7 +308,13 @@ def merge_data_trees(
     from the second sequence, except for those elements that were already
     present in the first sequence. If ``merge_lists`` is set to ``False``, the
     second sequence simply replaces the first one (like for non-sequence types).
-    
+
+    If the value is a set, the process depends on the ``merge_sets`` option. If
+    it is set to ``True`` (the default), the resulting set is created by
+    calculating the union of both sets (``set1 | set2``). If it is set to
+    ``False``, the second set simply replaces the first one (like for non-set
+    types).
+
     In this context, the ``str``, ``bytes``, ``bytearray``, and ``memoryview``
     types are not treated as sequences. Values of this type always replace each
     other and are not merged.
@@ -331,14 +339,17 @@ def merge_data_trees(
         in case of key collisions.
     :param merge_lists:
         ``True`` if sequences in the mappings shall be merged, too, ``False``
-        they shall replace each other.
+        if they shall replace each other. The default is ``False``.
+    :param merge_sets:
+        ``True`` if sets in the mappings shall be merged, too, ``False`` if they
+        shall replace each other. The default is ``True``.
     :return:
         insertion-order preserving dictionary that contains the merged data from
         ``tree1`` and ``tree2``.
     """
-    return _merge_data_trees(tree1, tree2, merge_lists, None)
+    return _merge_data_trees(tree1, tree2, merge_lists, merge_sets, None)
 
-def _merge_data_trees(tree1, tree2, merge_lists, parent_key):
+def _merge_data_trees(tree1, tree2, merge_lists, merge_sets, parent_key):
     """
     Merge two dictionaries (or other kind of mappings). This is the internal
     implementation for `merge_data_trees`.
@@ -350,11 +361,13 @@ def _merge_data_trees(tree1, tree2, merge_lists, parent_key):
         if key in tree2:
             override_value = tree2[key]
             val_is_mapping = isinstance(value, collections.abc.Mapping)
+            val_is_set = isinstance(value, collections.abc.Set)
             val_is_seq = (isinstance(value, collections.abc.Sequence)
                     and not isinstance(
                         value, (bytearray, bytes, memoryview, str)))
             oval_is_mapping = isinstance(
                 override_value, collections.abc.Mapping)
+            oval_is_set = isinstance(override_value, collections.abc.Set)
             oval_is_seq = (isinstance(override_value, collections.abc.Sequence)
                 and not isinstance(
                     override_value, (bytearray, bytes, memoryview, str)))
@@ -367,6 +380,7 @@ def _merge_data_trees(tree1, tree2, merge_lists, parent_key):
                     value,
                     override_value,
                     merge_lists,
+                    merge_sets,
                     absolute_key)
             elif merge_lists and val_is_seq and oval_is_seq:
                 merged_list = list(value)
@@ -374,9 +388,15 @@ def _merge_data_trees(tree1, tree2, merge_lists, parent_key):
                     if element not in merged_list:
                         merged_list += [element]
                 merged[key] = merged_list
+            elif merge_sets and val_is_set and oval_is_set:
+                merged[key] = value | override_value
             elif val_is_mapping or oval_is_mapping:
                 raise TypeError(
                     'Cannot merge mapping type with non-mapping type while '
+                    'trying to merge value for key {0}.'.format(absolute_key))
+            elif merge_sets and (val_is_set or oval_is_set):
+                raise TypeError(
+                    'Cannot merge set type with non-set type while '
                     'trying to merge value for key {0}.'.format(absolute_key))
             elif merge_lists and (val_is_seq or oval_is_seq):
                 raise TypeError(

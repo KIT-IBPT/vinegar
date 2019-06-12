@@ -256,6 +256,49 @@ class TestYamlTargetSource(unittest.TestCase):
             # only those elements that were not already present.
             self.assertEqual([3, 4, 5, 1, 2], data['key'])
 
+    def test_config_merge_sets(self):
+        """
+        Test the 'merge_sets' configuration option.
+        """
+        with TemporaryDirectory() as tmpdir:
+            ds = YamlTargetSource({'root_dir': tmpdir})
+            # We have to fill the configuration directory with files that the
+            # data source can read.
+            root_dir_path = pathlib.Path(tmpdir)
+            _write_file(
+                root_dir_path / 'top.yaml',
+                """
+                '*':
+                    - a
+                    - b
+                """)
+            _write_file(
+                root_dir_path / 'a.yaml',
+                """
+                key: !!set
+                    1: null
+                    2: null
+                    3: null
+                """)
+            _write_file(
+                root_dir_path / 'b.yaml',
+                """
+                key: !!set
+                    2: null
+                    4: null 
+                    5: null
+                """)
+            (data, _) = ds.get_data('dummy', {}, '')
+            # We expect that the lists have not been merged and the second
+            # definition has replaced the first definition instead.
+            self.assertEqual({1, 2, 3, 4, 5}, data['key'])
+            # Now we repeat the test, but this time we set merge_sets to False.
+            ds = YamlTargetSource({'root_dir': tmpdir, 'merge_sets': False})
+            (data, _) = ds.get_data('dummy', {}, '')
+            # Now the elements that are defined later should be appended, but
+            # only those elements that were not already present.
+            self.assertEqual({2, 4, 5}, data['key'])
+
     def test_config_template(self):
         """
         Test the 'template' configuration option.
