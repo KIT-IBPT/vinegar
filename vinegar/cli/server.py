@@ -305,7 +305,12 @@ def _run_server_internal(config):
         # Start the servers.
         http_server.start()
         tftp_server.start()
-        shutdown_event.wait()
+        # We really want to wait until a KeyboardInterrupt is raised or we
+        # receive SIGTERM, but on Windows waiting indefinitely has th
+        # effect that the KeyboardInterrupt is not delivered any longer, so we
+        # wait for short amounts of time in a loop.
+        while not shutdown_event.wait(0.1):
+            pass
     except KeyboardInterrupt:
         pass
     finally:
