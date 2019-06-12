@@ -90,23 +90,30 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
             # We test that the handler correctly indicates when a file exists,
             # but is not readable. We can only test this on platforms where we
             # can make the file "not readable" by using chmod.
+            saved_mode = file_path.stat().st_mode
             file_path.chmod(0)
+            # On some platforms, the temporary directory cannot be deleted if
+            # there is a file for which we lack the permissions, so we change it
+            # back when we are done.
             try:
-                with open(str(file_path), 'rb'):
-                    file_readable = True
-            except PermissionError:
-                file_readable = False
-            if not file_readable:
-                config['file'] = str(file_path)
-                handler = self.get_request_handler(config)
-                self.call_handle(
-                    handler, '/test', expect_status=HTTPStatus.FORBIDDEN)
-                # We repeat this test while using a template engine.
-                config['template'] = 'jinja'
-                handler = self.get_request_handler(config)
-                self.call_handle(
-                    handler, '/test', expect_status=HTTPStatus.FORBIDDEN)
-                del config['template']
+                try:
+                    with open(str(file_path), 'rb'):
+                        file_readable = True
+                except PermissionError:
+                    file_readable = False
+                if not file_readable:
+                    config['file'] = str(file_path)
+                    handler = self.get_request_handler(config)
+                    self.call_handle(
+                        handler, '/test', expect_status=HTTPStatus.FORBIDDEN)
+                    # We repeat this test while using a template engine.
+                    config['template'] = 'jinja'
+                    handler = self.get_request_handler(config)
+                    self.call_handle(
+                        handler, '/test', expect_status=HTTPStatus.FORBIDDEN)
+                    del config['template']
+            finally:
+                file_path.chmod(saved_mode)
             # Next, we test that the handler correctly detects when the file
             # option actually refers to a directory.
             config['file'] = str(temp_path)

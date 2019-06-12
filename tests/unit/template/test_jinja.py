@@ -70,7 +70,7 @@ class TestJinjaEngine(unittest.TestCase):
             _write_file(
                 template_path,
                 """
-                {{ abc ~ def }}
+                {{ abc ~ def }}
                 """)
             self.assertEqual(
                 '123456', engine.render(str(template_path), {}))
@@ -243,15 +243,22 @@ class TestJinjaEngine(unittest.TestCase):
             tmpdir_path = pathlib.Path(tmpdir)
             template_path = tmpdir_path / 'test.jinja'
             _write_file(template_path, 'We do not care about the content')
+            saved_mode = template_path.stat().st_mode
             template_path.chmod(0)
+            # On some platforms, the temporary directory cannot be deleted if
+            # there is a file for which we lack the permissions, so we change it
+            # back when we are done.
             try:
-                with open(str(template_path), 'rb'):
-                    file_readable = True
-            except PermissionError:
-                file_readable = False
-            if not file_readable:
-                with self.assertRaises(PermissionError):
-                    engine.render(str(template_path), {})
+                try:
+                    with open(str(template_path), 'rb'):
+                        file_readable = True
+                except PermissionError:
+                    file_readable = False
+                if not file_readable:
+                    with self.assertRaises(PermissionError):
+                        engine.render(str(template_path), {})
+            finally:
+                template_path.chmod(saved_mode)
 
     def test_get_instance(self):
         """
