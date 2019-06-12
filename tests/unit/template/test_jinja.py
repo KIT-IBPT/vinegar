@@ -36,7 +36,7 @@ class TestJinjaEngine(unittest.TestCase):
                 {{ 'some text' }}
                 """)
             self.assertEqual(
-                'some text', engine.render(template_path.as_posix(), {}))
+                'some text', engine.render(str(template_path), {}))
             # Now we change the template.
             # We actually try several times with increasing sleep times. On
             # systems, where the time stamp is very precise, the test finishes
@@ -48,7 +48,7 @@ class TestJinjaEngine(unittest.TestCase):
                     """
                     {{ 'other text' }}
                     """)
-                new_render_result = engine.render(template_path.as_posix(), {})
+                new_render_result = engine.render(str(template_path), {})
                 if 'some text' != new_render_result:
                     break
                 time.sleep(sleep_time)
@@ -73,12 +73,12 @@ class TestJinjaEngine(unittest.TestCase):
                 {{ abc ~ def }}
                 """)
             self.assertEqual(
-                '123456', engine.render(template_path.as_posix(), {}))
+                '123456', engine.render(str(template_path), {}))
             # Context objects supplied to render should not override the context
             # objects from the configuration.
             self.assertEqual(
                 '123456',
-                engine.render(template_path.as_posix(), {'abc': 789}))
+                engine.render(str(template_path), {'abc': 789}))
 
     def test_config_env(self):
         """
@@ -103,7 +103,7 @@ class TestJinjaEngine(unittest.TestCase):
                 {! 'some text' !}
                 """)
             self.assertEqual(
-                'some text', engine.render(template_path.as_posix(), {}))
+                'some text', engine.render(str(template_path), {}))
 
     def test_config_provide_transform_functions(self):
         """
@@ -124,20 +124,20 @@ class TestJinjaEngine(unittest.TestCase):
             engine = JinjaEngine({'cache_enabled': False})
             self.assertEqual(
                 'SOME TEXT',
-                engine.render(template_path.as_posix(), {}))
+                engine.render(str(template_path), {}))
             # Explicitly setting provide_transform_functions should not make a
             # difference.
             engine = JinjaEngine(
                 {'cache_enabled': False, 'provide_transform_functions': True})
             self.assertEqual(
                 'SOME TEXT',
-                engine.render(template_path.as_posix(), {}))
+                engine.render(str(template_path), {}))
             # If we provide our own transform object in the context, this should
             # be hidden by the transform object provided by the template engine.
             self.assertEqual(
                 'SOME TEXT',
                 engine.render(
-                    template_path.as_posix(),
+                    str(template_path),
                     {'transform': 'text from context'}))
             # The "is defined" check should succeed if there is a transform
             # object, and fail if there is none.
@@ -148,14 +148,14 @@ class TestJinjaEngine(unittest.TestCase):
                 """)
             self.assertEqual(
                 'True',
-                engine.render(template_path.as_posix(), {}))
+                engine.render(str(template_path), {}))
             # Now, we set provide_transform_functions to False, which should
             # remove the transform object from the context.
             engine = JinjaEngine(
                 {'cache_enabled': False, 'provide_transform_functions': False})
             self.assertEqual(
                 'False',
-                engine.render(template_path.as_posix(), {}))
+                engine.render(str(template_path), {}))
             # If we provide our own transform object, that object should be
             # available.
             _write_file(
@@ -166,7 +166,7 @@ class TestJinjaEngine(unittest.TestCase):
             self.assertEqual(
                 'text from context',
                 engine.render(
-                    template_path.as_posix(),
+                    str(template_path),
                     {'transform': 'text from context'}))
 
     def test_config_relative_includes_and_root_dir(self):
@@ -228,7 +228,7 @@ class TestJinjaEngine(unittest.TestCase):
             tmpdir_path = pathlib.Path(tmpdir)
             template_path = tmpdir_path / 'test.jinja'
             with self.assertRaises(FileNotFoundError):
-                engine.render(template_path.as_posix(), {})
+                engine.render(str(template_path), {})
 
     def test_file_permission_denied(self):
         """
@@ -245,13 +245,13 @@ class TestJinjaEngine(unittest.TestCase):
             _write_file(template_path, 'We do not care about the content')
             template_path.chmod(0)
             try:
-                with open(template_path.as_posix(), 'rb'):
+                with open(str(template_path), 'rb'):
                     file_readable = True
             except PermissionError:
                 file_readable = False
             if not file_readable:
                 with self.assertRaises(PermissionError):
-                    engine.render(template_path.as_posix(), {})
+                    engine.render(str(template_path), {})
 
     def test_get_instance(self):
         """
@@ -290,10 +290,10 @@ class TestJinjaEngine(unittest.TestCase):
                 """)
             context = {
                 'include2': os.path.abspath(
-                    (tmpdir_path / 'include2.jinja').as_posix())}
+                    str(tmpdir_path / 'include2.jinja'))}
             self.assertEqual(
                 'this is from the included template',
-                engine.render(template_path.as_posix(), context))
+                engine.render(str(template_path), context))
 
 def _write_file(path, text):
     """
@@ -302,6 +302,6 @@ def _write_file(path, text):
     We use this to generate configuration files for tests.
     """
     if isinstance(path, pathlib.PurePath):
-        path = path.as_posix()
+        path = str(path)
     with open(path, mode='w') as file:
         file.write(inspect.cleandoc(text))

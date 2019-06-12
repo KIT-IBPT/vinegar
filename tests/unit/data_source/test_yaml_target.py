@@ -722,6 +722,6 @@ def _write_file(path, text):
     We use this to generate configuration files for tests.
     """
     if isinstance(path, pathlib.PurePath):
-        path = path.as_posix()
+        path = str(path)
     with open(path, mode='w') as file:
         file.write(inspect.cleandoc(text))

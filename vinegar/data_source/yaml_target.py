@@ -212,7 +212,7 @@ class YamlTargetSource(DataSource):
         # class so that we can detect it more easily when two path names refer
         # to the same file.
         self._top_file = os.path.abspath(
-            (self._root_dir_path / 'top.yaml').as_posix())
+            str(self._root_dir_path / 'top.yaml'))
         # We create a cache where we can save results of earlier calls to
         # get_data(...). As the data source has to be thread safe, the cache has
         # to be thread safe. If the cache size is zero or negative, we disable
@@ -426,13 +426,13 @@ class YamlTargetSource(DataSource):
             file_path_yaml = file_path.with_suffix('.yaml')
             if file_path_yaml.exists():
                 data_files.append(
-                    (file_name, os.path.abspath(file_path_yaml.as_posix())))
+                    (file_name, os.path.abspath(str(file_path_yaml))))
             else:
                 file_path_init_yaml = file_path / 'init.yaml'
                 if file_path_init_yaml.exists():
                     data_files.append(
                         (file_name,
-                            os.path.abspath(file_path_init_yaml.as_posix())))
+                            os.path.abspath(str(file_path_init_yaml))))
                 else:
                     raise FileNotFoundError(
                         'File {0} included by {1} could not be found.'
@@ -462,7 +462,7 @@ class YamlTargetSource(DataSource):
         if not pathlib.Path(self._top_file).exists():
             raise FileNotFoundError(
                 'Could not find top.yaml in {0}.'.format(
-                    self._root_dir_path.as_posix()))
+                    str(self._root_dir_path)))
         try:
             top_yaml = self._render(self._top_file, system_id, preceding_data)
             top_data = yaml.safe_load(top_yaml)

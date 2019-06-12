@@ -55,7 +55,7 @@ def version_for_file_path(
         version string based on the file's ``ctime`` and ``mtime``.
     """
     if isinstance(file_path, pathlib.PurePath):
-        file_path = file_path.as_posix()
+        file_path = str(file_path)
     try:
         file_stat = os.stat(file_path)
         file_info = 'file_path={0},ctime={1},mtime={2}'.format(

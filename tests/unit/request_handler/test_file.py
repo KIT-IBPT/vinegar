@@ -68,7 +68,7 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
             _write_file(file_path, 'Test 123')
             # We only test the handler with a prefix because attaching it to the
             # root is only allowed for HTTP when operating in file mode.
-            config = {'request_path': '/test', 'file': file_path.as_posix()}
+            config = {'request_path': '/test', 'file': str(file_path)}
             handler = self.get_request_handler(config)
             file_content = self.call_handle(
                 handler, '/test', expect_status=HTTPStatus.OK)
@@ -77,7 +77,7 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
             self.call_handle(handler, '/test/abc', expect_can_handle=False)
             # We test that the handler returns a "not found" result if the file
             # does not exist.
-            config['file'] = (temp_path / 'no_such_file.txt').as_posix()
+            config['file'] = str(temp_path / 'no_such_file.txt')
             handler = self.get_request_handler(config)
             self.call_handle(
                 handler, '/test', expect_status=HTTPStatus.NOT_FOUND)
@@ -92,12 +92,12 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
             # can make the file "not readable" by using chmod.
             file_path.chmod(0)
             try:
-                with open(file_path.as_posix(), 'rb'):
+                with open(str(file_path), 'rb'):
                     file_readable = True
             except PermissionError:
                 file_readable = False
             if not file_readable:
-                config['file'] = file_path.as_posix()
+                config['file'] = str(file_path)
                 handler = self.get_request_handler(config)
                 self.call_handle(
                     handler, '/test', expect_status=HTTPStatus.FORBIDDEN)
@@ -109,7 +109,7 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
                 del config['template']
             # Next, we test that the handler correctly detects when the file
             # option actually refers to a directory.
-            config['file'] = temp_path.as_posix()
+            config['file'] = str(temp_path)
             handler = self.get_request_handler(config)
             self.call_handle(
                 handler, '/test', expect_status=HTTPStatus.NOT_FOUND)
@@ -141,7 +141,7 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
             # id and data.
             _write_file(file_path, '{{ id is defined }}:{{ data is defined }}')
             config = {
-                'file': file_path.as_posix(),
+                'file': str(file_path),
                 'lookup_key': 'test_key',
                 'request_path': '/test/...',
                 'template': 'jinja'}
@@ -255,7 +255,7 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
             # at all.
             _write_file(file_path, '{{ id is defined }}:{{ data is defined }}')
             config = {
-                'file': file_path.as_posix(),
+                'file': str(file_path),
                 'request_path': '/test/...',
                 'template': 'jinja'}
             # If the lookup_key is not set, we expect no lookup to be run. We
@@ -322,7 +322,7 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
             # at all.
             _write_file(file_path, '{{ id is defined }}:{{ data is defined }}')
             config = {
-                'file': file_path.as_posix(),
+                'file': str(file_path),
                 'lookup_key': 'test_key',
                 'request_path': '/test/...',
                 'template': 'jinja'}
@@ -369,7 +369,7 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
             # want to test the extraction of lookup values.
             _write_file(file_path, '{{ id is defined }}:{{ data is defined }}')
             config = {
-                'file': file_path.as_posix(),
+                'file': str(file_path),
                 'lookup_key': 'test_key'}
             # We have find_system return None so that the lookup has no result.
             # We have get_data raise an exception because that method should
@@ -414,7 +414,7 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
             # going to be rendered.
             _write_file(file_path, '')
             config = {
-                'file': file_path.as_posix(),
+                'file': str(file_path),
                 'lookup_key': 'test_key',
                 'request_path': '/test/...'}
             # We have find_system return None so that the lookup has no result.
@@ -452,7 +452,7 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
             sub_dir_path.mkdir()
             sub_file_path = sub_dir_path / 'sub.txt'
             _write_file(sub_file_path, 'ABC')
-            config = {'root_dir': temp_path.as_posix()}
+            config = {'root_dir': str(temp_path)}
             # If the request_path option is missing, we should not be able to
             # create the handler.
             with self.assertRaises(KeyError):
@@ -699,7 +699,7 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
             # Things work a bit different when operating in file mode, so we
             # want to run some tests for that mode as well.
             del config['root_dir']
-            config['file'] = file_path.as_posix()
+            config['file'] = str(file_path)
             # Even for TFTP, we allow attaching directly to the root in file
             # mode when we expect a lookup value.
             config['request_path'] = '/...'
@@ -763,7 +763,7 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
             sub_file_path = sub_dir_path / 'sub.txt'
             _write_file(sub_file_path, 'ABC')
             # First, we test the handler when it is attached at the webroot.
-            config = {'request_path': '/', 'root_dir': temp_path.as_posix()}
+            config = {'request_path': '/', 'root_dir': str(temp_path)}
             handler = self.get_request_handler(config)
             file_content = self.call_handle(handler, '/test.txt')
             self.assertEqual('Test 123', file_content.decode())
@@ -815,7 +815,7 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
             # We set lookup_key to ":system_id:" so that we do not have to mock
             # find_system.
             config = {
-                'file': file_path.as_posix(),
+                'file': str(file_path),
                 'lookup_key': ':system_id:',
                 'request_path': '/test/...'}
             data_source = unittest.mock.Mock(spec=DataSource)
@@ -857,7 +857,7 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
             # We set lookup_key to ":system_id:" so that we do not have to mock
             # find_system.
             config = {
-                'file': file_path.as_posix(),
+                'file': str(file_path),
                 'lookup_key': ':system_id:',
                 'request_path': '/test/...',
                 'template': 'jinja'}
@@ -910,12 +910,12 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
             _write_file(root_file_path, 'root')
             _write_file(sub_file_path, 'sub')
             # First, we test the handler when it is attached at the webroot.
-            config = {'request_path': '/', 'root_dir': root_path.as_posix()}
+            config = {'request_path': '/', 'root_dir': str(root_path)}
             handler = self.get_request_handler(config)
             self._test_path_security_run_checks(handler, '')
             # Second, we test the handler when it is using a prefix.
             config = {
-                'request_path': '/prefix', 'root_dir': root_path.as_posix()}
+                'request_path': '/prefix', 'root_dir': str(root_path)}
             handler = self.get_request_handler(config)
             self._test_path_security_run_checks(handler, '/prefix')
 
@@ -1154,7 +1154,7 @@ class TestHttpFileRequestHandler(TestFileRequestHandlerBase):
             # with this test.
             config = {
                 'request_path': '/test',
-                'file': file_path.as_posix()}
+                'file': str(file_path)}
             handler = self.get_request_handler(config)
             # If the content type is not set explicitly, we expect a content
             # type of "application/octet-stream" when not using a template
@@ -1208,7 +1208,7 @@ class TestHttpFileRequestHandler(TestFileRequestHandlerBase):
             _write_file(special_path, 'Test 123')
             config = {
                 'request_path': '/test',
-                'root_dir': temp_path.as_posix()}
+                'root_dir': str(temp_path)}
             handler = self.get_request_handler(config)
             # If the content_type_map option is not set, everything should
             # default to the content_type option, which is
@@ -1265,7 +1265,7 @@ class TestHttpFileRequestHandler(TestFileRequestHandlerBase):
             # We should get an exception when we try to set
             # the content_type_map while operating in file mode.
             del config['root_dir']
-            config['file'] = text_path.as_posix()
+            config['file'] = str(text_path)
             with self.assertRaises(ValueError):
                 self.get_request_handler(config)
 
@@ -1284,7 +1284,7 @@ class TestHttpFileRequestHandler(TestFileRequestHandlerBase):
             # We test the handler when it is attached at the webroot. This test
             # is specific to the HTTP version because such a setup is not
             # allowed for TFTP.
-            config = {'request_path': '/', 'file': file_path.as_posix()}
+            config = {'request_path': '/', 'file': str(file_path)}
             handler = self.get_request_handler(config)
             file_content = self.call_handle(
                 handler, '/', expect_status=HTTPStatus.OK)
@@ -1299,7 +1299,7 @@ class TestHttpFileRequestHandler(TestFileRequestHandlerBase):
             temp_path = pathlib.Path(tmpdir)
             file_path = temp_path / 'test.txt'
             _write_file(file_path, 'Test 123')
-            config = {'request_path': '/test', 'file': file_path.as_posix()}
+            config = {'request_path': '/test', 'file': str(file_path)}
             handler = self.get_request_handler(config)
             file_content = self.call_handle(
                 handler, '/test', expect_status=HTTPStatus.OK, method='HEAD')
@@ -1370,7 +1370,7 @@ class TestTftpFileRequestHandler(TestFileRequestHandlerBase):
             file_path = temp_path / 'test.txt'
             _write_file(file_path, 'Test 123')
             # First, we test the handler when it is attached at the webroot.
-            config = {'request_path': '/', 'file': file_path.as_posix()}
+            config = {'request_path': '/', 'file': str(file_path)}
             # In TFTP mode, attaching a request handler directly to the root is
             # not allowed when operating in file mode.
             with self.assertRaises(ValueError):
@@ -1402,7 +1402,7 @@ class TestTftpFileRequestHandler(TestFileRequestHandlerBase):
             sub_file_path = sub_dir_path / 'sub.txt'
             _write_file(sub_file_path, 'ABC')
             # First, we test the handler when it is attached at the webroot.
-            config = {'request_path': '/', 'root_dir': temp_path.as_posix()}
+            config = {'request_path': '/', 'root_dir': str(temp_path)}
             handler = self.get_request_handler(config)
             file_content = self.call_handle(handler, 'test.txt')
             self.assertEqual('Test 123', file_content.decode())
@@ -1448,6 +1448,6 @@ def _write_file(path, text):
     We use this to generate configuration files for tests.
     """
     if isinstance(path, pathlib.PurePath):
-        path = path.as_posix()
+        path = str(path)
     with open(path, mode='w') as file:
         file.write(inspect.cleandoc(text))
