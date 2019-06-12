@@ -249,10 +249,31 @@ class HttpServer:
         new daemon thread for each request.
 
         This server also sets the address family to ``socket.AF_INET6`` so that
-        IPv6 connections are supported.
+        IPv6 connections are supported and overrides the `server_bind` method to
+        set the ``IPPROTO_IPV6`` ``IPV6_V6ONLY`` socket option to 0.
         """
         address_family = socket.AF_INET6
         daemon_threads = True
+
+        def server_bind(self):
+            # socket.IPPROTO_IPV6 is not available when running on Windows and
+            # using Python < 3.8, so we fall back to a fixed value if it is not
+            # available.
+            try:
+                ipproto_ipv6 = socket.IPPROTO_IPV6
+            except AttributeError:
+                ipproto_ipv6 = 41
+            # socket.IPV6_V6ONLY, on the other hand, should be available on
+            # Windows, at least for the Python versions we care about (>= 3.5).
+            # If it is not available or if the call to setsockopt fails, we log
+            # a warning, but continue.
+            try:
+                self.socket.setsockopt(ipproto_ipv6, socket.IPV6_V6ONLY, 0)
+            except:
+                logger.warning(
+                    'Cannot set IPV6_V6ONLY socket option to 0, socket might '
+                    'not be reachable via IPv4.')
+            super().server_bind()
 
     def __init__(
             self,

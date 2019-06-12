@@ -270,6 +270,23 @@ class TftpServer:
                     socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 # This timeout specifies how quickly we can shutdown the server.
                 self._socket.settimeout(0.1)
+                # socket.IPPROTO_IPV6 is not available when running on Windows
+                # and using Python < 3.8, so we fall back to a fixed value if it
+                # is not available.
+                try:
+                    ipproto_ipv6 = socket.IPPROTO_IPV6
+                except AttributeError:
+                    ipproto_ipv6 = 41
+                # socket.IPV6_V6ONLY, on the other hand, should be available on
+                # Windows, at least for the Python versions we care about
+                # (>= 3.5). If it is not available or if the call to setsockopt
+                # fails, we log a warning, but continue.
+                try:
+                    self._socket.setsockopt(ipproto_ipv6, socket.IPV6_V6ONLY, 0)
+                except:
+                    logger.warning(
+                        'Cannot set IPV6_V6ONLY socket option to 0, socket '
+                        'might not be reachable via IPv4.')
                 self._socket.bind((self._bind_address, self._bind_port))
                 logger.info(
                     'TFTP server is listening on %s.',
@@ -804,6 +821,22 @@ class _TftpReadRequest:
         # a with statement.
         with self._socket:
             self._socket.settimeout(self._timeout)
+            # socket.IPPROTO_IPV6 is not available when running on Windows and
+            # using Python < 3.8, so we fall back to a fixed value if it is not
+            # available.
+            try:
+                ipproto_ipv6 = socket.IPPROTO_IPV6
+            except AttributeError:
+                ipproto_ipv6 = 41
+            # socket.IPV6_V6ONLY, on the other hand, should be available on
+            # Windows, at least for the Python versions we care about (>= 3.5).
+            # If it is not available or if the call to setsockopt fails, we do
+            # not even log a warning because we most likely already logged that
+            # warning for the main socket.
+            try:
+                self._socket.setsockopt(ipproto_ipv6, socket.IPV6_V6ONLY, 0)
+            except:
+                pass
             try:
                 self._file = self._handler_function(
                     self._filename, self._client_address, self._handler_context)
