@@ -232,7 +232,6 @@ def _run_server_internal(config):
         data_sources.append(
             vinegar.data_source.get_data_source(
                 data_source_config['name'], data_source_config))
-        value = next(iter(data_source_config.values()))
     data_sources_merge_lists = config.get('data_sources_merge_lists', False)
     data_sources_merge_sets = config.get('data_sources_merge_sets', True)
     data_source = vinegar.data_source.get_composite_data_source(
