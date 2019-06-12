@@ -14,7 +14,7 @@ import socketserver
 import threading
 import typing
 
-from vinegar.utils.socket import socket_address_to_str
+from vinegar.utils.socket import ipv6_address_unwrap, socket_address_to_str
 
 # Logger used by this module
 logger = logging.getLogger(__name__)
@@ -158,6 +158,11 @@ class HttpServer:
         `log_message` because that method is not used directly by the base
         class.
         """
+
+        def address_string(self):
+            # We override this method so that we can unwrap an IPv4 address
+            # wrapped in an IPv6 address
+            return ipv6_address_unwrap(self.client_address[0])
 
         def log_error(self, format, *args):
             # We do not use log_error directly and the base class does not use
