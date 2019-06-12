@@ -562,6 +562,14 @@ class FileRequestHandlerBase(DataSourceAware):
                 return (io.BytesIO(render_result.encode()), file)
             else:
                 return (open(file, mode='rb'), file)
+        except PermissionError:
+            # On Windows, we get a permission error when trying to open a
+            # directory, so we want to catch such a situation and treat it
+            # like a IsADirectoryError.
+            if os.path.isdir(file):
+                return None, file
+            else:
+                raise
         except (FileNotFoundError, IsADirectoryError):
             # We treat a request to a file that is actually a directory like a
             # request to a file that does not exist. This is consistent with our
