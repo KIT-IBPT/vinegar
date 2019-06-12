@@ -42,7 +42,7 @@ This means that the default value of the ``content_type`` option (only available
 in the HTTP version of the handler) depends on whether a template engine is used
 or not.
 
-.. _request_path_matching:
+.. _request_handler_file_request_path_matching:
 
 Request path matching
 ---------------------
@@ -90,8 +90,8 @@ The value that replaces the placeholder in the actual request path is
 transformed according to the configuration set through the
 ``lookup_value_transform`` configuration option and then used to find a system
 ID through `DataSource.find_system`. This is most useful when also using a
-template engine (see :ref:`using_templates`). If no matching system can be
-found, the request file is treated as not existing (unless
+template engine (see :ref:`request_handler_file_templates`). If no matching
+system can be found, the request file is treated as not existing (unless
 ``lookup_no_result_action`` is set to ``continue``).
 
 Placeholders do not necessarily have to appear at the end of a request path. For
@@ -102,7 +102,7 @@ Placeholders can be used in file mode as well as in directory mode. Like request
 paths that do not use place holders, the extra portion of the path will be used
 as the path of the file inside the directory, when operating in directory mode.
 
-.. _using_templates:
+.. _request_handler_file_templates:
 
 Using templates
 ---------------
@@ -131,7 +131,7 @@ are available. The same applies if ``find_system`` raises an exception and
 ``lookup_no_result_action`` is set to ``continue`` and
 ``data_source_error_action`` is set to ``ignore`` or ``warn``.
 
-.. _config_example:
+.. _request_handler_file_config_example:
 
 Configuration example
 ---------------------
@@ -184,9 +184,10 @@ used to control their behavior. Most of them apply both the HTTP and TFTP
 handler, but some are specific to only one of the two.
 
 For a more detailed discussion about the options controlling request path
-matching, please refer to :ref:`request_path_matching`. More information about
-the templating mechanism can be found in :ref:`using_templates` and a example
-making use of some of the options an be found in :ref:`config_example`.
+matching, please refer to :ref:`request_handler_file_request_path_matching`.
+More information about the templating mechanism can be found in
+:ref:`request_handler_file_templates` and a example making use of some of the
+options an be found in :ref:`request_handler_file_config_example`.
 
 The common options are:
 
@@ -204,8 +205,8 @@ The common options are:
     mode, the value of this option is treated as a prefix. If the ``lookup_key``
     option is set, the specified path must contain a placeholder (which is
     configured through the ``lookup_value_placeholder`` option). Please refer to
-    :ref:`request_path_matching` for a more thorough discussion of request path
-    matching.
+    :ref:`request_handler_file_request_path_matching` for a more thorough
+    discussion of request path matching.
 
 :``root_dir`` (mandatory):
     Path to the directory that contains the files that are served by the request

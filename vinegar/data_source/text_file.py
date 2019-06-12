@@ -9,14 +9,15 @@ This data source supports the `~DataSource.find_sytem` method, which makes it
 perfect for being used as the root source that defines the list of existing
 systems.
 
-.. _specify_file_format:
+.. _data_source_text_file_file_format:
 
 Specifying the file format
 --------------------------
 
 This section only describes the options related to the file format. For a full
-list of supported options, please refer to :ref:`config_options`. For an
-example configuration, please refer to :ref:`config_example`.
+list of supported options, please refer to
+:ref:`data_source_text_file_config_options`. For an example configuration,
+please refer to :ref:`data_source_text_file_config_example`.
 
 The centerpiece of the file format configuration is a regular expression that
 defines the format of a single line in the file. This regular expression is
@@ -102,7 +103,7 @@ is logged and only the first line for the system ID is used (option value
 option to ``error``. If the option is set to ``ignore``, only the first line is
 used, but no warning message is logged.
 
-.. _config_example:
+.. _data_source_text_file_config_example:
 
 Configuration example
 ---------------------
@@ -245,7 +246,7 @@ final (transformed) data and the ``find_first_match`` configuration option has
 been enabled. If it had not been enabled, the result would be ``None`` because
 ``system4.mydomain.example.com`` has the same MAC address.
 
-.. _config_options:
+.. _data_source_text_file_config_options:
 
 Configuration options
 ---------------------
@@ -253,7 +254,8 @@ Configuration options
 This data source has several configuration options that can be used to control
 its behavior. This section only gives an overview of the available options. For
 a more detailed discussion about the options controlling the file format, please
-refer to :ref:`specify_file_format` and :ref:`config_example`.
+refer to :ref:`data_source_text_file_file_format` and
+:ref:`data_source_text_file_config_example`.
 
 :``file`` (mandatory):
     Path to the text file (as a ``str``).
@@ -264,19 +266,20 @@ refer to :ref:`specify_file_format` and :ref:`config_example`.
     ``fullmatch``). Consequently, there is no need to use start of string or end
     of string anchors. The regular expression must define catching groups that
     can then be referenced from the ``system_id`` and ``variables``
-    configuration. See :ref:`specify_file_format` for details.
+    configuration. See :ref:`data_source_text_file_file_format` for details.
 
 :``system_id`` (mandatory):
     Configuration describing how the system ID is extracted from a line.
     This configuration refers to a catching group of ``regular_expression``
-    through its ``source`` option. See :ref:`specify_file_format` for details.
+    through its ``source`` option. See :ref:`data_source_text_file_file_format`
+    for details.
 
 :``variables`` (mandatory):
     Configuration describing how the various data itmes are extracted from a
     line. This configuration option expects a ``dict`` where each key-value pair
     refers to one data item, using the key as the key in the data tree generated
     for the system and the value as the configuration for that data item. See
-    :ref:`specify_file_format` for details.
+    :ref:`data_source_text_file_file_format` for details.
 
 :``cache_enabled`` (optional):
     If ``True`` (the default), the contents of the text file are read once and
