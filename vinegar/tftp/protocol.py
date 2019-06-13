@@ -6,37 +6,37 @@ import enum
 import struct
 import typing
 
-# Default size of a transfer block in bytes. This block size is used if the
-# client does not request a specific block size.
+#: Default size of a transfer block in bytes. This block size is used if the
+#: client does not request a specific block size.
 DEFAULT_BLOCK_SIZE = 512
 
-# Highest possible block number. Beyond this number, the block counter has to
-# wrap back to zero or one.
+#: Highest possible block number. Beyond this number, the block counter has to
+#: wrap back to zero or one.
 MAX_BLOCK_NUMBER = 65535
 
-# Maximum transfer block size that may be requested by a client.
+#: Maximum transfer block size that may be requested by a client.
 MAX_BLOCK_SIZE = 65464
 
-# Maximum size of a request packet in bytes. A TFTP request must never exceed
-# that size.
+#: Maximum size of a request packet in bytes. A TFTP request must never exceed
+#: that size.
 MAX_REQUEST_PACKET_SIZE = 512
 
-# Maximum timeout interval that is alloed by RFC 2349.
+#: Maximum timeout interval that is alloed by RFC 2349.
 MAX_TIMEOUT = 255
 
-# Minimum block size that may be requested by a client.
+#: Minimum block size that may be requested by a client.
 MIN_BLOCK_SIZE = 8
 
-# Minimum timeout interval that is allowed by RFC 2349.
+#: Minimum timeout interval that is allowed by RFC 2349.
 MIN_TIMEOUT = 1
 
-# Name of the block-size option.
+#: Name of the block-size option.
 OPTION_BLOCK_SIZE = 'blksize'
 
-# Name of the timeout-interval option.
+#: Name of the timeout-interval option.
 OPTION_TIMEOUT = 'timeout'
 
-# Name of the transfer-size option.
+#: Name of the transfer-size option.
 OPTION_TRANSFER_SIZE = 'tsize'
 
 @enum.unique
@@ -45,13 +45,30 @@ class ErrorCode(enum.IntEnum):
     Code identifying the type of of error in a TFTP error packet.
     """
 
+    #: Error does not fall into any of the other well-defined categories.
     NOT_DEFINED = 0
+
+    #: Requested file could not be found.
     FILE_NOT_FOUND = 1
+
+    #: Access to the requested file has been forbidden.
     ACCESS_VIOLATION = 2
+
+    #: The disk is full (for write requests).
     DISK_FULL = 3
+
+    #: The requested operation is not allowed in this context by the protocol
+    #: specification.
     ILLEGAL_OPERATION = 4
+    
+    #: The packet was received from an unexpected source address or port.
     UNKNOWN_TRANSFER_ID = 5
+    
+    #: File does already exist and is not overwritten (for write requests).
     FILE_ALREADY_EXISTS = 6
+
+    #: The specified user is not known by this server (for write requests using
+    #: the mail mode).
     NO_SUCH_USER = 7
 
     @staticmethod
@@ -83,11 +100,24 @@ class Opcode(enum.IntEnum):
     Code identifying the type of of a TFTP packet.
     """
 
+    #: Client request for reading a file.
     READ_REQUEST = 1
+
+    #: Client request for writing a file.
     WRITE_REQUEST = 2
+
+    #: Data transfer from the server to the client (read) or from the client to
+    #: the server (write).
     DATA = 3
+
+    #: Acknowledgement of a received ``DATA`` packet.
     ACK = 4
+    
+    #: Error message.
     ERROR = 5
+    
+    #: Acknowledgement of supported options (send from the server to the client
+    #: as the first response to a request specifying supported options).
     OPTIONS_ACK = 6 
 
     @staticmethod
@@ -121,8 +151,16 @@ class TransferMode(enum.IntEnum):
     Transfer mode that can be requested by a client.
     """
 
+    #: Netascii transfer mode. In this mode, all line breaks are converted to
+    #: CR LF before sending them over the wire.
     NETASCII = 1
+    
+    #: Binary transfer mode. In this mode, bytes are sent without any
+    #: conversion.
     OCTET = 2
+    
+    #: Deprecated mail transfer mode. This mode could be used by clients to
+    #: write a file that would then be sent to a user by e-mail.
     MAIL = 3
 
     @staticmethod
