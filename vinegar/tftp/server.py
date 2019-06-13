@@ -5,6 +5,7 @@ TFTP server component of Vinegar.
 import abc
 import io
 import logging
+import os
 import re
 import socket
 import struct
@@ -12,11 +13,11 @@ import threading
 import time
 import typing
 
-from vinegar.tftp.protocol import DEFAULT_BLOCK_SIZE, MAX_BLOCK_SIZE, \
-    MAX_BLOCK_NUMBER, MAX_REQUEST_PACKET_SIZE, MAX_TIMEOUT, MIN_BLOCK_SIZE, \
-    MIN_TIMEOUT, OPTION_BLOCK_SIZE, OPTION_TIMEOUT, ErrorCode, Opcode, \
-    TransferMode, data_packet, decode_ack, decode_error, decode_read_request, \
-    error_packet, options_ack_packet
+from vinegar.tftp.protocol import (DEFAULT_BLOCK_SIZE, MAX_BLOCK_SIZE,
+    MAX_BLOCK_NUMBER, MAX_REQUEST_PACKET_SIZE, MAX_TIMEOUT, MIN_BLOCK_SIZE,
+    MIN_TIMEOUT, OPTION_BLOCK_SIZE, OPTION_TIMEOUT, OPTION_TRANSFER_SIZE,
+    ErrorCode, Opcode, TransferMode, data_packet, decode_ack, decode_error,
+    decode_read_request, error_packet, options_ack_packet)
 
 from vinegar.utils.socket import socket_address_to_str
 
@@ -143,9 +144,11 @@ class TftpServer:
     Server implementing the TFTP (RFC 1350) protocol. This server can serve
     arbitrary resources (read-only), not just files on the file system.
 
-    This implementation supports the TFTP blocksize option (RFC 2348) and the
-    TFTP timeout interval option (RFC 2349), but not the TFTP transfer size
-    option.
+    This implementation supports the TFTP blocksize option (RFC 2348), the TFTP
+    timeout interval option (RFC 2349), and the TFTP transfer size option.
+    Support for the transfer size option is limited to binary transfers and
+    request handlers that provide a file object for which we can actually
+    determine the size.
 
     The server internally uses a daemon thread that processes incoming requests.
     For each request, it creates a new thread that processes this request and
@@ -661,6 +664,11 @@ class _TftpReadRequest:
                     and requested_timeout <= max_timeout):
                 supported_options[OPTION_TIMEOUT] = str(requested_timeout)
                 self._timeout = requested_timeout
+        # When the client specifies the transfer size option, it has to send a
+        # value of 0 with the read request.
+        if (OPTION_TRANSFER_SIZE in options
+                and options[OPTION_TRANSFER_SIZE] == '0'):
+            supported_options[OPTION_TRANSFER_SIZE] = None
         self._options = supported_options
         # After we have setup everything, we can start the processing thread.
         self._thread = threading.Thread(target=self._run, daemon=True)
@@ -739,6 +747,52 @@ class _TftpReadRequest:
             # When sending the error, we want to use a fresh timeout value.
             self._socket.settimeout(self._timeout)
             self._send(data)
+
+    def _process_transfer_size_option(self):
+        # If the client did not specify the transfer size option, we do not have
+        # to do anything.
+        if OPTION_TRANSFER_SIZE not in self._options:
+            return
+        # In text mode, determing the file size is hard because the size might
+        # might change due to line breaks being converted. For this reason, we
+        # do not support the transfer size option in text mode. This is
+        # consistent with what other TFTP servers (e.g. tftpd-hpa) do.
+        if self._netascii_mode:
+            # We have to delete the transfer size option so that we do not try
+            # to send the option back to the client.
+            del self._options[OPTION_TRANSFER_SIZE]
+            return
+        # In binary mode, we can try to determine the transfer size for two
+        # cases: If it is an instance of BytesIO or if it is backed by a real
+        # file.
+        if isinstance(self._file, io.BytesIO):
+            # An instance of bytes IO should have a getbuffer() method that
+            # returns a memoryview instance. The length of that memoryview is
+            # the size of the buffer and we substract the current position
+            # because in theory the code that returned the file object could
+            # already have read from it.
+            try:
+                self._options[OPTION_TRANSFER_SIZE] = str(
+                    len(self._file.getbuffer()) - self._file.tell())
+            except:
+                # We ignore any exception that might happen here: We can still
+                # transfer the file, we just cannot tell its size.
+                del self._options[OPTION_TRANSFER_SIZE]
+        else:
+            # For any other file, we check whether we can get the backing file
+            # descriptor. If we can, we try to get the size of the associated
+            # file. This might fail if the file descriptor does not refer to a
+            # regular file, but something like a pipe. If we can get the file
+            # size, we substract the current position from it because in theory,
+            # the code that returned the file object might already have read
+            # some data.
+            try:
+                file_stat = os.fstat(self._file.fileno())
+                self._options[OPTION_TRANSFER_SIZE] = str(file_stat.st_size)
+            except:
+                # We ignore any exception that might happen here: We can still
+                # transfer the file, we just cannot tell its size.
+                del self._options[OPTION_TRANSFER_SIZE]
 
     def _receive(self):
         self._set_socket_timeout()
@@ -873,6 +927,10 @@ class _TftpReadRequest:
             # We always want to close the file-like object, so we use it in a
             # with statement.
             with self._file:
+                # If the client requested the file size, we tell it if possible.
+                # We do this here because we need access to the file in order to
+                # determine its size.
+                self._process_transfer_size_option()
                 if self._netascii_mode:
                     self._file_reader = _TftpReadRequest._NetasciiReader(
                         self._file)

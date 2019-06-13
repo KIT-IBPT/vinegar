@@ -36,6 +36,9 @@ OPTION_BLOCK_SIZE = 'blksize'
 # Name of the timeout-interval option.
 OPTION_TIMEOUT = 'timeout'
 
+# Name of the transfer-size option.
+OPTION_TRANSFER_SIZE = 'tsize'
+
 @enum.unique
 class ErrorCode(enum.IntEnum):
     """
