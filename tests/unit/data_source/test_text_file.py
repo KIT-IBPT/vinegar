@@ -40,7 +40,9 @@ class TestTextFileSource(unittest.TestCase):
                     'vinegar.data_source.text_file.logger',
                     autospec=True) as mock_logger:
                 ds.get_data('system', {}, '')
-                mock_logger.warning.assert_called_once()
+                # assert_called_once does not exist in Python 3.5, so we use a
+                # workaround here.
+                self.assertEqual(1, mock_logger.warning.call_count)
             # If the option is set to error, we expect an exception.
             config['duplicate_system_id_action'] = 'error'
             ds = TextFileSource(config)
@@ -63,7 +65,9 @@ class TestTextFileSource(unittest.TestCase):
                     'vinegar.data_source.text_file.logger',
                     autospec=True) as mock_logger:
                 ds.get_data('system', {}, '')
-                mock_logger.warning.assert_called_once()
+                # assert_called_once does not exist in Python 3.5, so we use a
+                # workaround here.
+                self.assertEqual(1, mock_logger.warning.call_count)
 
     def test_config_find_first_match(self):
         """
@@ -119,7 +123,9 @@ class TestTextFileSource(unittest.TestCase):
                     'vinegar.data_source.text_file.logger',
                     autospec=True) as mock_logger:
                 ds.get_data('system', {}, '')
-                mock_logger.warning.assert_called_once()
+                # assert_called_once does not exist in Python 3.5, so we use a
+                # workaround here.
+                self.assertEqual(1, mock_logger.warning.call_count)
             # If we set it to error, we expect an exception.
             config['mismatch_action'] = 'error'
             ds = TextFileSource(config)
@@ -141,7 +147,9 @@ class TestTextFileSource(unittest.TestCase):
                     'vinegar.data_source.text_file.logger',
                     autospec=True) as mock_logger:
                 ds.get_data('system', {}, '')
-                mock_logger.warning.assert_called_once()
+                # assert_called_once does not exist in Python 3.5, so we use a
+                # workaround here.
+                self.assertEqual(1, mock_logger.warning.call_count)
 
     def test_config_regular_expression_ignore(self):
         """
