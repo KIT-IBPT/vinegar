@@ -13,7 +13,9 @@ import vinegar.template.jinja
 
 from tempfile import TemporaryDirectory
 
-from vinegar.template.jinja import JinjaEngine
+from vinegar.utils.odict import  OrderedDict
+
+from vinegar.template.jinja import JinjaEngine, SerializerExtension
 
 class TestJinjaEngine(unittest.TestCase):
     """
@@ -301,6 +303,263 @@ class TestJinjaEngine(unittest.TestCase):
             self.assertEqual(
                 'this is from the included template',
                 engine.render(str(template_path), context))
+
+class TestSerializersExtension(unittest.TestCase):
+    """
+    Tests for the `SerializersExtension`.
+    """
+
+    def test_filter_json(self):
+        """
+        Test that the ``json`` filter can be used.
+        """
+        # We are going to overwrite the template file, so we have to disable the
+        # cache in order to avoid problems.
+        engine = JinjaEngine({'cache_enabled': False})
+        with TemporaryDirectory() as tmpdir:
+            # We have to generate a template file that can be read by the
+            # template engine.
+            tmpdir_path = pathlib.Path(tmpdir)
+            template_path = tmpdir_path / 'test.jinja'
+            _write_file(
+                template_path,
+                """
+                {{ value | json }}
+                """)
+            value = OrderedDict()
+            value['def'] = 456
+            value['abc'] = 123
+            self.assertEqual(
+                '{"def": 456, "abc": 123}',
+                engine.render(
+                    str(template_path), {'value': value}))
+            # We also want to test the sort_keys option.
+            _write_file(
+                template_path,
+                """
+                {{ value | json(sort_keys=False) }}
+                """)
+            self.assertEqual(
+                '{"def": 456, "abc": 123}',
+                engine.render(
+                    str(template_path), {'value': value}))
+            _write_file(
+                template_path,
+                """
+                {{ value | json(sort_keys=True) }}
+                """)
+            self.assertEqual(
+                '{"abc": 123, "def": 456}',
+                engine.render(
+                    str(template_path), {'value': value}))
+            # And we want to test the indent option (indent=None is the default)
+            _write_file(
+                template_path,
+                """
+                {{ value | json }}
+                """)
+            self.assertEqual(
+                '[1, 2]',
+                engine.render(
+                    str(template_path), {'value': [1, 2]}))
+            _write_file(
+                template_path,
+                """
+                {{ value | json(indent=None) }}
+                """)
+            self.assertEqual(
+                '[1, 2]',
+                engine.render(
+                    str(template_path), {'value': [1, 2]}))
+            _write_file(
+                template_path,
+                """
+                {{ value | json(indent=0) }}
+                """)
+            self.assertEqual(
+                '[\n1,\n2\n]',
+                engine.render(
+                    str(template_path), {'value': [1, 2]}))
+            _write_file(
+                template_path,
+                """
+                {{ value | json(indent=2) }}
+                """)
+            self.assertEqual(
+                '[\n  1,\n  2\n]',
+                engine.render(
+                    str(template_path), {'value': [1, 2]}))
+
+    def test_filter_load_json(self):
+        """
+        Test that the ``load_json`` filter can be used.
+        """
+        engine = JinjaEngine({})
+        with TemporaryDirectory() as tmpdir:
+            # We have to generate a template file that can be read by the
+            # template engine.
+            tmpdir_path = pathlib.Path(tmpdir)
+            template_path = tmpdir_path / 'test.jinja'
+            _write_file(
+                template_path,
+                """
+                {{ ('{"abc": 123}' | load_json)['abc'] }}
+                """)
+            self.assertEqual(
+                '123',
+                engine.render(str(template_path), {}))
+
+    def test_filter_load_yaml(self):
+        """
+        Test that the ``load_yaml`` filter can be used.
+        """
+        engine = JinjaEngine({})
+        with TemporaryDirectory() as tmpdir:
+            # We have to generate a template file that can be read by the
+            # template engine.
+            tmpdir_path = pathlib.Path(tmpdir)
+            template_path = tmpdir_path / 'test.jinja'
+            _write_file(
+                template_path,
+                """
+                {{ ('abc: 123' | load_yaml)['abc'] }}
+                """)
+            self.assertEqual(
+                '123',
+                engine.render(str(template_path), {}))
+
+    def test_filter_yaml(self):
+        """
+        Test that the ``yaml`` filter can be used.
+        """
+        # We are going to overwrite the template file, so we have to disable the
+        # cache in order to avoid problems.
+        engine = JinjaEngine({'cache_enabled': False})
+        with TemporaryDirectory() as tmpdir:
+            # We have to generate a template file that can be read by the
+            # template engine.
+            tmpdir_path = pathlib.Path(tmpdir)
+            template_path = tmpdir_path / 'test.jinja'
+            _write_file(
+                template_path,
+                """
+                {{ value | yaml }}
+                """)
+            self.assertEqual(
+                '{abc: 123}',
+                engine.render(
+                    str(template_path), {'value': {'abc': 123}}))
+            # We also want to test the flow_style option. The default is True.
+            _write_file(
+                template_path,
+                """
+                {{ value | yaml(flow_style=True) }}
+                """)
+            self.assertEqual(
+                '{abc: 123}',
+                engine.render(
+                    str(template_path), {'value': {'abc': 123}}))
+            _write_file(
+                template_path,
+                """
+                {{ value | yaml(flow_style=False) }}
+                """)
+            self.assertEqual(
+                'abc: 123',
+                engine.render(
+                    str(template_path), {'value': {'abc': 123}}))
+
+    def test_tag_import_json(self):
+        """
+        Test that the ``import_json`` tag can be used.
+        """
+        engine = JinjaEngine({})
+        with TemporaryDirectory() as tmpdir:
+            # We have to generate a template file that can be read by the
+            # template engine.
+            tmpdir_path = pathlib.Path(tmpdir)
+            template_path = tmpdir_path / 'test.jinja'
+            _write_file(
+                template_path,
+                """
+                {% import_json 'json.jinja' as value -%}
+                {{ value['abc'] }}
+                """)
+            json_path = tmpdir_path / 'json.jinja'
+            _write_file(
+                json_path,
+                """
+                {"abc": 123}
+                """)
+            self.assertEqual(
+                '123',
+                engine.render(str(template_path), {}))
+
+    def test_tag_import_yaml(self):
+        """
+        Test that the ``import_json`` tag can be used.
+        """
+        engine = JinjaEngine({})
+        with TemporaryDirectory() as tmpdir:
+            # We have to generate a template file that can be read by the
+            # template engine.
+            tmpdir_path = pathlib.Path(tmpdir)
+            template_path = tmpdir_path / 'test.jinja'
+            _write_file(
+                template_path,
+                """
+                {% import_yaml 'yaml.jinja' as value -%}
+                {{ value['abc'] }}
+                """)
+            yaml_path = tmpdir_path / 'yaml.jinja'
+            _write_file(
+                yaml_path,
+                """
+                abc: 123
+                """)
+            self.assertEqual(
+                '123',
+                engine.render(str(template_path), {}))
+
+    def test_tag_load_json(self):
+        """
+        Test that the ``load_json`` tag can be used.
+        """
+        engine = JinjaEngine({})
+        with TemporaryDirectory() as tmpdir:
+            # We have to generate a template file that can be read by the
+            # template engine.
+            tmpdir_path = pathlib.Path(tmpdir)
+            template_path = tmpdir_path / 'test.jinja'
+            _write_file(
+                template_path,
+                """
+                {% load_json as value %}{"abc": 123}{% endload -%}
+                {{ value['abc'] }}
+                """)
+            self.assertEqual(
+                '123',
+                engine.render(str(template_path), {}))
+
+    def test_tag_load_yaml(self):
+        """
+        Test that the ``load_yaml`` tag can be used.
+        """
+        engine = JinjaEngine({})
+        with TemporaryDirectory() as tmpdir:
+            # We have to generate a template file that can be read by the
+            # template engine.
+            tmpdir_path = pathlib.Path(tmpdir)
+            template_path = tmpdir_path / 'test.jinja'
+            _write_file(
+                template_path,
+                """
+                {% load_yaml as value %}abc: 123{% endload -%}
+                {{ value['abc'] }}
+                """)
+            self.assertEqual(
+                '123',
+                engine.render(str(template_path), {}))
 
 def _write_file(path, text):
     """
