@@ -21,6 +21,9 @@ Unless disabled by setting ``provide_transform_functions`` to ``False``, this
 template engine provides a ``transform`` object that can be used to access
 functions from the ``vinegar.transform`` package.
 
+This template engine also provides a ``raise`` function that can be used to
+raise a ``TemplateError`` from within templates.
+
 The environment created by this template engine adds four extensions by default:
 
 * ``jinja2.ext.do'``: This extension provides the ``do`` tag that can be used to
@@ -254,6 +257,7 @@ class JinjaEngine(TemplateEngine):
         self._base_context = {}
         if config.get('provide_transform_functions', True):
             self._base_context['transform'] = self._TransformHelper()
+        self._base_context['raise'] = self._raise_template_error
         self._base_context.update(config.get('context', {}))
 
     def render(
@@ -270,6 +274,10 @@ class JinjaEngine(TemplateEngine):
             return template.render(**merged_context)
         except jinja2.TemplateNotFound as e:
             raise FileNotFoundError() from e
+
+    @staticmethod
+    def _raise_template_error(message):
+        raise jinja2.exceptions.TemplateError(message)
 
 class SerializerExtension(jinja2.ext.Extension):
     """

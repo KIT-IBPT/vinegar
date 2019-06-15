@@ -8,6 +8,8 @@ import pathlib
 import time
 import unittest
 
+import jinja2.exceptions
+
 import vinegar.template
 import vinegar.template.jinja
 
@@ -303,6 +305,24 @@ class TestJinjaEngine(unittest.TestCase):
             self.assertEqual(
                 'this is from the included template',
                 engine.render(str(template_path), context))
+
+    def test_raise(self):
+        """
+        Test that the ``raise`` function exists and works as expected.
+        """
+        engine = JinjaEngine({})
+        with TemporaryDirectory() as tmpdir:
+            tmpdir_path = pathlib.Path(tmpdir)
+            template_path = tmpdir_path / 'test.jinja'
+            _write_file(
+                template_path,
+                """
+                {{ raise('test message') }}
+                """)
+            with self.assertRaises(
+                    jinja2.exceptions.TemplateError) as raises_assertion:
+                engine.render(str(template_path), {})
+            self.assertEqual('test message', raises_assertion.exception.args[0])
 
 class TestSerializersExtension(unittest.TestCase):
     """
