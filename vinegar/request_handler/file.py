@@ -518,7 +518,7 @@ class FileRequestHandlerBase(DataSourceAware):
                             'The data_source.find_system("%s", "%s") method '
                             'raised an exception. This is treated as a lookup '
                             'failure (system_id == None).',
-                            lookup_key, lookup_value)
+                            lookup_key, lookup_value, exc_info=True)
                     system_id = None
             if system_id is None:
                 if self._lookup_no_result_action == 'not_found':
@@ -539,7 +539,7 @@ class FileRequestHandlerBase(DataSourceAware):
                                 'The data_source.get_data("%s", ...) method '
                                 'raised an exception. Continuing without '
                                 'system data.',
-                                system_id)
+                                system_id, exc_info=True)
                             pass
                         data = None
         else:
