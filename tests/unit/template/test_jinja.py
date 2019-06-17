@@ -137,9 +137,15 @@ class TestJinjaEngine(unittest.TestCase):
                 'SOME TEXT',
                 engine.render(str(template_path), {}))
             # If we provide our own transform object in the context, this should
-            # be hidden by the transform object provided by the template engine.
+            # hide the transform object provided by the template engine because
+            # context objects override globals.
+            _write_file(
+                template_path,
+                """
+                {{ transform }}
+                """)
             self.assertEqual(
-                'SOME TEXT',
+                'text from context',
                 engine.render(
                     str(template_path),
                     {'transform': 'text from context'}))

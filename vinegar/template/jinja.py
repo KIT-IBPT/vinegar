@@ -22,7 +22,9 @@ template engine provides a ``transform`` object that can be used to access
 functions from the ``vinegar.transform`` package.
 
 This template engine also provides a ``raise`` function that can be used to
-raise a ``TemplateError`` from within templates.
+raise a ``TemplateError`` from within templates. That function is added to the
+globals so that it is also available in templates that are imported without the
+context.
 
 The environment created by this template engine adds four extensions by default:
 
@@ -77,12 +79,13 @@ options that can be passed through the ``config`` dictionary that is passed to
     This option (a ``bool``) specifies whether an object with the name
     ``transform`` is added to the context. If ``True`` (the default), the
     ``transform`` object allows easy access to the transformation functions
-    provided by `vinegar.transform`. The ``transform`` object is not added if
-    there is an object using that key in the context that is passed to
-    `~JinjaEngine.render`. If ``provide_transform_functions`` is ``False``, the
-    ``transform`` object is not added to the context. The ``transform`` object
-    can be used like in the following example:
-    ``transform['string.to_upper']('This is all converted to upper case.')``
+    provided by `vinegar.transform`. The ``transform`` object is added to the
+    globals. This means that it is also going to be available in imported
+    templates that are not imported with the context. If
+    ``provide_transform_functions`` is ``False``, the ``transform`` object is
+    not available from templates. The ``transform`` object can be used like in
+    the following example: ``transform['string.to_upper']('This is all converted
+    to upper case.')``
 
 :``relative_includes``:
     This option (a ``bool``) specifies whether included templates (these are
@@ -254,11 +257,10 @@ class JinjaEngine(TemplateEngine):
             self._environment = self._Environment(**env_options)
         else:
             self._environment = jinja2.Environment(**env_options)
-        self._base_context = {}
+        self._environment.globals['raise'] = self._raise_template_error
         if config.get('provide_transform_functions', True):
-            self._base_context['transform'] = self._TransformHelper()
-        self._base_context['raise'] = self._raise_template_error
-        self._base_context.update(config.get('context', {}))
+            self._environment.globals['transform'] = self._TransformHelper()
+        self._base_context = config.get('context', {})
 
     def render(
             self,
