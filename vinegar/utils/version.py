@@ -58,8 +58,12 @@ def version_for_file_path(
         file_path = str(file_path)
     try:
         file_stat = os.stat(file_path)
-        file_info = 'file_path={0},ctime={1},mtime={2}'.format(
-            file_path, file_stat.st_ctime, file_stat.st_mtime)
+        file_info = 'file_path={0},ctime={1},mtime={2},dev={3},ino={4}'.format(
+            file_path,
+            file_stat.st_ctime_ns,
+            file_stat.st_mtime_ns,
+            file_stat.st_dev,
+            file_stat.st_ino)
         return _hash_str(file_info)
     except:
         # If we cannot stat the file, we calculate the version based on the
