@@ -168,7 +168,9 @@ specified. All other options have default values.
     (``{}``). This configuration is passed on to the template engine as is.
 """
 
+import collections
 import collections.abc
+import copy
 import os.path
 import pathlib
 
@@ -182,7 +184,8 @@ from vinegar.data_source import DataSource, merge_data_trees
 from vinegar.utils import oyaml as yaml
 from vinegar.utils.odict import OrderedDict
 from vinegar.utils.smart_dict import SmartLookupOrderedDict
-from vinegar.utils.version import aggregate_version, version_for_file_path
+from vinegar.utils.version import (
+    aggregate_version, version_for_file_path, version_for_str)
 
 class YamlTargetSource(DataSource):
     """
@@ -243,84 +246,129 @@ class YamlTargetSource(DataSource):
             system_id: str,
             preceding_data: Mapping[Any, Any],
             preceding_data_version: str) -> Tuple[Mapping[Any, Any], str]:
-        cache_item = self._cache.get(system_id, None)
-        if cache_item is not None and self._is_cache_item_current(
-                cache_item, preceding_data_version):
-            return cache_item['data'], cache_item['data_version']
-        data, sources = self._compile_data(system_id, preceding_data)
-        # Our data depends on the preceding data and the files that have been
-        # used to compile it, so we have to calculate the aggregate version.
-        # sources is a dictionary where each key is a filename and each value
-        # is the version corresponding to that file, so for calculating the
-        # aggregate version, we are only interested in the values.
-        data_version = aggregate_version(
-            [preceding_data_version] + list(sources.values()))
-        cache_item = {
-            'data': data,
-            'data_version': data_version,
-            'preceding_data_version': preceding_data_version,
-            'sources': sources,
-        }
-        self._cache[system_id] = cache_item
-        return data, data_version
+        data_compiler = _DataCompiler(
+            self._allow_empty_top,
+            self._merge_lists,
+            self._merge_sets,
+            self._root_dir_path,
+            self._template_engine,
+            self._top_file)
+        old_cache_item = self._cache.get(system_id, None)
+        data, data_version, new_cache_item = data_compiler.compile_data(
+            system_id, preceding_data, old_cache_item)
+        # If we have a new version of the cache item, we have to update the
+        # cache. Obviously, there is a race condition when updating the cache,
+        # but this does not matter. If we update the cache with an older
+        # version, this is going to be detected and fixed on the next call to
+        # this method.
+        if new_cache_item and (new_cache_item is not old_cache_item):
+            self._cache[system_id] = new_cache_item
+        # We make a deep copy of the data before returning it. This way, we can
+        # avoid a situation in which the calling code makes modifications to the
+        # returned dictionary (or a data structure included in it) and this
+        # affects later calls.
+        return copy.deepcopy(data), data_version
 
-    @staticmethod
-    def _add_to_sources(sources, file_path):
-        # When adding a file to the list of sources, we have to check whether it
-        # is already in that list. If it is not, we add it. If it is and has the
-        # same version there, everything is fine. However, if it is and has a
-        # different version, the file has changed during the process. Using
-        # either version would be wrong, so we set the version to the empty
-        # string. This will have the consequence that the result will be
-        # considered out of date when it is checked next time and a rebuild will
-        # be triggered.
-        file_version = version_for_file_path(file_path)
-        try:
-            existing_file_version = sources[file_path]
-            if file_version != existing_file_version:
-                sources[file_path] = ''
-        except KeyError:
-            sources[file_path] = file_version
+# Each value in the cache item for a system is in instance of this type.
+_CachedData = collections.namedtuple('_CachedData', ('data', 'version'))
 
-    def _compile_data(self, system_id, preceding_data):
-        data = {}
-        sources = {}
-        # First, we have to process the top file to find the initial list of
-        # files that we have to process.
-        self._add_to_sources(sources, self._top_file)
-        data_files = self._process_top(system_id, preceding_data)
+class _DataCompiler:
+    """
+    Compiles data for a system.
+
+    A new instance of this class is created for each call to
+    `YamlTargetSource.get_data`.
+
+    Objects of this type are not thread safe.
+    """
+
+    def __init__(
+            self,
+            allow_empty_top,
+            merge_lists,
+            merge_sets,
+            root_dir_path,
+            template_engine,
+            top_file):
+        self._allow_empty_top = allow_empty_top
+        self._merge_lists = merge_lists
+        self._merge_sets = merge_sets
+        self._root_dir_path = root_dir_path
+        self._template_engine = template_engine
+        self._top_file = top_file
+
+    def compile_data(self, system_id, preceding_data, old_cache):
+        """
+        Compiles the data for the specified system ID and preceding data.
+
+        :param system_id:
+            system for which the data shall be compiled.
+        :param preceding_data:
+            data supplied by the preceding data sources. This data is passed as
+            part of the context when rendering templates.
+        :param old_cache:
+            cache returned by an earlier call to this function or ``None`` if
+            this is the first call to this function for the specified system ID,
+            or the data from the last call is not in the cache any longer.
+        :return:
+            tuple of the compiled data, the associated version, and the updated
+            cache.
+        """
+        # We create a new cache object on each iteration because if there are
+        # changes, they might result in files not being part of the tree any
+        # longer and if we simply updated the old cache, the data for these
+        # files would never be removed.
+        self._context = {
+            'id': system_id,
+            'data': SmartLookupOrderedDict(preceding_data)}
+        self._new_cache = {}
+        if old_cache is None:
+            self._old_cache = {}
+        else:
+            self._old_cache = old_cache
+        self._system_id = system_id
+        data_files = self._process_top()
         # We process each of the files that were listed in top.yaml.
-        data = self._process_data_files(
-            sources, ['top file'], data_files, system_id, preceding_data)
-        return (data, sources)
+        if data_files:
+            data_list = self._process_data_files(
+                ['top file'], data_files)
+            data_items, data_versions = zip(*data_list)
+        else:
+            data_items = tuple()
+            data_versions = tuple()
+        # The result version is an aggregate of the versions of the involved
+        # files. We do not have to consider the version of the top file, because
+        # changes in the top file only matter if they lead to a different set or
+        # order of data files and this will be reflected in the list of
+        # versions.
+        data_version = aggregate_version(data_versions)
+        cached_result = self._old_cache.get('result', None)
+        if cached_result and (cached_result.version == data_version):
+            return cached_result.data, cached_result.version, self._old_cache
+        data = {}
+        for data_item in data_items:
+            data = merge_data_trees(
+                data,
+                data_item,
+                merge_lists=self._merge_lists,
+                merge_sets=self._merge_sets)
+        self._new_cache['result'] = _CachedData(data, data_version)
+        return data, data_version, self._new_cache
 
-    def _expression_matches(self, target_expression, system_id):
+    def _expression_matches(self, target_expression):
         if not isinstance(target_expression, str):
             raise TypeError(
                 'Invalid target expression in {0}: Expected a string, but got '
                 'an object of type {1}.'.format(
                     self._top_file, type(target_expression).__name__))
-        return vinegar.utils.system_matcher.match(system_id, target_expression)
-
-    def _is_cache_item_current(self, cache_item, preceding_data_version):
-        # If the supplied preceding data has changed, we have to recompile.
-        if cache_item['preceding_data_version'] != preceding_data_version:
-            return False
-        # We check whether one of the source files has changed. We can only use
-        # the data from the cache if all source files are still the same.
-        for source_file, source_version in cache_item['sources'].items():
-            if (version_for_file_path(source_file) != source_version):
-                return False
-        return True
+        return vinegar.utils.system_matcher.match(
+            self._system_id, target_expression)
 
     def _process_data_file(
             self,
-            sources,
             parent_files,
             file_name,
-            file_path,
-            system_id,
-            preceding_data):
+            file_path):
         # If a file recursively includes itself (directly or indirectly), we end
         # up in an infinite loop, so we have to detect such a situation.
         if file_name in parent_files:
@@ -330,76 +378,93 @@ class YamlTargetSource(DataSource):
                 'Recursion loop detected in file {0}: The file is included by '
                 'itself through the following chain: {1}'.format(
                     file_name, include_chain))
-        self._add_to_sources(sources, file_path)
+        # The same file might already have been processed because it is
+        # referenced in more than one place. In this case, we prefer the version
+        # in the new cache over the version in the old cache, because the
+        # version in the new cache might be newer.
+        cache_key = 'data_file_' + file_name
         try:
-            file_yaml = self._render(file_path, system_id, preceding_data)
-            file_data = yaml.safe_load(file_yaml)
+            cached_file = self._new_cache[cache_key]
+        except KeyError:
+            try:
+                cached_file = self._old_cache[cache_key]
+            except KeyError:
+                cached_file = None
+        try:
+            file_yaml = self._render(file_path)
+            file_version = version_for_str(file_yaml)
+            # If the file has not changed, we can use the cached data. We still
+            # have to process the included files because they might have
+            # changed.
+            if cached_file and (file_version == cached_file.version):
+                cache_valid = True
+            else:
+                cache_valid = False
+                file_data = yaml.safe_load(file_yaml)
         except Exception as e:
             raise RuntimeError(
                 'Error processing data file {0}.'.format(file_name)) from e
-        if not isinstance(file_data, collections.abc.Mapping):
-            raise TypeError(
-                'File {0} does not contain a dictionary as its top '
-                'structure.'.format(file_name))
-        # If the file does not include any other files, we can simply return its
-        # data.
+        # If the data from the cache is valid, we can simply use it. Otherwise,
+        # we have to process the file content.
+        if cache_valid:
+            # cached_file.data is a tuple of three items: The data preceding the
+            # include block, the list stored inside the include block, and the
+            # data following the include block.
+            preceding_data, include_files, following_data = cached_file.data
+            # We might have gotten the data from the old cache, so we have to
+            # copy it to the new cache.
+            self._new_cache[cache_key] = cached_file
+        else:
+            if not isinstance(file_data, collections.abc.Mapping):
+                raise TypeError(
+                    'File {0} does not contain a dictionary as its top '
+                    'structure.'.format(file_name))
+            preceding_data, include_files, following_data = \
+                self._process_data_file_content(file_data)
+            self._new_cache[cache_key] = _CachedData(
+                (preceding_data, include_files, following_data), file_version)
+        data_list = []
+        if preceding_data:
+            data_list += [(preceding_data, file_version)]
+        if include_files:
+            data_list += self._process_data_files(
+                parent_files + [file_name], include_files)
+        if following_data:
+            data_list += [(following_data, file_version)]
+        return data_list
+
+    @staticmethod
+    def _process_data_file_content(file_data):
+        # If the file does not include any other files, we can simply use its
+        # data as the preceding data.
         if not 'include' in file_data:
-            return file_data
+            return file_data, None, None
         # If the includes come first, we can use a simplified approach for the
         # merging.
         if next(iter(file_data.keys())) == 'include':
             include_files = file_data['include']
-            include_data = self._process_data_files(
-                sources,
-                parent_files + [file_name],
-                include_files,
-                system_id,
-                preceding_data)
-            # We have to remove the "include" key so that it does not appear in
-            # the merge data.
             del file_data['include']
-            return merge_data_trees(
-                include_data,
-                file_data,
-                merge_lists=self._merge_lists,
-                merge_sets=self._merge_sets)
+            return None, include_files, file_data
         # If the includes come somewhere in the middle of the file, we have to
         # split the data between the part that comes before the includes and the
         # part that comes after the includes.
-        data_before = OrderedDict()
-        data_after = OrderedDict()
+        preceding_data = OrderedDict()
+        following_data = OrderedDict()
         before_include = True
         for key, value in file_data.items():
             if key == 'include':
-                include_data = self._process_data_files(
-                    sources,
-                    parent_files + [file_name],
-                    value,
-                    system_id,
-                    preceding_data)
-                data_before = merge_data_trees(
-                    data_before,
-                    include_data,
-                    merge_lists=self._merge_lists,
-                    merge_sets=self._merge_sets)
+                include_files = value
                 before_include = False
             elif before_include:
-                data_before[key] = value
+                preceding_data[key] = value
             else:
-                data_after[key] = value
-        return merge_data_trees(
-            data_before,
-            data_after,
-            merge_lists=self._merge_lists,
-            merge_sets=self._merge_sets)
+                following_data[key] = value
+        return preceding_data, include_files, following_data
 
     def _process_data_files(
             self,
-            sources,
             parent_files,
-            file_list,
-            system_id,
-            preceding_data):
+            file_list):
         if not isinstance(file_list, collections.abc.Sequence):
             raise TypeError(
                 'Malformed file list in {0}: Found an object of type {1} '
@@ -437,34 +502,33 @@ class YamlTargetSource(DataSource):
                     raise FileNotFoundError(
                         'File {0} included by {1} could not be found.'
                         .format(file_name, parent_files[-1]))
-        data = {}
+        data_list = []
         for data_file_name, data_file in data_files:
-            # When processing the data file, we get the data provided by the
-            # file. We pass the list of source files so that additional files
-            # included by the data file can be added to the list.
-            data_file_data = self._process_data_file(
-                sources,
+            # _process_data_file returns a list of tuples. Each of this tuples
+            # contains the data that shall later be merged into the result and
+            # the version of the file that provided that data.
+            data_file_data_list = self._process_data_file(
                 parent_files,
                 data_file_name,
-                data_file,
-                system_id,
-                preceding_data)
-            # We merge the file's data into the data that we already have from
-            # processing earlier files.
-            data = merge_data_trees(
-                data,
-                data_file_data,
-                merge_lists=self._merge_lists,
-                merge_sets=self._merge_sets)
-        return data
+                data_file)
+            data_list += data_file_data_list
+        return data_list
 
-    def _process_top(self, system_id, preceding_data):
+    def _process_top(self):
         if not pathlib.Path(self._top_file).exists():
             raise FileNotFoundError(
                 'Could not find top.yaml in {0}.'.format(
                     str(self._root_dir_path)))
         try:
-            top_yaml = self._render(self._top_file, system_id, preceding_data)
+            top_yaml = self._render(self._top_file)
+            top_version = version_for_str(top_yaml)
+            # If we have a cache entry for top.yaml and the version has not
+            # changed, we can simply use the cached data instead of parsing the
+            # YAML again.
+            cached_top = self._old_cache.get('top', None)
+            if cached_top and (cached_top.version == top_version):
+                self._new_cache['top'] = cached_top
+                return cached_top.data
             top_data = yaml.safe_load(top_yaml)
         except Exception as e:
             raise RuntimeError('Error processing top file.') from e
@@ -474,7 +538,8 @@ class YamlTargetSource(DataSource):
             # intention, so we allow to disable this error through a
             # configuration option.
             if self._allow_empty_top:
-                return []
+                self._new_cache['top'] = _CachedData(None, top_version)
+                return None
             else:
                 raise TypeError(
                     'Top file is empty. This is most likely an error. If not, '
@@ -490,20 +555,19 @@ class YamlTargetSource(DataSource):
                     'Malformed file list in {0}: Found an object of type {1} '
                     'where a list was expected.'.format(
                         self._top_file, type(file_list).__name__))
-            if self._expression_matches(target_expression, system_id):
+            if self._expression_matches(target_expression):
                 data_files += file_list
             pass
+        self._new_cache['top'] = _CachedData(data_files, top_version)
         return data_files
 
-    def _render(self, template_path, system_id, preceding_data):
-        context = {
-            'id': system_id,
-            'data': SmartLookupOrderedDict(preceding_data)}
+    def _render(self, template_path):
         if self._template_engine is None:
             with open(template_path, 'r', encoding='utf-8') as file:
                 return file.read()
         else:
-            return self._template_engine.render(template_path, context)
+            return self._template_engine.render(
+                template_path, copy.deepcopy(self._context))
 
 def get_instance(config: Mapping[Any, Any]) -> YamlTargetSource:
     """

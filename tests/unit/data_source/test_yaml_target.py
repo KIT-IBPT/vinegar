@@ -20,50 +20,6 @@ class TestYamlTargetSource(unittest.TestCase):
     Tests for the `YamlTargetSource`.
     """
 
-    def test_cache(self):
-        """
-        Test that generate data is cached.
-
-        As there is no direct way of testing this, we collect data twice, with
-        different input (preceding) data. As we pass the same version both
-        times, the code should not detect the change and still return the old
-        results.
-        """
-        with TemporaryDirectory() as tmpdir:
-            ds = YamlTargetSource({'root_dir': tmpdir})
-            # We have to fill the configuration directory with files that the
-            # data source can read.
-            root_dir_path = pathlib.Path(tmpdir)
-            _write_file(
-                root_dir_path / 'top.yaml',
-                """
-                '*':
-                    - a
-                """)
-            _write_file(
-                root_dir_path / 'a.yaml',
-                """
-                key: {{ data['input'] }}
-                """)
-            (data, version1) = ds.get_data('dummy', {'input': 1}, '1')
-            self.assertEqual({'key': 1}, data)
-            # We get the same data again and expect that data and version are
-            # still the same.
-            (data, version2) = ds.get_data('dummy', {'input': 1}, '1')
-            self.assertEqual({'key': 1}, data)
-            self.assertEqual(version1, version2)
-            # Now we change the input, but do not update the corresponding
-            # version number. Therefore, the change should not be detected and
-            # we should still get the old data.
-            (data, version3) = ds.get_data('dummy', {'input': 2}, '1')
-            self.assertEqual({'key': 1}, data)
-            self.assertEqual(version1, version3)
-            # Now we update the input version number, which should result in the
-            # cache being invalidated.
-            (data, version4) = ds.get_data('dummy', {'input': 3}, '2')
-            self.assertEqual({'key': 3}, data)
-            self.assertNotEqual(version1, version4)
-
     def test_cache_invalidation(self):
         """
         Test that files are reread when they have changed (instead of reusing)
@@ -130,6 +86,55 @@ class TestYamlTargetSource(unittest.TestCase):
                 sleep_time *= 2
             self.assertEqual({'key': 3}, data)
             self.assertNotEqual(version2, version3)
+
+    def test_cache_invalidation_import(self):
+        """
+        Test that a template is rendered again when a template that is imported
+        by that template changes. This specifically tests for a bug that we had
+        in a pre-release version.
+        """
+        with TemporaryDirectory() as tmpdir:
+            ds = YamlTargetSource({'root_dir': tmpdir})
+            # We have to fill the configuration directory with files that the
+            # data source can read.
+            root_dir_path = pathlib.Path(tmpdir)
+            _write_file(
+                root_dir_path / 'top.yaml',
+                """
+                '*':
+                    - a
+                """)
+            _write_file(
+                root_dir_path / 'a.yaml',
+                """
+                {% from 'b.yaml' import value %}
+                key: {{ value }}
+                """)
+            _write_file(
+                root_dir_path / 'b.yaml',
+                """
+                {% set value = 1 %}
+                """)
+            (data, version1) = ds.get_data('dummy', {}, '')
+            self.assertEqual({'key': 1}, data)
+            # Now we update b.yaml.
+            # We actually try several times with increasing sleep times. On
+            # systems, where the time stamp is very precise, the test finishes
+            # quickly, on other ones it takes a bit longer.
+            sleep_time = 0.01
+            while sleep_time < 3.0:
+                _write_file(
+                    root_dir_path / 'b.yaml',
+                    """
+                    {% set value = 2 %}
+                    """)
+                (data, version2) = ds.get_data('dummy', {}, '')
+                if version1 != version2:
+                    break
+                time.sleep(sleep_time)
+                sleep_time *= 2
+            self.assertEqual({'key': 2}, data)
+            self.assertNotEqual(version1, version2)
 
     def test_config_allow_empty_top(self):
         """
@@ -370,6 +375,45 @@ class TestYamlTargetSource(unittest.TestCase):
                 """)
             self.assertEqual(
                 {'key': 1}, ds.get_data('dummy', {'input': 1}, '1')[0])
+
+    def test_deep_copy(self):
+        """
+        Test that modifying the data returned by ``get_data`` or modifying an
+        object passed to the template context does not affect future calls or
+        other templates.
+        """
+        with TemporaryDirectory() as tmpdir:
+            ds = YamlTargetSource({'root_dir': tmpdir})
+            # We have to fill the configuration directory with files that the
+            # data source can read.
+            root_dir_path = pathlib.Path(tmpdir)
+            _write_file(
+                root_dir_path / 'top.yaml',
+                """
+                '*':
+                    - a
+                    - b
+                """)
+            # We modify one of the context objects in the first template. This
+            # change should not be visible in the second template.
+            _write_file(
+                root_dir_path / 'a.yaml',
+                """
+                {%- do data['key'].update({'abc': 'def'}) -%}
+                a: {{ data['key']['abc'] }}
+                """)
+            _write_file(
+                root_dir_path / 'b.yaml',
+                """
+                b: {{ data['key']['abc'] }}
+                """)
+            data, _ = ds.get_data('dummy', {'key': {'abc': 'abc'}}, '')
+            self.assertEqual({'a': 'def', 'b': 'abc'}, data)
+            # Now we modify the returned data and check that the (cached) data
+            # returned by get_data does not change.
+            data['other'] = 123
+            data, _ = ds.get_data('dummy', {'key': {'abc': 'abc'}}, '')
+            self.assertEqual({'a': 'def', 'b': 'abc'}, data)
 
     def test_get_instance(self):
         """
