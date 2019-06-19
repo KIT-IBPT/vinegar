@@ -253,7 +253,7 @@ The common options are:
     transformations that are applied to the value extracted from the request
     path and being passed to ``find_system`` or being used as a system ID
     directly. This list is passed to
-    `vinegar.transform.apply_transformation_chain`. If this list is empty (the
+    `vinegar.transform.get_transformation_chain`. If this list is empty (the
     default), no transformations are applied and the string extracted from the
     request path is used as is.
 
@@ -309,7 +309,7 @@ from vinegar.http.server import HttpRequestHandler
 from vinegar.template import get_template_engine
 from vinegar.tftp.protocol import ErrorCode as TftpErrorCode
 from vinegar.tftp.server import TftpError, TftpRequestHandler
-from vinegar.transform import apply_transformation_chain
+from vinegar.transform import get_transformation_chain
 from vinegar.utils.smart_dict import SmartLookupOrderedDict
 
 # Logger used by this module.
@@ -499,8 +499,7 @@ class FileRequestHandlerBase(DataSourceAware):
         if self._extract_lookup_value:
             lookup_key = self._lookup_key
             lookup_raw_value = context['lookup_raw_value']
-            lookup_value = apply_transformation_chain(
-                self._lookup_value_transform, lookup_raw_value)
+            lookup_value = self._lookup_value_transform(lookup_raw_value)
             # If the lookup key is set to ":system_id", we treat the value as
             # the system ID instead of trying to look it up.
             if lookup_key == ':system_id:':
@@ -599,7 +598,8 @@ class FileRequestHandlerBase(DataSourceAware):
         self._lookup_key = config.get('lookup_key', None)
         self._lookup_value_placeholder = config.get(
             'lookup_value_placeholder', '...')
-        self._lookup_value_transform = config.get('lookup_value_transform', [])
+        self._lookup_value_transform = get_transformation_chain(
+            config.get('lookup_value_transform', []))
         # If a lookup key is defined, the request path must contain a
         # placeholder. That placeholder defines which part of the path contains
         # the value to be looked up.

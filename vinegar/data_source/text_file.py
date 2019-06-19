@@ -65,7 +65,7 @@ that has the following keys:
 :``transform`` (optional):
     A list defining the transformations that shall be applied to the string
     extracted through the regular expression. This list is passed to
-    `vinegar.transform.apply_transformation_chain`. If this list is empty (the
+    `vinegar.transform.get_transformation_chain`. If this list is empty (the
     default), no transformations are applied and the string extracted by the
     regular expression is used as is.
 
@@ -324,7 +324,7 @@ import threading
 from typing import Any, Mapping, Tuple
 
 from vinegar.data_source import DataSource
-from vinegar.transform import apply_transformation_chain
+from vinegar.transform import get_transformation_chain
 from vinegar.utils.odict import OrderedDict
 from vinegar.utils.version import version_for_file_path, version_for_str
 
@@ -374,7 +374,10 @@ class TextFileSource(DataSource):
             self._regular_expression_ignore = re.compile(
                 regular_expression_ignore_text)
         self._system_id_config = config['system_id']
+        self._initialize_transform_func(self._system_id_config)
         self._variables_config = config['variables']
+        for var_config in self._variables_config.values():
+            self._initialize_transform_func(var_config)
         self._file_version = ''
         self._lock = threading.Lock()
 
@@ -425,6 +428,11 @@ class TextFileSource(DataSource):
             version = self._system_version.get(system_id, '')
         return data, version
 
+    @staticmethod
+    def _initialize_transform_func(config):
+        config['_transform_func'] = get_transformation_chain(
+            config.get('transform', []))
+
     def _process_variable(self, config, match, optional=True):
         # The group index can be an integer number or a name.
         group_index = config['source']
@@ -440,8 +448,8 @@ class TextFileSource(DataSource):
             if not transform_none_value:
                 return None
         # Now we apply the transformations.
-        transformations = config.get('transform', [])
-        value = apply_transformation_chain(transformations, value)
+        transform_func = config['_transform_func']
+        value = transform_func(value)
         if value is None and not optional:
             raise ValueError(
                 'Regular expression group {0} has no value.'.format(

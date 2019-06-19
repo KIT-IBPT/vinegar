@@ -14,7 +14,9 @@ example, code might allow a user to choose the transformation function at
 runtime.
 
 The `apply_transformation_chain` function can be used when a user can specify a
-whole chain of transformations that shall be applied one after the other.
+whole chain of transformations that shall be applied one after the other. If
+that chain is going to be used repeatedly, it might be more efficient to use
+`get_transformation_chain` once and use the returned function repeatedly.
 """
 
 import collections.abc
@@ -106,6 +108,58 @@ def apply_transformation_chain(chain: TransformationChain, value: Any) -> Any:
         transformed value. This is the return value of the last function in the
         transformation chain.
     """
+    return get_transformation_chain(chain)(value)
+
+def get_transformation_chain(chain: TransformationChain) -> Callable:
+    """
+    Return a function representing the specified transformation chain.
+
+    Each of the functions in the chain in the chain is applied to the input
+    value to the returned function in sequence.
+
+    The ``chain`` argument is a list of transformation specifications. Each
+    specification is either a ``str`` simply specifying the name of the
+    transformation function, or it is a ``dict`` with a single entry, where the
+    key is the name of the transformation function and the value is the
+    configuration for that function.
+
+    The name of the transformation functions is parsed according to the same
+    rules as for the `apply_transformation` function.
+
+    The configuration for a function can be a ``dict``, a ``list`` or another
+    value. If it is a ``dict``, the items in it are passed to the function as
+    keyword arguments. If it is a ``list``, the items in it are passed to the
+    function as positional arguments (after the ``value`` argument). In all
+    other cases, the configuration is passed as a single positional argument
+    after the ``value`` argument.
+
+    Example::
+
+        # The following three calls all result in the output "ABC.def":
+        chain = [
+            'string.to_upper',
+            {'string.add_suffix': '.def'}]
+        func = get_transformation_chain(chain)
+        func('abc')
+        chain = [
+            {'string.to_upper': []},
+            {'string.add_suffix': ['.def']}]
+        func = get_transformation_chain(chain)
+        func('abc')
+        chain = [
+            {'string.to_upper': {}},
+            {'string.add_suffix': {'suffix': '.def'}}]
+        func = get_transformation_chain(chain)
+        func('abc')
+
+    :param chain:
+        list describing the transformation chain. Please refer to the function
+        description for details.
+    :return:
+        transformed value. This is the return value of the last function in the
+        transformation chain.
+    """
+    funcs = []
     for transformation in chain:
         if isinstance(transformation, collections.abc.Mapping):
             if len(transformation) != 1:
@@ -130,8 +184,12 @@ def apply_transformation_chain(chain: TransformationChain, value: Any) -> Any:
             args = config
         elif config is not None:
             args = [config]
-        value = apply_transformation(name, value, *args, **kwargs)
-    return value
+        funcs.append((get_transformation_function(name), args, kwargs))
+    def chain_func(value):
+        for func in funcs:
+            value = func[0](value, *(func[1]), **(func[2]))
+        return value
+    return chain_func
 
 def get_transformation_function(name: str) -> Callable:
     """
