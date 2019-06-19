@@ -2,11 +2,11 @@
 
 from setuptools import setup, find_packages
 
-from vinegar.version import version_string
+from vinegar.version import VERSION_STRING
 
 setup(
     name="vinegar",
-    version=version_string,
+    version=VERSION_STRING,
     packages=find_packages(
         include=['vinegar', 'vinegar.*'],
     ),

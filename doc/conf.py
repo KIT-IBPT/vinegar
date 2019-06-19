@@ -27,7 +27,7 @@ copyright = '2019 The Vinegar Project Team'
 author = 'Sebastian Marsching'
 
 # The full version, including alpha/beta/rc tags
-release = vinegar.version.version_string
+release = vinegar.version.VERSION_STRING
 
 
 # -- General configuration ---------------------------------------------------
