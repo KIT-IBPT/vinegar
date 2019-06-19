@@ -28,7 +28,7 @@ context.
 
 The environment created by this template engine adds four extensions by default:
 
-* ``jinja2.ext.do'``: This extension provides the ``do`` tag that can be used to
+* ``jinja2.ext.do``: This extension provides the ``do`` tag that can be used to
   execute some code  (similar to a ``{{ ... }}`` block) without generating
   output.
 * ``jinja2.ext.loopcontrols``: This extension provides the ``break`` and
