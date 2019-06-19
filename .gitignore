@@ -3,4 +3,5 @@ __pycache__/
 
 /.vscode
 /dist
+/doc-build
 /vinegar.egg-info
