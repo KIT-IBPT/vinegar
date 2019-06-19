@@ -1,0 +1,2 @@
+debian/vinegar-server.yaml etc/vinegar
+debian/vinegar-server-logging.ini etc/vinegar

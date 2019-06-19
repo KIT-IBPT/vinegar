@@ -1,0 +1,17 @@
+#!/usr/bin/make -f
+
+export PYBUILD_NAME=vinegar
+%:
+	dh $@ --with python3 --with sphinxdoc --with systemd --buildsystem=pybuild
+
+override_dh_installdocs:
+	dh_installdocs
+	sphinx-build doc debian/vinegar-doc/usr/share/doc/vinegar-doc/html
+
+override_dh_python3:
+	dh_python3
+
+	mkdir -p debian/vinegar-server/usr/sbin
+	mv \
+		debian/python3-vinegar/usr/bin/vinegar-server \
+		debian/vinegar-server/usr/sbin

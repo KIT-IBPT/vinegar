@@ -1,0 +1,25 @@
+#!/bin/sh
+
+set -e
+
+case "$1" in
+  configure)
+    # Create the vinegar user if it does not exit yet. adduser will
+    # automatically detect it the user exists, but we want to print a message
+    # when we create it.
+    if ! getent passwd vinegar > /dev/null ; then
+      echo 'Adding system-user for Vinegar' 1>&2
+      adduser --system --group --quiet --home /srv/vinegar \
+        --no-create-home --disabled-login vinegar
+    fi
+    # The log directory must be owned by that user so that the server can write
+    # its logfile.
+    install -d -ovinegar -gadm -m2750 /var/log/vinegar
+    # The state directory must also be owned by that user so that the server can
+    # write the database file that is part of the default configuration.
+    chown vinegar:adm /var/lib/vinegar
+    chmod 0750 /var/lib/vinegar
+    ;;
+esac
+
+#DEBHELPER#

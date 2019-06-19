@@ -1,0 +1,16 @@
+#!/bin/sh
+
+set -e
+
+#DEBHELPER#
+
+case "$1" in
+  purge)
+    # We want to remove the log files when the package is purged. At the moment,
+    # there are no other files in that directory, but this might change and so
+    # we only remove the directory if it is empty.
+    rm -rf /var/log/vinegar/server.log* >/dev/null 2>&1 || true
+    rmdir /var/log/vinegar >/dev/null 2>&1 \
+      || echo 'Directory /var/log/vinegar has not been removed.' 1>&2
+    ;;
+esac

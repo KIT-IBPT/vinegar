@@ -1,0 +1,245 @@
+# List of data sources.
+# The data sources are processed in order: Data from data sources earlier in the
+# list is provided to data sources later in the list. Data from data sources
+# later in the list overrides data from data sources earlier in the list.
+data_sources:
+  # The first data source reads the file /srv/vinegar/systems/list.txt,
+  # expecting one line for every system. Each line has the following format:
+  #
+  # <MAC address>:<IPv4 address>:<hostname>[,<extra name 1>,<extra-name 2>,...]
+  #
+  # This format can be customized by change the configuration for the data
+  # source. Please refer to the documentation for the text_file data source for
+  # a full list of available configuration options.
+  - name: text_file
+
+    # We set the filename to /srv/vinegar/systems/list.txt.
+    file: /srv/vinegar/systems/list.txt
+
+    # This is the regular expression that matches the lines that we want to use.
+    # We specify the X flag first (?x) so that we can use the multi-line syntax,
+    # which makes the regular expression much more readable.
+    regular_expression: |
+        (?x)
+        # We expect a CSV file with three columns that are separated by
+        # semicolons.
+        # The first column specifies the MAC address.
+        (?P<mac>[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5});
+        # The second column specifies the IP address.
+        (?P<ip>[0-9]{1,3}(?:\.[0-9]{1,3}){3});
+        # The third column specifies the hostname and an optional list of
+        # additional names.
+        (?P<hostname>[^,]+)
+        (,(?P<extra_names>.+))?
+
+        # We want to ignore empty lines and lines starting with a "#".
+    regular_expression_ignore: "|(?:#.*)"
+
+    # We build the system ID from the hostname by adding a domain name and
+    # ensuring that everything is in lower case.
+    system_id:
+      source: hostname
+      transform:        
+        - string.add_suffix: .mydomain.example.com
+        - string.to_lower
+
+    # We define a couple of variables that will be available in the data tree
+    # for each system.
+    variables:
+      'info:extra_names':
+        source: extra_names
+        transform:
+          - string.to_lower
+          - string.split: .
+      'net:fqdn':
+        source: hostname
+        transform:
+          - string.add_suffix: .mydomain.example.com
+          - string.to_lower
+      'net:hostname':
+        source: hostname
+        transform:
+          - string.to_lower
+      'net:ipv4_addr':
+        source: ip
+        transform:
+          - ipv4_address.normalize
+      'net:mac_addr':
+        source: mac
+        transform:
+          - mac_address.normalize
+
+  # We use a yaml_target data source as the second source in the list. This
+  # source expects a top configuration file /srv/vinegar/datatree/top.yaml and
+  # includes further files bases on the configuration in that file. As the
+  # text_file data source is earlier in the list, the data from that data source
+  # can be used in the files for the yaml_target data source through Jinja
+  # template syntax (e.g. "{{ data.get('net:macaddr') }}").
+  - name: yaml_target
+    root_dir: /srv/vinegar/datatree
+
+  # As the last source, we use an sqlite data source. This data source allows us
+  # to update single pieces of data in a safe way (ensuring that these updates
+  # become visible immediately). We use the same database as the HTTP request
+  # handler later in this file, so that we can use data items updates by that
+  # request handler.
+  - name: sqlite
+
+    # We use a database stored in /var/lib/vinegar/system-state.db.
+    db_file: /var/lib/vinegar/system-state.db
+
+    # We disable the find_system function for this data source because it only
+    # stores flags that are not really useful for a reverse lookup.
+    find_system_enabled: False
+
+    # We store the data for this data source under a separate key in order to
+    # avoid collissions with keys from other sources.
+    key_prefix: state 
+
+# Lists in the data provided by data sources is not merged by default. Instead,
+# if a data source later in the list of data sources provides a list for the
+# same key as a data source earlier in the list, the list from the data source
+# that is later in the list completely replaces the list from the data source
+# earlier in the list. This can be changed by setting this option to True.
+# data_sources_merge_lists: False
+
+# Configuration for the HTTP server.
+http:
+  # The HTTP server binds to all local interfaces by default.
+  # bind_address: '::'
+  
+  # The HTTP server binds to port 80 by default.
+  # bind_port: 80
+  
+  # The list of request handlers is processed in order, using the first handler
+  # that matches.
+  request_handlers:
+
+    # We register a request handler that serves files after rendering them
+    # through the Jinja template engine. This allows us to use data from the
+    # data sources defined above in that files.
+    - name: file
+
+      # We have to define a request path. The files served by this request
+      # handler are going to be available at
+      # http://vinegar-server.example.com/templates/<system ID>/...
+      request_path: /templates/...
+
+      # We expect the system-ID to be specified as part of the request path.
+      # This information is used to decide for which system a file should be
+      # rendered.
+      lookup_key: ':system_id:'
+
+      # We use files in /srv/vinegar/http/templates as the templates.
+      root_dir: /srv/vinegar/http/templates
+
+      # We want to render the files with the Jinja template engine.
+      template: jinja
+
+    # We register a second request handler that can be used to reset the
+    # 'netboot_enabled' flag in the SQLite database. This way, we can reset this
+    # flag from an installer environment in order to avoid booting into the
+    # installer again.
+    - name: sqlite_update
+
+      # This request handler is going to be available at
+      # http://vinegar-server.example.com/reset-netboot-enabled/<system ID>
+      request_path: /reset-netboot-enabled
+
+      # This request handler uses the same database file as the sqlite datasource
+      # defined earlier.
+      db_file: /var/lib/vinegar/system-state.db
+
+      # This handler deletes the data for the 'netboot_enabled' key, effectively
+      # resetting the flag.
+      action: delete_data
+      key: netboot_enabled
+
+      # We only allow a client to use this request handler if its IP address
+      # matches the one for the targeted system. We know the IP address because
+      # the text_file data source that we defined earlier provides it.
+      client_address_key: 'net:ipv4_addr'
+
+# Path to the logging configuration.
+logging_config_file: /etc/vinegar/vinegar-server-logging.ini
+
+# Configuration for the TFTP server.
+tftp:
+  # The TFTP server binds to all local interfaces by default.
+  # bind_address: '::'
+  
+  # The TFTP server binds to port 69 by default. While you can change this port
+  # number, most PXE clients will only use that port, so it will usually not be
+  # useful to bind to a different one.
+  # bind_port: 69
+  
+  # The list of request handlers is processed in order, using the first handler
+  # that matches.
+  request_handlers:
+
+    # We register a request handler that serves files after rendering them
+    # through the Jinja template engine. This allows us to use data from the
+    # data sources defined above in that files.
+    - name: file
+
+      # We have to define a request path. The files served by this request
+      # handler are going to be available at
+      # tftp://vinegar-server.example.com/templates/<MAC address>/...
+      request_path: /templates/...
+
+      # We expect the MAC address to be specified as part of the request path.
+      # This information is used to find the system ID which in turn allows us
+      # to decide for which system a file should be rendered. We cannot use the
+      # system ID directly because we will typically not know it in the PXE
+      # environment, but the MAC address is known (e.g. $net_default_mac in
+      # GRUB 2). The lookup the the MAC address works because the text-file
+      # based data source defined earlier knows the MAC address for each system.
+      lookup_key: 'net:mac_addr'
+
+      # The MAC address specified by the client might not necessarily use the
+      # same formatting as the data source, so we normalize the MAC address in
+      # order to avoid false negatives.
+      lookup_value_transform:
+        - mac_address.normalize
+
+      # We use files in /srv/vinegar/tftp/templates as the templates.
+      root_dir: /srv/vinegar/tftp/templates
+
+      # We want to render the files with the Jinja template engine.
+      template: jinja
+
+      # We want to use this request handler to load parts of the GRUB
+      # configuration. This means that a problem with this handler could result
+      # in a system getting stuck at the GRUB boot screen. We want to avoid this
+      # at all cost, so we rather render a template without having
+      # system-specifc data than not being able to fulfill the request. The
+      # template files obviously have to be written in a way that they can
+      # handle situation where there is no system data (and as a result the id
+      # and data context objects are not available). We still want to log a
+      # warning if such a situation appears so that we can fix the problem that
+      # causes it in the first place.
+      data_source_error_action: warn
+      lookup_no_result_action: continue
+
+    # We register two more request handler that serve static files without
+    # rendering them as templates. We need these handler for two reasons. First,
+    # we cannot render binary files (like the boot loader or kernel images) as
+    # templates as this would corrupt them. Second, we do not know the MAC
+    # address yet when loading the initial parts of the boot loader (the path
+    # to these parts is fixed in the DHCP configuration).
+    # The first handler is used for the files belonging to GRUB.
+    - name: file
+
+      # We have to define a request path. The files served by this request
+      # handler are going to be available at
+      # tftp://vinegar-server.example.com/grub/...
+      request_path: /grub
+
+      # We serve files from /srv/vinegar/tftp/grub.
+      root_dir: /srv/vinegar/tftp/grub
+
+    # The second request handler is used for installer files like the kernel
+    # images and initial ramdisks.
+    - name: file
+      request_path: /images
+      root_dir: /srv/vinegar/tftp/images

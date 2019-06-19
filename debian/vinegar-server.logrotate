@@ -1,0 +1,8 @@
+/var/log/vinegar/server.log {
+	daily
+	missingok
+	rotate 10
+	compress
+	notifempty
+	create 644 vinegar adm
+}

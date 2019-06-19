@@ -1,0 +1,31 @@
+Source: vinegar
+Maintainer: Sebastian Marsching <sebastian.marsching-git-2016@aquenos.com>
+Section: python
+Priority: optional
+Build-Depends: dh-python, dh-systemd, python3-all (>= 3.5),
+ python3-docutils (>= 0.12),python3-jinja2 (>= 2.8),
+ python3-setuptools (>= 5.5.1), python3-sphinx (>= 1.3), python3-yaml (>= 3.11),
+ debhelper (>= 9.20150101)
+Standards-Version: 3.9.8
+Homepage: https://www.ibpt.kit.edu/
+X-Python3-Version: >= 3.5
+
+Package: python3-vinegar
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends}
+Suggests: vinegar-doc
+Description: Salt-style PXE boot server (Python modules)
+ This package provides the Python modules for Vinegar.
+
+Package: vinegar-doc
+Architecture: all
+Depends: ${misc:Depends}, ${sphinxdoc:Depends}
+Description: Salt-style PXE boot server (documentation)
+ This package provides the documentation for Vinegar.
+
+Package: vinegar-server
+Architecture: all
+Depends: ${misc:Depends}, adduser, python3-vinegar (= ${source:Version})
+Suggests: vinegar-doc
+Description: Salt-style PXE boot server (server component)
+ This package provides the server executable and configuration.
