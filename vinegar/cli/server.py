@@ -201,7 +201,7 @@ def run_server(config: typing.Mapping[str, typing.Any]) -> None:
         logging.basicConfig(level=logging_level)
     try:
         _run_server_internal(config)
-    except:
+    except BaseException:
         logging.getLogger(__name__).exception('Server startup failed.')
         # We still raise the exception so that it is printed to the output.
         raise

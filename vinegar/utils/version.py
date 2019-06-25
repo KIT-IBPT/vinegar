@@ -69,7 +69,7 @@ def version_for_file_path(
                 file_stat.st_ino,
                 file_stat.st_size)
         return _hash_str(file_info)
-    except:
+    except Exception:
         # If we cannot stat the file, we calculate the version based on the
         # file path only. We also encode the exception type, so that a file that
         # cannot be found has a different version string than a file that exists

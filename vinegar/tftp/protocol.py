@@ -260,7 +260,7 @@ def decode_error(data: bytes) -> typing.Tuple[ErrorCode, str]:
         return (None, '')
     try:
         error_code = ErrorCode.from_bytes(data, offset=2)
-    except:
+    except struct.error:
         error_code = None
     data_parts = data[4:].split(b'\0')
     if data_parts:

@@ -292,7 +292,7 @@ class TftpServer:
                 # fails, we log a warning, but continue.
                 try:
                     self._socket.setsockopt(ipproto_ipv6, socket.IPV6_V6ONLY, 0)
-                except:
+                except Exception:
                     logger.warning(
                         'Cannot set IPV6_V6ONLY socket option to 0, socket '
                         'might not be reachable via IPv4.')
@@ -305,9 +305,10 @@ class TftpServer:
                     target=self._run, daemon=True)
                 self._main_thread.start()
                 self._running = True
-            except:
+            except BaseException:
                 self._socket.close()
                 self._socket = None
+                raise
 
     def stop(self):
         """
@@ -382,7 +383,7 @@ class TftpServer:
     def _process_read_request(self, req_data, req_addr):
         try:
             (filename, transfer_mode, options) = decode_read_request(req_data)
-        except:
+        except Exception:
             # If we cannot decode the read request, this is an error, but in the
             # client, not the server, so we log it with a level of INFO.
             logger.info(
@@ -448,7 +449,7 @@ class TftpServer:
         (opcode_num,) = struct.unpack_from('!H', req_data)
         try:
             opcode = Opcode(opcode_num)
-        except:
+        except Exception:
             logger.debug(
                 'Invalid request from %s: Opcode %s is not recognized.',
                 socket_address_to_str(req_addr),
@@ -489,7 +490,7 @@ class TftpServer:
                     # A timeout is not an error, it just means that we should
                     # check the _shutdown_requested flag again.
                     pass
-                except:
+                except Exception:
                     # We do not want a problem with a request to stop the whole
                     # server, so we log the problem and continue.
                     logger.exception('Request processing failed.')
@@ -740,7 +741,7 @@ class _TftpReadRequest:
             # When sending the error, we want to use a fresh timeout value.
             self._socket.settimeout(self._timeout)
             self._send(error_packet(ErrorCode.NOT_DEFINED, message))
-        except:
+        except Exception:
             # Otherwise, there must be some kind of internal error, so we log
             # the exception and send an error code to the client.
             logger.exception(
@@ -782,7 +783,7 @@ class _TftpReadRequest:
             try:
                 self._options[OPTION_TRANSFER_SIZE] = str(
                     len(self._file.getbuffer()) - self._file.tell())
-            except:
+            except Exception:
                 # We ignore any exception that might happen here: We can still
                 # transfer the file, we just cannot tell its size.
                 del self._options[OPTION_TRANSFER_SIZE]
@@ -797,7 +798,7 @@ class _TftpReadRequest:
             try:
                 file_stat = os.fstat(self._file.fileno())
                 self._options[OPTION_TRANSFER_SIZE] = str(file_stat.st_size)
-            except:
+            except Exception:
                 # We ignore any exception that might happen here: We can still
                 # transfer the file, we just cannot tell its size.
                 del self._options[OPTION_TRANSFER_SIZE]
@@ -832,7 +833,7 @@ class _TftpReadRequest:
         (opcode_num,) = struct.unpack_from('!H', data)
         try:
             opcode = Opcode(opcode_num)
-        except:
+        except ValueError:
             raise _TftpReadRequest._InvalidPacket(
                 'Received packet with invalid opcode %s.', opcode_num)
         if opcode == Opcode.ACK:
@@ -843,16 +844,11 @@ class _TftpReadRequest:
                     block_number,
                     socket_address_to_str(self._client_address))
                 return block_number
-            except:
+            except ValueError:
                 raise _TftpReadRequest._InvalidPacket(
                     'Received malformed ACK packet.')
         elif opcode == Opcode.ERROR:
-            try:
-                (error_code, error_message) = decode_error(data)
-            except:
-                # Even if the error packet is malformed, we treat it as an error
-                # and simply close the connection without sending an error back.
-                raise _TftpReadRequest._ClientError('Unknown error.')
+            (error_code, error_message) = decode_error(data)
             if error_code is not None and error_message:
                 raise _TftpReadRequest._ClientError(
                     'Error code {0}: {1}'.format(
@@ -873,12 +869,13 @@ class _TftpReadRequest:
         try:
             self._socket = socket.socket(
                 family=socket.AF_INET6, type=socket.SOCK_DGRAM)
-        except:
+        except Exception:
             logger.exception(
                 'Error creating socket for read request for file "%s" from '
                 'client %s.',
                 self._filename,
                 socket_address_to_str(self._client_address))
+            return
         # We want to make sure that we always close the socket, so we use it in
         # a with statement.
         with self._socket:
@@ -897,7 +894,7 @@ class _TftpReadRequest:
             # warning for the main socket.
             try:
                 self._socket.setsockopt(ipproto_ipv6, socket.IPV6_V6ONLY, 0)
-            except:
+            except Exception:
                 pass
             try:
                 self._file = self._handler_function(
@@ -918,7 +915,7 @@ class _TftpReadRequest:
                 self._socket.settimeout(self._timeout)
                 self._send(data)
                 return
-            except:
+            except Exception:
                 logger.exception(
                     'Request handler for read request for file "%s" from '
                     'client %s raised an exception.',

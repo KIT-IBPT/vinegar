@@ -513,7 +513,7 @@ class FileRequestHandlerBase(DataSourceAware):
                 try:
                     system_id = self._data_source.find_system(
                         lookup_key, lookup_value)
-                except:
+                except Exception:
                     if self._data_source_error_action == 'error':
                         raise
                     elif self._data_source_error_action == 'warn':
@@ -534,7 +534,7 @@ class FileRequestHandlerBase(DataSourceAware):
                 if self._template_engine is not None:
                     try:
                         data, _ = self._data_source.get_data(system_id, {}, '')
-                    except:
+                    except Exception:
                         if self._data_source_error_action == 'error':
                             raise
                         elif self._data_source_error_action == 'warn':

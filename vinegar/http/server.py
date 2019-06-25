@@ -203,7 +203,7 @@ class HttpServer:
                                 self.rfile,
                                 self.client_address,
                                 context)
-                        except:
+                        except Exception:
                             logger.exception(
                                 'Request handler for %s request for file "%s" '
                                 'from client %s raised an exception.',
@@ -232,7 +232,7 @@ class HttpServer:
                             shutil.copyfileobj(body, self.wfile)
                         return
                 self.send_error(http.HTTPStatus.NOT_FOUND)
-            except:
+            except Exception:
                 # We do not want a problem with a request to bubble up into the
                 # calling code, so we log the problem and continue.
                 logger.exception('Request processing failed.')
@@ -276,7 +276,7 @@ class HttpServer:
             # a warning, but continue.
             try:
                 self.socket.setsockopt(ipproto_ipv6, socket.IPV6_V6ONLY, 0)
-            except:
+            except Exception:
                 logger.warning(
                     'Cannot set IPV6_V6ONLY socket option to 0, socket might '
                     'not be reachable via IPv4.')
