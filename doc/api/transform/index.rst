@@ -10,6 +10,7 @@ Sub modules
   :toctree:
 
   ipv4_address
+  ipv6_address
   mac_address
   misc
   passlib
