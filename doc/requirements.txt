@@ -1,0 +1,7 @@
+# Requirements for building the docs.
+# The primary reason for having this is that we want to configure the
+# version of Sphinx used by readthedocs.io.
+
+Jinja2>=2.10.1
+PyYAML>=5.1
+Sphinx>=2.0.1
