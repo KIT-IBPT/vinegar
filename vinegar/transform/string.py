@@ -4,6 +4,7 @@ String transformations.
 
 from typing import Any
 
+
 def add_prefix(value: str, prefix: str) -> str:
     """
     Return combination of the value with a prefix.
@@ -17,6 +18,7 @@ def add_prefix(value: str, prefix: str) -> str:
     """
     return prefix + value
 
+
 def add_suffix(value: str, suffix: str) -> str:
     """
     Return combination of the value with a suffix.
@@ -29,6 +31,7 @@ def add_suffix(value: str, suffix: str) -> str:
         ``value + suffix``.
     """
     return value + suffix
+
 
 def split(value: str, sep: str = None, maxsplit: int = -1) -> str:
     """
@@ -47,6 +50,7 @@ def split(value: str, sep: str = None, maxsplit: int = -1) -> str:
     """
     return value.split(sep, maxsplit)
 
+
 def to_lower(value: str) -> str:
     """
     Return lower-case version of the string.
@@ -58,6 +62,7 @@ def to_lower(value: str) -> str:
     """
     return value.lower()
 
+
 def to_str(value: Any) -> str:
     """
     Return string representation of the value.
@@ -68,6 +73,7 @@ def to_str(value: Any) -> str:
         ``str(value)``.
     """
     return str(value)
+
 
 def to_upper(value: str) -> str:
     """

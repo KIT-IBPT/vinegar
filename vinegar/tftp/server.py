@@ -13,7 +13,8 @@ import threading
 import time
 import typing
 
-from vinegar.tftp.protocol import (DEFAULT_BLOCK_SIZE, MAX_BLOCK_SIZE,
+from vinegar.tftp.protocol import (
+    DEFAULT_BLOCK_SIZE, MAX_BLOCK_SIZE,
     MAX_BLOCK_NUMBER, MAX_REQUEST_PACKET_SIZE, MAX_TIMEOUT, MIN_BLOCK_SIZE,
     MIN_TIMEOUT, OPTION_BLOCK_SIZE, OPTION_TIMEOUT, OPTION_TRANSFER_SIZE,
     ErrorCode, Opcode, TransferMode, data_packet, decode_ack, decode_error,
@@ -23,6 +24,7 @@ from vinegar.utils.socket import socket_address_to_str
 
 # Logger used by this module
 logger = logging.getLogger(__name__)
+
 
 class TftpError(Exception):
     """
@@ -40,14 +42,15 @@ class TftpError(Exception):
     message = ''
 
     def __init__(
-        self,
-        message: str = '', error_code: ErrorCode = ErrorCode.NOT_DEFINED):
+            self,
+            message: str = '', error_code: ErrorCode = ErrorCode.NOT_DEFINED):
         if message:
             super().__init__(message)
         else:
             super().__init__()
         self.message = message
         self.error_code = error_code
+
 
 class TftpRequestHandler(abc.ABC):
     """
@@ -139,6 +142,7 @@ class TftpRequestHandler(abc.ABC):
         """
         return None
 
+
 class TftpServer:
     """
     Server implementing the TFTP (RFC 1350) protocol. This server can serve
@@ -224,7 +228,9 @@ class TftpServer:
         """
         for request_handler in request_handlers:
             if not isinstance(request_handler, TftpRequestHandler):
-                raise ValueError('All request handlers must implement the TftpRequestHandler interface.')
+                raise ValueError(
+                    'All request handlers must implement the '
+                    'TftpRequestHandler interface.')
         self._request_handlers = request_handlers
         self._bind_address = bind_address
         self._bind_port = bind_port
@@ -306,7 +312,7 @@ class TftpServer:
     def stop(self):
         """
         Stops this server instance.
-        
+
         This closes the server socket and stops the daemon thread that has been
         created. Please note that this will not close the sockets or shutdown
         the threads that have been created for requests. Each of these threads
@@ -357,7 +363,7 @@ class TftpServer:
             filename,
             transfer_mode,
             options,
-            client_address, 
+            client_address,
             handler_function,
             handler_context,
             self._default_timeout,
@@ -393,7 +399,8 @@ class TftpServer:
             # If the client requests transfer mode "mail" this is not an error
             # in the server, so we log it with a level of INFO.
             logger.info(
-                'Read request from %s requested unsupported transfer mode "mail".',
+                'Read request from %s requested unsupported transfer mode '
+                '"mail".',
                 socket_address_to_str(req_addr))
             data = error_packet(
                 ErrorCode.ILLEGAL_OPERATION,
@@ -489,6 +496,7 @@ class TftpServer:
         finally:
             self._socket.close()
 
+
 class _TftpReadRequest:
     """
     Represents the connection associated with a read request. This object wraps
@@ -558,7 +566,7 @@ class _TftpReadRequest:
                                 # later.
                                 self._last_byte_was_cr = True
                                 self._data += (new_data[start_index:index]
-                                    + b'\r\n')
+                                               + b'\r\n')
                                 index += 1
                                 start_index = index
                             elif new_data[index + 1] == self.LF:
@@ -569,7 +577,7 @@ class _TftpReadRequest:
                                 # If the CR is not followed by an LF, we have to
                                 # insert one.
                                 self._data += (new_data[start_index:index]
-                                    + b'\r\n')
+                                               + b'\r\n')
                                 index += 1
                                 start_index = index
                         elif new_data[index] == self.LF:
@@ -1003,7 +1011,6 @@ class _TftpReadRequest:
                 else:
                     raise
 
-
     def _set_socket_timeout(self):
         now = time.monotonic()
         time_remaining = self._time_limit - now
@@ -1015,9 +1022,11 @@ class _TftpReadRequest:
             # mode, which would have undesired side effects.
             self._socket.settimeout(0.001)
 
+
 # We use this regular expression to verify that an option that must be a
 # positive integer has been specified correctly.
 _REGEXP_POSITIVE_INT = re.compile('[1-9][0-9]*')
+
 
 def create_tftp_server(
         request_handlers: typing.List[TftpRequestHandler],

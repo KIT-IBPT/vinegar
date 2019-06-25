@@ -8,7 +8,9 @@ import re
 #
 # This regular expression is design so that groups 1 to 4 capture the individual
 # byte of the IP address and group 5 captures the subnet mask (if present).
-_IPV4_REGEXP = re.compile('([0-9]+)\\.([0-9]+)\\.([0-9]+)\\.([0-9]+)(?:/([0-9]+))?')
+_IPV4_REGEXP = re.compile(
+    '([0-9]+)\\.([0-9]+)\\.([0-9]+)\\.([0-9]+)(?:/([0-9]+))?')
+
 
 def broadcast_address(value: str, raise_error_if_malformed: bool = False):
     """
@@ -42,7 +44,7 @@ def broadcast_address(value: str, raise_error_if_malformed: bool = False):
                 'Cannot calculate net address for IP address without subnet '
                 'mask: {0}'.format(value))
         else:
-            return value            
+            return value
     addr_as_int = (
         (addr_bytes[0] << 24) + (addr_bytes[1] << 16) + (addr_bytes[2] << 8)
         + addr_bytes[3])
@@ -53,6 +55,7 @@ def broadcast_address(value: str, raise_error_if_malformed: bool = False):
     addr_bytes[2] = (addr_as_int >> 8) & 255
     addr_bytes[3] = addr_as_int & 255
     return '{0[0]}.{0[1]}.{0[2]}.{0[3]}'.format(addr_bytes)
+
 
 def net_address(value: str, raise_error_if_malformed: bool = False):
     """
@@ -98,6 +101,7 @@ def net_address(value: str, raise_error_if_malformed: bool = False):
     addr_bytes[3] = addr_as_int & 255
     return '{0[0]}.{0[1]}.{0[2]}.{0[3]}/{1}'.format(addr_bytes, mask)
 
+
 def normalize(value: str, raise_error_if_malformed: bool = False):
     """
     Normalize an IPv4 address.
@@ -134,6 +138,7 @@ def normalize(value: str, raise_error_if_malformed: bool = False):
         value = '{0}/{1}'.format(value, mask)
     return value
 
+
 def strip_mask(value: str, raise_error_if_malformed: bool = False):
     """
     Strip a subnet mask from an IPv4 address (if present).
@@ -164,6 +169,7 @@ def strip_mask(value: str, raise_error_if_malformed: bool = False):
     # after the "/" character.
     value, _, _ = value.partition('/')
     return value
+
 
 def _str_to_addr_bytes_and_mask(value):
     match = _IPV4_REGEXP.fullmatch(value)

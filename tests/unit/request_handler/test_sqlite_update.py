@@ -18,6 +18,7 @@ from vinegar.request_handler.sqlite_update import (
     get_instance_http)
 from vinegar.utils.sqlite_store import open_data_store
 
+
 class TestHttpSQLiteRequestHandler(unittest.TestCase):
     """
     Tests for the `TestHttpSQLiteRequestHandler`.
@@ -110,7 +111,7 @@ class TestHttpSQLiteRequestHandler(unittest.TestCase):
             'find_system should not have been called.')
         data_source.get_data.return_value = (system_data, '')
         with self._data_store_and_handler(
-            config, data_source) as (data_store, handler):
+                config, data_source) as (data_store, handler):
             system_id = 'system'
             data_store.set_value(system_id, 'key1', 'value1')
             self.assertEqual({'key1': 'value1'}, data_store.get_data(system_id))

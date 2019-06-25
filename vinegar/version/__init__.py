@@ -12,8 +12,10 @@ BETA_VERSION_OFFSET = -1000
 
 #: Version (as a tuple).
 #:
-#: When changing the version here, it also has to be changed in debian/changelog.
+#: When changing the version here, it also has to be changed in
+#: debian/changelog.
 VERSION = (1, 0, 1 + BETA_VERSION_OFFSET)
+
 
 def _version_string():
     """
@@ -28,6 +30,7 @@ def _version_string():
             # number.
             version_string += 'beta%d' % (component - BETA_VERSION_OFFSET)
     return version_string[1:]
+
 
 #: Version (as a string)
 VERSION_STRING = _version_string()

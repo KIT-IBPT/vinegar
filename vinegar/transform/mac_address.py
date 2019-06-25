@@ -42,6 +42,7 @@ _MAC_REGEXP = re.compile(
     ([0-9A-Fa-f]{1,2})
     ''')
 
+
 def normalize(
         value: str,
         target_case: str = 'upper',
@@ -89,7 +90,7 @@ def normalize(
         raise ValueError(
             'Invalid delimiter "{0}". Valid values are ":", "-", "colon", '
             '"dash" or "minus".'.format(delimiter))
-    if not target_case in ('lower', 'upper'):
+    if target_case not in ('lower', 'upper'):
         raise ValueError(
             'Invalid target case "{0}": Valid values are "lower" and '
             '"upper".'.format(target_case))

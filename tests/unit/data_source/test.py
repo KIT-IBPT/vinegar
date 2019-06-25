@@ -14,6 +14,7 @@ from vinegar.data_source import (
     inject_data_source,
     merge_data_trees)
 
+
 class TestDataSourceModule(unittest.TestCase):
     """
     Tests for the `vinegar.datasorce` module.
@@ -111,6 +112,7 @@ class TestDataSourceModule(unittest.TestCase):
         expected_result = {0: {2, 4, 5}}
         result = merge_data_trees(d1, d2, merge_sets=False)
         self.assertEqual(expected_result, result)
+
 
 class _DummyDataSource(DataSource):
     """

@@ -7,6 +7,7 @@ import unittest
 from vinegar.transform import apply_transformation
 from vinegar.transform.misc import to_int
 
+
 class TestMiscModule(unittest.TestCase):
     """
     Tests for the `vinegar.transform.misc` module.

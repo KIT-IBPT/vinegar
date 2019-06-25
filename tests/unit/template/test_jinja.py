@@ -15,9 +15,10 @@ import vinegar.template.jinja
 
 from tempfile import TemporaryDirectory
 
-from vinegar.utils.odict import  OrderedDict
+from vinegar.utils.odict import OrderedDict
 
 from vinegar.template.jinja import JinjaEngine, SerializerExtension
+
 
 class TestJinjaEngine(unittest.TestCase):
     """
@@ -330,6 +331,7 @@ class TestJinjaEngine(unittest.TestCase):
                 engine.render(str(template_path), {})
             self.assertEqual('test message', raises_assertion.exception.args[0])
 
+
 class TestSerializersExtension(unittest.TestCase):
     """
     Tests for the `SerializersExtension`.
@@ -586,6 +588,7 @@ class TestSerializersExtension(unittest.TestCase):
             self.assertEqual(
                 '123',
                 engine.render(str(template_path), {}))
+
 
 def _write_file(path, text):
     """

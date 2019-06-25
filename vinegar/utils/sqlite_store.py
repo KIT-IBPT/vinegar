@@ -11,7 +11,7 @@ mind and is probably not very useful for other applications.
 
 However, it is still provided by a separate package because other modules might
 find it useful to be able to access and modify the database used by a data
-source. 
+source.
 
 The data store is implemented in a way, so that it is safe to access the same
 database concurrently from multiple threads or even processes. This means that
@@ -28,6 +28,7 @@ import threading
 from typing import Any, Mapping, Sequence
 
 from vinegar.utils.odict import OrderedDict
+
 
 class DataStore:
     """
@@ -80,7 +81,6 @@ class DataStore:
         self._lock = threading.Lock()
         self._create_tables()
 
-    
     def close(self) -> None:
         """
         Close this data store. This closes the underlying database connection.
@@ -336,10 +336,11 @@ class DataStore:
         # We do not have to do anything here because we already opened the
         # connection in __init__.
         return self
-    
+
     def __exit__(self, exc_type, exc_value, traceback):
         # Close the database connection.
         self.close()
+
 
 def open_data_store(db_file: str, strict_value_checking=True) -> DataStore:
     """

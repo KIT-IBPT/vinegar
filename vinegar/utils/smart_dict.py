@@ -60,6 +60,7 @@ ensures that the dictionary preserves the insertion order of keys (see
 
 from vinegar.utils.odict import OrderedDict
 
+
 class SmartLookupDict(dict):
 
     def get(self, key, *args, **kwargs):
@@ -117,6 +118,7 @@ class SmartLookupDict(dict):
             value for ``key`` or ``default`` if ``key`` is not found.
         """
         return _smart_setdefault(self, key, default, sep, dict)
+
 
 class SmartLookupOrderedDict(OrderedDict):
 
@@ -176,6 +178,7 @@ class SmartLookupOrderedDict(OrderedDict):
         """
         return _smart_setdefault(self, key, default, sep, OrderedDict)
 
+
 def _smart_get(d, key, *args, **kwargs):
     """
     Actual implementation of ``get`` shared by ``SmartLookupDict`` and
@@ -223,6 +226,7 @@ def _smart_get(d, key, *args, **kwargs):
         else:
             raise KeyError(key) from None
     return nested_value
+
 
 def _smart_setdefault(d, key, default, sep, dict_type):
     """

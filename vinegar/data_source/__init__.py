@@ -28,6 +28,7 @@ from typing import Any, Mapping, Sequence, Tuple, Union
 from vinegar.utils.odict import OrderedDict
 from vinegar.utils.version import aggregate_version
 
+
 class DataSource(abc.ABC):
     """
     Source that provides configuration information for a system.
@@ -95,7 +96,7 @@ class DataSource(abc.ABC):
 
         If the data source does not have any information associated with the
         specified system ID, it should return an empty dictionary.
-        
+
         The return value of this method is in fact a tuple of the configuration
         data and a version string. The version string can be used by the calling
         code to decide whether the data has changed and thus caches have to be
@@ -132,6 +133,7 @@ class DataSource(abc.ABC):
 
         """
         raise NotImplementedError()
+
 
 class DataSourceAware(abc.ABC):
     """
@@ -171,6 +173,7 @@ class DataSourceAware(abc.ABC):
         """
         pass
 
+
 class _CompositeDataSource(DataSource):
     """
     Data source that chains multiple data sources.
@@ -206,8 +209,10 @@ class _CompositeDataSource(DataSource):
                 [preceding_data_version, new_data_version])
         return preceding_data, preceding_data_version
 
+
 def get_composite_data_source(
-        data_sources: Sequence[Union[Tuple[str, Mapping[Any, Any]], DataSource]],
+        data_sources:
+        Sequence[Union[Tuple[str, Mapping[Any, Any]], DataSource]],
         merge_lists: bool = False,
         merge_sets: bool = True) -> DataSource:
     """
@@ -229,9 +234,9 @@ def get_composite_data_source(
     :param data_sources:
         sequence of data sources that are chained together. Each item in the
         sequence can either be an instance of `DataSource` or a tuple. If it is
-        a tuple, the first element must be the name of the data source (as passed
-        to `get_data_source`) and the second one must be the corresponding
-        configuration.
+        a tuple, the first element must be the name of the data source (as
+        passed to `get_data_source`) and the second one must be the
+        corresponding configuration.
     :param merge_lists:
         defines whether lists are merged when merging data or whether a list in
         one dictionary replaces the list in the other dictionary. Please refer
@@ -246,6 +251,7 @@ def get_composite_data_source(
         else:
             data_source_objs.append(get_data_source(source[0], source[1]))
     return _CompositeDataSource(data_source_objs, merge_lists)
+
 
 def get_data_source(name: str, config: Mapping[Any, Any]) -> DataSource:
     """
@@ -265,6 +271,7 @@ def get_data_source(name: str, config: Mapping[Any, Any]) -> DataSource:
     module_name = name if '.' in name else '{0}.{1}'.format(__name__, name)
     data_source_module = importlib.import_module(module_name)
     return data_source_module.get_instance(config)
+
 
 def inject_data_source(obj: Any, data_source: DataSource) -> None:
     """
@@ -286,6 +293,7 @@ def inject_data_source(obj: Any, data_source: DataSource) -> None:
     """
     if isinstance(obj, DataSourceAware):
         obj.set_data_source(data_source)
+
 
 def merge_data_trees(
         tree1: Mapping[Any, Any],
@@ -349,6 +357,7 @@ def merge_data_trees(
     """
     return _merge_data_trees(tree1, tree2, merge_lists, merge_sets, None)
 
+
 def _merge_data_trees(tree1, tree2, merge_lists, merge_sets, parent_key):
     """
     Merge two dictionaries (or other kind of mappings). This is the internal
@@ -362,13 +371,14 @@ def _merge_data_trees(tree1, tree2, merge_lists, merge_sets, parent_key):
             override_value = tree2[key]
             val_is_mapping = isinstance(value, collections.abc.Mapping)
             val_is_set = isinstance(value, collections.abc.Set)
-            val_is_seq = (isinstance(value, collections.abc.Sequence)
-                    and not isinstance(
-                        value, (bytearray, bytes, memoryview, str)))
+            val_is_seq = (
+                isinstance(value, collections.abc.Sequence)
+                and not isinstance(value, (bytearray, bytes, memoryview, str)))
             oval_is_mapping = isinstance(
                 override_value, collections.abc.Mapping)
             oval_is_set = isinstance(override_value, collections.abc.Set)
-            oval_is_seq = (isinstance(override_value, collections.abc.Sequence)
+            oval_is_seq = (
+                isinstance(override_value, collections.abc.Sequence)
                 and not isinstance(
                     override_value, (bytearray, bytes, memoryview, str)))
             if parent_key is None:

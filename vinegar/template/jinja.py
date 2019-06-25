@@ -14,8 +14,8 @@ Template syntax
 
 The Jinja template engine supports the full range of features provided by the
 Jinja 2 library. Please refer to the
-`Jinja 2 documentation <http://jinja.pocoo.org/docs/>`_ to learn more about how to
-write Jinja templates.
+`Jinja 2 documentation <http://jinja.pocoo.org/docs/>`_ to learn more about how
+to write Jinja templates.
 
 Unless disabled by setting ``provide_transform_functions`` to ``False``, this
 template engine provides a ``transform`` object that can be used to access
@@ -122,6 +122,7 @@ from vinegar.transform import get_transformation_function
 from vinegar.utils.odict import OrderedDict
 from vinegar.utils.version import version_for_file_path
 
+
 class JinjaEngine(TemplateEngine):
     """
     Template engine using the Jinja 2 library.
@@ -181,7 +182,8 @@ class JinjaEngine(TemplateEngine):
             file_version = version_for_file_path(template)
             try:
                 with open(template, 'rb') as file_descriptor:
-                    file_contents = file_descriptor.read().decode(self._encoding)
+                    file_contents = file_descriptor.read().decode(
+                        self._encoding)
             except (FileNotFoundError, IsADirectoryError):
                 raise jinja2.TemplateNotFound(template)
 
@@ -202,7 +204,7 @@ class JinjaEngine(TemplateEngine):
         and function name as an index to this object.
 
         Example::
-        
+
             transform['string.to_upper']('Convert this to upper case.')
         """
 
@@ -220,7 +222,7 @@ class JinjaEngine(TemplateEngine):
         """
         root_dir = config.get('root_dir', None)
         user_env = config.get('env', {})
-        relative_includes = config.get('relative_includes', True)        
+        relative_includes = config.get('relative_includes', True)
         # We do not allow specifying both a custom loader and the root
         # directory. This would not make sense as that loader would not use the
         # specified root directory.
@@ -280,6 +282,7 @@ class JinjaEngine(TemplateEngine):
     @staticmethod
     def _raise_template_error(message):
         raise jinja2.exceptions.TemplateError(message)
+
 
 class SerializerExtension(jinja2.ext.Extension):
     """
@@ -452,7 +455,7 @@ class SerializerExtension(jinja2.ext.Extension):
         if (parser.stream.current.test_any('name:with', 'name:without')
                 and parser.stream.look().test('name:context')):
             import_node.with_context = next(parser.stream).value == 'with'
-            self.stream.skip()
+            parser.stream.skip()
         else:
             import_node.with_context = False
         # The import node will take care of loading the referenced template and
@@ -533,6 +536,7 @@ class SerializerExtension(jinja2.ext.Extension):
         if text.endswith('\n...'):
             text = text[:-4]
         return text
+
 
 def get_instance(config: typing.Mapping[typing.Any, typing.Any]) -> JinjaEngine:
     """

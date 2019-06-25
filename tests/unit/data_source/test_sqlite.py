@@ -12,6 +12,7 @@ from tempfile import TemporaryDirectory
 
 from vinegar.data_source.sqlite import SQLiteSource
 
+
 class TestSQLiteSource(unittest.TestCase):
     """
     Tests for the `SQLiteSource`.
@@ -86,7 +87,7 @@ class TestSQLiteSource(unittest.TestCase):
     def test_get_data(self):
         """
         Test the `~SQLiteSource.get_data method.
-        
+
         This mainly tests that data from the database is returned as expected.
         """
         config = {}
@@ -110,6 +111,7 @@ class TestSQLiteSource(unittest.TestCase):
             data, version2 = ds.get_data(system_id2, {}, '')
             self.assertEqual({'abc': 789}, data)
             self.assertNotEqual(version1, version2)
+
 
 @contextmanager
 def _temporary_data_source_and_store(config):

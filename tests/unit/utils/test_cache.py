@@ -6,6 +6,7 @@ import unittest
 
 from vinegar.utils.cache import LRUCache
 
+
 class TestLRUCache(unittest.TestCase):
     """
     Tests for the `LRUCache`.

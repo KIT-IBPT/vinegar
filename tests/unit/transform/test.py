@@ -6,6 +6,7 @@ import unittest
 
 from vinegar.transform import apply_transformation, apply_transformation_chain
 
+
 class TestTransformModule(unittest.TestCase):
     """
     Tests for the `vinegar.transform` module.

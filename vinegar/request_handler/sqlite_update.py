@@ -143,6 +143,7 @@ from vinegar.request_handler import HttpRequestHandler
 from vinegar.utils.smart_dict import SmartLookupDict
 from vinegar.utils.sqlite_store import open_data_store
 
+
 class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
     """
     HTTP request handler that applies updates to an SQLite database.
@@ -217,7 +218,7 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
             # We get the expected client address from the system data. We wrap
             # the system data in a smart lookup dict, so that we can look for a
             # value inside a nested dict.
-            system_data, _ = self._data_source.get_data(system_id, {}, '')            
+            system_data, _ = self._data_source.get_data(system_id, {}, '')
             system_data = SmartLookupDict(system_data)
             expected_client_address = system_data.get(
                 self._client_address_key, None)
@@ -281,10 +282,12 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
     def set_data_source(self, data_source: DataSource) -> None:
         self._data_source = data_source
 
+
 # Regular expression that matches an IPv4 address that is encoded inside an IPv6
 # address (e.g. ::ffff:127.0.0.1).
 _IPV4_IN_IPV6_ADDRESS_REGEXP = re.compile(
     '::(?:ffff|FFFF):([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)')
+
 
 def get_instance_http(
         config: Mapping[Any, Any]) -> HttpSQLiteUpdateRequestHandler:

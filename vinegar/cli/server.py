@@ -90,7 +90,7 @@ them are optional):
     use multiple request handlers with the same name, but having a different
     configuration. Please refer to the documentation of the request handlers to
     learn more about the configuration options for each request handler.
-"""
+"""  # nopep8
 
 import argparse
 import collections.abc
@@ -109,6 +109,7 @@ import vinegar.tftp.server
 import vinegar.version
 
 from vinegar.utils import oyaml as yaml
+
 
 def main():
     """
@@ -129,11 +130,12 @@ def main():
         help='show program\'s version number and exit')
     args = parser.parse_args()
     if args.version:
-        print('Vinegar server %s' % vinegar.version.version_string)
+        print('Vinegar server %s' % vinegar.version.VERSION_STRING)
         sys.exit(0)
     config_file = args.config_file
     config = read_server_config(config_file)
     run_server(config)
+
 
 def read_server_config(
         config_file: str = None) -> typing.Mapping[str, typing.Any]:
@@ -152,7 +154,7 @@ def read_server_config(
     :return:
         configuration read from the file.
     """
-    if (config_file == None):
+    if config_file is None:
         if sys.platform == 'win32':
             config_file = 'C:\\Vinegar\\conf\\vinegar-server.yaml'
         else:
@@ -162,6 +164,7 @@ def read_server_config(
     if config is None:
         config = {}
     return config
+
 
 def run_server(config: typing.Mapping[str, typing.Any]) -> None:
     """
@@ -202,6 +205,7 @@ def run_server(config: typing.Mapping[str, typing.Any]) -> None:
         logging.getLogger(__name__).exception('Server startup failed.')
         # We still raise the exception so that it is printed to the output.
         raise
+
 
 def _run_server_internal(config):
     """
@@ -249,7 +253,7 @@ def _run_server_internal(config):
             'Expected a list for the http:request_handlers key, but found an '
             'object of type \'%s\'.' % type(request_handler_configs).__name__)
     for request_handler_config in request_handler_configs:
-        if not 'name' in request_handler_config:
+        if 'name' not in request_handler_config:
             raise KeyError('Request handler configuration must specify a name.')
         request_handler = vinegar.request_handler.get_http_request_handler(
             request_handler_config['name'],
@@ -279,7 +283,7 @@ def _run_server_internal(config):
             'Expected a list for the tftp:request_handlers key, but found an '
             'object of type \'\'.' % type(request_handler_configs).__name__)
     for request_handler_config in request_handler_configs:
-        if not 'name' in request_handler_config:
+        if 'name' not in request_handler_config:
             raise KeyError('Request handler configuration must specify a name.')
         request_handler = vinegar.request_handler.get_tftp_request_handler(
             request_handler_config['name'],
@@ -316,6 +320,7 @@ def _run_server_internal(config):
     finally:
         http_server.stop()
         tftp_server.stop()
+
 
 if __name__ == '__main__':
     main()

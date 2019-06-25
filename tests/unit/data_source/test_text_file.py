@@ -14,6 +14,7 @@ from tempfile import TemporaryDirectory
 
 from vinegar.data_source.text_file import TextFileSource
 
+
 class TestTextFileSource(unittest.TestCase):
     """
     Tests for the `TextFileSource`.
@@ -334,6 +335,7 @@ class TestTextFileSource(unittest.TestCase):
             self.assertEqual(expected_data4, data)
             self.assertEqual(version4a, version4b)
 
+
 def _get_base_config(dir_path, data_text):
     """
     Call `_write_test_data_file` and return a basic configuration that uses the
@@ -352,7 +354,7 @@ def _get_base_config(dir_path, data_text):
                 # The first column specifies the MAC address.
                 (?P<mac>[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5});
                 # The second column specifies the IP address.
-                (?P<ip>[0-9]{1,3}(?:\.[0-9]{1,3}){3});
+                (?P<ip>[0-9]{1,3}(?:\\.[0-9]{1,3}){3});
                 # The third column specifies the hostname and an optional list
                 # of additional names.
                 (?P<hostname>[^,]+)
@@ -363,38 +365,28 @@ def _get_base_config(dir_path, data_text):
             'source': 'hostname',
             'transform': [
                 {'string.add_suffix': '.mydomain.example.com'},
-                'string.to_lower',
-            ],
-        },
+                'string.to_lower']},
         'variables': {
             'info:extra_names': {
                 'source': 'extra_names',
                 'transform': [
                     'string.to_lower',
-                    {'string.split': ','},
-                ],
-            },
+                    {'string.split': ','}]},
             'net:fqdn': {
                 'source': 'hostname',
                 'transform': [
                     {'string.add_suffix': '.mydomain.example.com'},
-                    'string.to_lower',
-                ],
-            },
+                    'string.to_lower']},
             'net:hostname': {
                 'source': 'hostname',
-                'transform': ['string.to_lower'],
-            },
+                'transform': ['string.to_lower']},
             'net:ipv4_addr': {
                 'source': 'ip',
-                'transform': ['ipv4_address.normalize'],
-            },
+                'transform': ['ipv4_address.normalize']},
             'net:mac_addr': {
                 'source': 'mac',
-                'transform': ['mac_address.normalize'],
-            },
-        },
-    }
+                'transform': ['mac_address.normalize']}}}
+
 
 def _write_file(path, text):
     """

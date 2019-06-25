@@ -15,13 +15,13 @@ parentheses.
 Examples:
 
 * "abc.example.com" exactly matches "abc.example.com".
-* "\*.example.com" matches "abc.example.com" and "123.456.example.com", but not
+* "\\*.example.com" matches "abc.example.com" and "123.456.example.com", but not
   "abc.example.net".
-* "\*.example.com or \*.example.net" matches "abc.example.com" and
+* "\\*.example.com or \\*.example.net" matches "abc.example.com" and
   "123.example.net", but not "def.example.org".
-* "\*.example.com and not abc.\*" matches "def.example.com" and
+* "\\*.example.com and not abc.\\*" matches "def.example.com" and
   "abc123.example.com", but not "abc.example.com".
-* "(\*.example.com or \*.example.net) and not abc.\*" matches
+* "(\\*.example.com or \\*.example.net) and not abc.\\*" matches
   "def.example.com" and "def.example.net", but not "abc.example.com".
 """
 
@@ -29,6 +29,7 @@ import abc
 import fnmatch
 import functools
 import re
+
 
 class Matcher:
     """
@@ -60,6 +61,7 @@ class Matcher:
     def __str__(self):
         return self._pattern
 
+
 def match(name: str, pattern: str, case_sensitive: bool = False) -> bool:
     """
     Tell whether the specified ``pattern`` matches the specified ``name``.
@@ -87,6 +89,7 @@ def match(name: str, pattern: str, case_sensitive: bool = False) -> bool:
     expression = _expression_from_string_cached(pattern, case_sensitive)
     return expression.matches(name)
 
+
 def matcher(pattern: str, case_sensitive: bool = False) -> Matcher:
     """
     Return a `Matcher` for the specified pattern.
@@ -111,6 +114,7 @@ def matcher(pattern: str, case_sensitive: bool = False) -> Matcher:
     """
     return Matcher(pattern, case_sensitive)
 
+
 class _Expression(abc.ABC):
     """
     Base class for all expression supported by our expression language.
@@ -119,6 +123,7 @@ class _Expression(abc.ABC):
     @abc.abstractmethod
     def matches(self, name: str) -> bool:
         raise NotImplementedError
+
 
 class _AndExpression(_Expression):
     """
@@ -138,6 +143,7 @@ class _AndExpression(_Expression):
         else:
             return self._right_expression.matches(name)
 
+
 class _OrExpression(_Expression):
     """
     Or expression. This is an expression that evaluates to ``True`` if either
@@ -156,6 +162,7 @@ class _OrExpression(_Expression):
         else:
             return self._right_expression.matches(name)
 
+
 class _PatternExpression(_Expression):
     """
     Pattern expression. This is an expression that checks whether the specified
@@ -166,11 +173,12 @@ class _PatternExpression(_Expression):
         if case_sensitive:
             flags = 0
         else:
-            flags =re.IGNORECASE
+            flags = re.IGNORECASE
         self._regexp = re.compile(fnmatch.translate(pattern), flags)
 
     def matches(self, name):
         return self._regexp.fullmatch(name) is not None
+
 
 class _NotExpression(_Expression):
     """
@@ -182,6 +190,7 @@ class _NotExpression(_Expression):
 
     def matches(self, name):
         return not(self._expression.matches(name))
+
 
 def _expect_expression(tokens, case_sensitive):
     """
@@ -211,7 +220,7 @@ def _expect_expression(tokens, case_sensitive):
     #                | { UNARY_EXPRESSION , "and" , AND_EXPRESSION } ;
     #
     # OR_EXPRESSION = EXPRESSION , "or" , EXPRESSION ;
-    # 
+    #
     # This grammar describes tokens, not characters. Tokens have to be separated
     # by whitespace, except for parentheses. This grammar does not describe the
     # internal structure of patterns either, but it is simply assumed that
@@ -234,14 +243,16 @@ def _expect_expression(tokens, case_sensitive):
                 right_expression = _AndExpression(
                     right_expression, local_expression)
             else:
-                left_expression = _AndExpression(left_expression, local_expression)
+                left_expression = _AndExpression(
+                    left_expression, local_expression)
         elif token == 'or':
             # We might have had a preceding or operator where we were not sure
             # whether we could use its second argument because it could have
             # been part of an "and" expression. Now we know that it is not and
             # can use it.
             if right_expression is not None:
-                left_expression = _OrExpression(left_expression, right_expression)
+                left_expression = _OrExpression(
+                    left_expression, right_expression)
                 right_expression = None
             # The expression that we just consumed might be part of an "and"
             # expression, so we cannot use it as a part of the "or" expression
@@ -258,6 +269,7 @@ def _expect_expression(tokens, case_sensitive):
         left_expression = _OrExpression(left_expression, right_expression)
         right_expression = None
     return left_expression
+
 
 def _expect_unary_expression(tokens, case_sensitive):
     """
@@ -287,6 +299,7 @@ def _expect_unary_expression(tokens, case_sensitive):
                 token))
     else:
         return _PatternExpression(token, case_sensitive)
+
 
 def _expression_from_string(expression, case_sensitive):
     """
@@ -325,6 +338,7 @@ def _expression_from_string(expression, case_sensitive):
             'Cannot parse expression "{0}": {1}'
             .format(expression, message)) from None
 
+
 @functools.lru_cache(maxsize=256, typed=True)
 def _expression_from_string_cached(expression, case_sensitive):
     """
@@ -333,6 +347,7 @@ def _expression_from_string_cached(expression, case_sensitive):
     This is used by `match` for performance reasons.
     """
     return _expression_from_string(expression, case_sensitive)
+
 
 def _find_closing_parenthesis(tokens):
     """

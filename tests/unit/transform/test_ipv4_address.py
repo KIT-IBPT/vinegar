@@ -8,6 +8,7 @@ from vinegar.transform import apply_transformation
 from vinegar.transform.ipv4_address import (
     broadcast_address, net_address, normalize, strip_mask)
 
+
 class TestIPv4AddressModule(unittest.TestCase):
     """
     Tests for the `vinegar.transform.ipv4_address` module.

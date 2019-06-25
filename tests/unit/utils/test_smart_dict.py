@@ -7,6 +7,7 @@ import unittest
 
 from vinegar.utils.smart_dict import SmartLookupDict, SmartLookupOrderedDict
 
+
 class TestSmartLookupDictBase(unittest.TestCase, abc.ABC):
     """
     Tests for the `vingear.utils.odict` module.
@@ -120,6 +121,7 @@ class TestSmartLookupDictBase(unittest.TestCase, abc.ABC):
             test_value2, d.setdefault('def_ghi_456', test_value2, sep='_'))
         self.assertEqual(test_value2, d['def']['ghi']['456'])
 
+
 class TestSmartLookupDict(TestSmartLookupDictBase):
 
     def new(self, *args, **kwargs):
@@ -127,6 +129,7 @@ class TestSmartLookupDict(TestSmartLookupDictBase):
         Create a new instance of `SmartLookupDict`.
         """
         return SmartLookupDict(*args, **kwargs)
+
 
 class TestSmartLookupOrderedDict(TestSmartLookupDictBase):
 
@@ -141,12 +144,13 @@ class TestSmartLookupOrderedDict(TestSmartLookupDictBase):
         Test that the ``SmartLookupOrderedDict`` does in fact preserve the
         insertion order.
         """
-        d = SmartLookupOrderedDict()
-        l = [5, 1, 12, 2, 3, 6, 4]
-        for i in l:
-            d[i] = i
-        self.assertEqual(l, list(d.keys()))
-        self.assertEqual(l, list(d.values()))
+        my_dict = SmartLookupOrderedDict()
+        my_list = [5, 1, 12, 2, 3, 6, 4]
+        for i in my_list:
+            my_dict[i] = i
+        self.assertEqual(my_list, list(my_dict.keys()))
+        self.assertEqual(my_list, list(my_dict.values()))
+
 
 # We have to delete the base class because it cannot be instantiated and the
 # automatic test discovery would try to instantiate it.

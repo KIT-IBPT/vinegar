@@ -7,6 +7,7 @@ import unittest
 from vinegar.transform import apply_transformation
 from vinegar.transform.mac_address import normalize
 
+
 class TestMacAddressModule(unittest.TestCase):
     """
     Tests for the `vinegar.transform.mac_address` module.

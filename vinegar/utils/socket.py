@@ -10,6 +10,7 @@ import typing
 _IPV4_IN_IPV6_ADDRESS_REGEXP = re.compile(
     '::(?:ffff|FFFF):([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)')
 
+
 def ipv6_address_unwrap(ipv6_address: str) -> str:
     """
     Unwrap an IPv4 address that is encoded in an IPv6 address.
@@ -20,7 +21,7 @@ def ipv6_address_unwrap(ipv6_address: str) -> str:
 
     For any string not matching this pattern, this function simply returns the
     original string.
-    
+
     :param ipv6_address:
         string that might represent an IPv4 address wrapped in an IPv6 address
         (like ``::ffff::127.0.0.1``).
@@ -33,6 +34,7 @@ def ipv6_address_unwrap(ipv6_address: str) -> str:
         return match.group(1)
     else:
         return ipv6_address
+
 
 def socket_address_to_str(socket_address: typing.Tuple):
     """

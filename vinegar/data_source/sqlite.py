@@ -88,6 +88,7 @@ from vinegar.data_source import DataSource
 from vinegar.utils.sqlite_store import open_data_store
 from vinegar.utils.version import version_for_str
 
+
 class SQLiteSource(DataSource):
     """
     Data source that reads data from a SQLite database.
@@ -99,7 +100,7 @@ class SQLiteSource(DataSource):
     source, please refer to the
     `module documentation <vinegar.data_source.sqlite>`.
     """
-    
+
     def __init__(self, config: Mapping[Any, Any]):
         """
         Create a SQLite data source using the specified configuration.
@@ -156,6 +157,7 @@ class SQLiteSource(DataSource):
                 data = {prefix_component: data}
         version = version_for_str(json.dumps(data))
         return data, version
+
 
 def get_instance(config: Mapping[Any, Any]) -> SQLiteSource:
     """

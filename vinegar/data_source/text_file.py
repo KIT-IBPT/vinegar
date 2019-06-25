@@ -141,7 +141,7 @@ YAML for describing the configuration):
         # The first column specifies the MAC address.
         (?P<mac>[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5});
         # The second column specifies the IP address.
-        (?P<ip>[0-9]{1,3}(?:\.[0-9]{1,3}){3});
+        (?P<ip>[0-9]{1,3}(?:\\.[0-9]{1,3}){3});
         # The third column specifies the hostname and an optional list
         # of additional names.
         (?P<hostname>[^,]+)
@@ -331,6 +331,7 @@ from vinegar.utils.version import version_for_file_path, version_for_str
 # Logger used by this module.
 logger = logging.getLogger(__name__)
 
+
 class TextFileSource(DataSource):
     """
     Data source that reads data from a text file.
@@ -339,7 +340,7 @@ class TextFileSource(DataSource):
     source, please refer to the
     `module documentation <vinegar.data_source.text_file>`.
     """
-    
+
     def __init__(self, config: Mapping[Any, Any]):
         """
         Create a text file data source using the specified configuration.
@@ -535,7 +536,8 @@ class TextFileSource(DataSource):
                     elif self._duplicate_system_id_action == 'warn':
                         logger.warning(
                             'Duplicate system ID in file %s line %d: System ID '
-                            '"%s" is already specified in line %d. Ignoring line %d',
+                            '"%s" is already specified in line %d. Ignoring '
+                            'line %d',
                             self._file,
                             line_no,
                             system_id,
@@ -595,6 +597,7 @@ class TextFileSource(DataSource):
         # this function.
         if self._cache_enabled:
             self._file_version = current_file_version
+
 
 def get_instance(config: Mapping[Any, Any]) -> TextFileSource:
     """

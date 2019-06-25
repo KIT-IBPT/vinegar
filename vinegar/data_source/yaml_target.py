@@ -187,6 +187,7 @@ from vinegar.utils.smart_dict import SmartLookupOrderedDict
 from vinegar.utils.version import (
     aggregate_version, version_for_file_path, version_for_str)
 
+
 class YamlTargetSource(DataSource):
     """
     Data source that constructs a configuration tree through a flexible
@@ -196,7 +197,7 @@ class YamlTargetSource(DataSource):
     source, please refer to the
     `module documentation <vinegar.data_source.yaml_target>`.
     """
-    
+
     def __init__(self, config: Mapping[Any, Any]):
         """
         Create a YAML data source using the specified configuration.
@@ -269,8 +270,10 @@ class YamlTargetSource(DataSource):
         # affects later calls.
         return copy.deepcopy(data), data_version
 
+
 # Each value in the cache item for a system is in instance of this type.
 _CachedData = collections.namedtuple('_CachedData', ('data', 'version'))
+
 
 class _DataCompiler:
     """
@@ -437,7 +440,7 @@ class _DataCompiler:
     def _process_data_file_content(file_data):
         # If the file does not include any other files, we can simply use its
         # data as the preceding data.
-        if not 'include' in file_data:
+        if 'include' not in file_data:
             return file_data, None, None
         # If the includes come first, we can use a simplified approach for the
         # merging.
@@ -568,6 +571,7 @@ class _DataCompiler:
         else:
             return self._template_engine.render(
                 template_path, copy.deepcopy(self._context))
+
 
 def get_instance(config: Mapping[Any, Any]) -> YamlTargetSource:
     """

@@ -16,7 +16,9 @@ import typing
 KeyType = typing.TypeVar('KeyType')
 ValueType = typing.TypeVar('ValueType')
 
-class Cache(typing.Generic[KeyType, ValueType], abc.ABC): # pylint: disable=E1136
+
+class Cache(
+        typing.Generic[KeyType, ValueType], abc.ABC):  # pylint: disable=E1136
     """
     Interface for cache implementations
 
@@ -79,6 +81,7 @@ class Cache(typing.Generic[KeyType, ValueType], abc.ABC): # pylint: disable=E113
     def __setitem__(self, key: KeyType, value: ValueType) -> None:
         raise NotImplementedError
 
+
 class LRUCache(Cache[KeyType, ValueType]):
     """
     Cache using the last recently used (LRU) strategy.
@@ -86,7 +89,7 @@ class LRUCache(Cache[KeyType, ValueType]):
     This cache implementation is not thread-safe. If it is supposed to be used
     from multiple threads, wrap it in a `SynchronizedCache`.
     """
-    
+
     def __init__(self, cache_size: int = 16, mark_on_update: bool = True):
         """
         Create a LRU cache using the specified size.
@@ -102,7 +105,7 @@ class LRUCache(Cache[KeyType, ValueType]):
             shortly after. The default is ``True``.
         """
         if cache_size < 1:
-            raise ValueError('Cache size must be strictly positive.')        
+            raise ValueError('Cache size must be strictly positive.')
         self._cache_size = cache_size
         # We cannot use vinegar.utils.odict.OrderedDict here because we need the
         # move_to_end method.
@@ -135,6 +138,7 @@ class LRUCache(Cache[KeyType, ValueType]):
         if len(self._data) > self._cache_size:
             self._data.popitem(last=False)
 
+
 class NullCache(Cache[KeyType, ValueType]):
     """
     Cache that actually does not cache anything.
@@ -160,6 +164,7 @@ class NullCache(Cache[KeyType, ValueType]):
 
     def __setitem__(self, key: KeyType, value: ValueType) -> None:
         pass
+
 
 class SynchronizedCache(Cache[KeyType, ValueType]):
     """

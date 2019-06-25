@@ -315,6 +315,7 @@ from vinegar.utils.smart_dict import SmartLookupOrderedDict
 # Logger used by this module.
 logger = logging.getLogger(__name__)
 
+
 class FileRequestHandlerBase(DataSourceAware):
     """
     Base class for the `HttpFileRequestHandler` and `TftpFileRequestHandler`.
@@ -371,7 +372,8 @@ class FileRequestHandlerBase(DataSourceAware):
         template = config.get('template', None)
         template_config = config.get('template_config', {})
         if template:
-            self._template_engine = get_template_engine(template, template_config)
+            self._template_engine = get_template_engine(
+                template, template_config)
         else:
             self._template_engine = None
         # Initializing the variables that are related to the request path is
@@ -505,7 +507,9 @@ class FileRequestHandlerBase(DataSourceAware):
             if lookup_key == ':system_id:':
                 system_id = lookup_value
             else:
-                # If the data source is not available, we 
+                # If the data source is not available, we raise an error or
+                # continue without a system ID, depending on the
+                # data_source_error_action.
                 try:
                     system_id = self._data_source.find_system(
                         lookup_key, lookup_value)
@@ -649,48 +653,49 @@ class FileRequestHandlerBase(DataSourceAware):
 
     @staticmethod
     def _translate_path(root_dir, extra_path):
-            # There is no good reason why a path should contain a null byte, so
-            # we can be pretty sure someone is trying something nasty, if it
-            # does. Actually, this case should already be caught in
-            # prepare_context, but we have it here again, just in case the code
-            # structure changes in the future.
-            if '\0' in extra_path:
-                return None
-            # If we are running on a platform that does not use "/" as its path
-            # separator (e.g. Windows), we convert every character that is the
-            # path separator on this platform to "/". This ensures that after
-            # splitting, the path segments, there will be no segment that
-            # contains the platform's path separator.
-            extra_path = extra_path.replace(os.path.sep, '/')
-            # If there is no extra path, or if it ends with a "/", we do not
-            # even have to look for a file.
-            if (not extra_path) or extra_path.endswith('/'):
-                return None
-            # We split the path into its segments so that we can build the
-            # corresponding path on the file system.
-            extra_path_segments = extra_path.split('/')
-            # We remove any leading empty segments (those are caused by leading
-            # "/"s in the string).
-            while extra_path_segments and extra_path_segments[0] == '':
-                del extra_path_segments[0]
-            # If there are no segments left, the path does not refer to a valid
-            # file.
-            if not extra_path_segments:
-                return None
-            # If there are path segments that are "." or "..", the chances are
-            # good that someone is trying something nasty.
-            if ('.' in extra_path_segments) or ('..' in extra_path_segments):
-                return None
-            # Now we can construct the path on the file system.
-            fs_path = os.path.join(root_dir, *extra_path_segments)
-            fs_path = os.path.normpath(fs_path)
-            # The next check is kind of redundant: Due to the previous checks,
-            # it should not be possible to construct a path that points outside
-            # the root_dir. We still use this check to be extra sure.
-            if not fs_path.startswith(root_dir):
-                return None
-            else:
-                return fs_path
+        # There is no good reason why a path should contain a null byte, so we
+        # can be pretty sure someone is trying something nasty, if it does.
+        # Actually, this case should already be caught in prepare_context, but
+        # we have it here again, just in case the code structure changes in the
+        # future.
+        if '\0' in extra_path:
+            return None
+        # If we are running on a platform that does not use "/" as its path
+        # separator (e.g. Windows), we convert every character that is the path
+        # separator on this platform to "/". This ensures that after splitting,
+        # the path segments, there will be no segment that contains the
+        # platform's path separator.
+        extra_path = extra_path.replace(os.path.sep, '/')
+        # If there is no extra path, or if it ends with a "/", we do not even
+        # have to look for a file.
+        if (not extra_path) or extra_path.endswith('/'):
+            return None
+        # We split the path into its segments so that we can build the
+        # corresponding path on the file system.
+        extra_path_segments = extra_path.split('/')
+        # We remove any leading empty segments (those are caused by leading "/"s
+        # in the string).
+        while extra_path_segments and extra_path_segments[0] == '':
+            del extra_path_segments[0]
+        # If there are no segments left, the path does not refer to a valid
+        # file.
+        if not extra_path_segments:
+            return None
+        # If there are path segments that are "." or "..", the chances are good
+        # that someone is trying something nasty.
+        if ('.' in extra_path_segments) or ('..' in extra_path_segments):
+            return None
+        # Now we can construct the path on the file system.
+        fs_path = os.path.join(root_dir, *extra_path_segments)
+        fs_path = os.path.normpath(fs_path)
+        # The next check is kind of redundant: Due to the previous checks, it
+        # should not be possible to construct a path that points outside the
+        # root_dir. We still use this check to be extra sure.
+        if not fs_path.startswith(root_dir):
+            return None
+        else:
+            return fs_path
+
 
 class HttpFileRequestHandler(FileRequestHandlerBase, HttpRequestHandler):
     """
@@ -720,7 +725,7 @@ class HttpFileRequestHandler(FileRequestHandlerBase, HttpRequestHandler):
                 self._content_type = 'application/octet-stream'
         self._content_type_map = config.get('content_type_map', None)
         if not self._content_type_map:
-           self._content_type_map = {}
+            self._content_type_map = {}
         elif self._file:
             raise ValueError(
                 'The content_type_map must be empty when operating in file '
@@ -761,6 +766,7 @@ class HttpFileRequestHandler(FileRequestHandlerBase, HttpRequestHandler):
             file.close()
             file = None
         return HTTPStatus.OK, response_headers, file
+
 
 class TftpFileRequestHandler(FileRequestHandlerBase, TftpRequestHandler):
     """
@@ -825,6 +831,7 @@ class TftpFileRequestHandler(FileRequestHandlerBase, TftpRequestHandler):
         else:
             return '/' + filename
 
+
 def get_instance_http(config: Mapping[Any, Any]) -> HttpFileRequestHandler:
     """
     Create a HTTP request handler serving files.
@@ -841,6 +848,7 @@ def get_instance_http(config: Mapping[Any, Any]) -> HttpFileRequestHandler:
         HTTP request handler serving files from the file system.
     """
     return HttpFileRequestHandler(config)
+
 
 def get_instance_tftp(config: Mapping[Any, Any]) -> HttpFileRequestHandler:
     """

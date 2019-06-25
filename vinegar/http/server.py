@@ -19,6 +19,7 @@ from vinegar.utils.socket import ipv6_address_unwrap, socket_address_to_str
 # Logger used by this module
 logger = logging.getLogger(__name__)
 
+
 class HttpRequestHandler(abc.ABC):
     """
     Interface for a request handler. A request handler should be derived from
@@ -75,7 +76,7 @@ class HttpRequestHandler(abc.ABC):
                 http.HTTPStatus, typing.Mapping[str, str], io.BufferedIOBase]:
         """
         Handle the request.
-        
+
         This method returns a tuple of three items. The first item is the HTTP
         status code, the second item are the headers that shall be sent to the
         client, and the third is a file-like object from which the data for the
@@ -129,6 +130,7 @@ class HttpRequestHandler(abc.ABC):
             context object that is passed to ``can_handle`` and ``handle``.
         """
         return None
+
 
 class HttpServer:
     """
@@ -246,8 +248,8 @@ class HttpServer:
         do_PUT = _delegate_request
         do_DELETE = _delegate_request
 
-
-    class _ThreadingHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
+    class _ThreadingHTTPServer(
+            socketserver.ThreadingMixIn, http.server.HTTPServer):
         """
         Subclass of ``http.server.HTTPServer`` that uses the
         ``socketserver.ThreadingMixIn``. This means that this server spawns a
@@ -307,7 +309,9 @@ class HttpServer:
         """
         for request_handler in request_handlers:
             if not isinstance(request_handler, HttpRequestHandler):
-                raise ValueError('All request handlers must implement the HttpRequestHandler interface.')
+                raise ValueError(
+                    'All request handlers must implement the '
+                    'HttpRequestHandler interface.')
         self._request_handlers = request_handlers
         self._bind_address = bind_address
         self._bind_port = bind_port
@@ -325,7 +329,8 @@ class HttpServer:
                 return
 
             self._server = self._ThreadingHTTPServer(
-                (self._bind_address, self._bind_port), self._DelegatingRequestHandler)
+                (self._bind_address, self._bind_port),
+                self._DelegatingRequestHandler)
             logger.info(
                 'HTTP server is listening on %s.',
                 socket_address_to_str((self._bind_address, self._bind_port)))
@@ -350,6 +355,7 @@ class HttpServer:
 
     def _run(self):
         self._server.serve_forever(0.1)
+
 
 def create_http_server(
         request_handlers: typing.List[HttpRequestHandler],

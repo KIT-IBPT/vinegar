@@ -18,6 +18,7 @@ import pathlib
 import sys
 import typing
 
+
 def aggregate_version(versions: typing.Iterable[str]) -> str:
     """
     Calculate an aggregate version from several version strings.
@@ -33,6 +34,7 @@ def aggregate_version(versions: typing.Iterable[str]) -> str:
         aggregate version string based on the input versions.
     """
     return _hash_str('|'.join(versions))
+
 
 def version_for_file_path(
         file_path: typing.Union[str, pathlib.PurePath]) -> str:
@@ -76,6 +78,7 @@ def version_for_file_path(
             'file_path={0},exception={1}'.format(
                 file_path, str(sys.exc_info()[0])))
 
+
 def version_for_str(data: str) -> str:
     """
     Returns a version string for a string.
@@ -90,6 +93,7 @@ def version_for_str(data: str) -> str:
         hash-based version string.
     """
     return _hash_str(data)
+
 
 # Murmur3 is about twice as fast as MD5, but it is not available in the core
 # Python library. There is a Python-only variant of Murmur3, but that one is

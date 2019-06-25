@@ -6,6 +6,7 @@ import unittest
 
 from vinegar.utils.system_matcher import match, matcher
 
+
 class TestMatch(unittest.TestCase):
     """
     Tests for the `match` function.
@@ -81,6 +82,7 @@ class TestMatch(unittest.TestCase):
         self.assertTrue(match('456abc.example.com', pattern))
         self.assertFalse(match('abc.example.com', pattern))
         self.assertFalse(match('1.example.com', pattern))
+
 
 class TestMatcher(unittest.TestCase):
     """

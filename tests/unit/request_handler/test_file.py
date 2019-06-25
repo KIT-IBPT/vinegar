@@ -22,6 +22,7 @@ from vinegar.request_handler.file import (
 from vinegar.tftp.protocol import ErrorCode as TftpErrorCode
 from vinegar.tftp.server import TftpError
 
+
 class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
     """
     Base class for `TestHttpFileRequestHandler` and
@@ -938,7 +939,7 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
         different prefixes in the request path.
         """
         # As a very basic test, we check that we can read the two files that
-        # should be exposed.            
+        # should be exposed.
         file_content = self.call_handle(
             handler, prefix + '/root.txt', expect_status=HTTPStatus.OK)
         self.assertEqual('root', file_content.decode())
@@ -1060,7 +1061,7 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
             expect_status=HTTPStatus.NOT_FOUND)
         self.call_handle(
             handler,
-            prefix + '/%2e%2e\parent.txt',
+            prefix + '/%2e%2e\\parent.txt',
             expect_status=HTTPStatus.NOT_FOUND)
         self.call_handle(
             handler,
@@ -1107,6 +1108,7 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
             handler,
             prefix + '/sub%c1%9csub.txt',
             expect_status=HTTPStatus.NOT_FOUND)
+
 
 class TestHttpFileRequestHandler(TestFileRequestHandlerBase):
     """
@@ -1316,6 +1318,7 @@ class TestHttpFileRequestHandler(TestFileRequestHandlerBase):
                 handler, '/test', expect_status=HTTPStatus.OK, method='HEAD')
             self.assertIsNone(file_content)
 
+
 class TestTftpFileRequestHandler(TestFileRequestHandlerBase):
     """
     Tests for the `TftpFileRequestHandler`.
@@ -1448,9 +1451,11 @@ class TestTftpFileRequestHandler(TestFileRequestHandlerBase):
                 'test/sub/sub.txt/',
                 expect_status=HTTPStatus.NOT_FOUND)
 
+
 # We delete the base class from the module so that it is not automatically run
 # (which would fail, because it is abstract).
 del TestFileRequestHandlerBase
+
 
 def _write_file(path, text):
     """

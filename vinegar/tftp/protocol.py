@@ -39,6 +39,7 @@ OPTION_TIMEOUT = 'timeout'
 #: Name of the transfer-size option.
 OPTION_TRANSFER_SIZE = 'tsize'
 
+
 @enum.unique
 class ErrorCode(enum.IntEnum):
     """
@@ -60,10 +61,10 @@ class ErrorCode(enum.IntEnum):
     #: The requested operation is not allowed in this context by the protocol
     #: specification.
     ILLEGAL_OPERATION = 4
-    
+
     #: The packet was received from an unexpected source address or port.
     UNKNOWN_TRANSFER_ID = 5
-    
+
     #: File does already exist and is not overwritten (for write requests).
     FILE_ALREADY_EXISTS = 6
 
@@ -94,6 +95,7 @@ class ErrorCode(enum.IntEnum):
         """
         return struct.pack('!H', self.value)
 
+
 @enum.unique
 class Opcode(enum.IntEnum):
     """
@@ -112,13 +114,13 @@ class Opcode(enum.IntEnum):
 
     #: Acknowledgement of a received ``DATA`` packet.
     ACK = 4
-    
+
     #: Error message.
     ERROR = 5
-    
+
     #: Acknowledgement of supported options (send from the server to the client
     #: as the first response to a request specifying supported options).
-    OPTIONS_ACK = 6 
+    OPTIONS_ACK = 6
 
     @staticmethod
     def from_bytes(data: bytes, offset: int = 0) -> 'Opcode':
@@ -145,6 +147,7 @@ class Opcode(enum.IntEnum):
         """
         return struct.pack('!H', self.value)
 
+
 @enum.unique
 class TransferMode(enum.IntEnum):
     """
@@ -154,11 +157,11 @@ class TransferMode(enum.IntEnum):
     #: Netascii transfer mode. In this mode, all line breaks are converted to
     #: CR LF before sending them over the wire.
     NETASCII = 1
-    
+
     #: Binary transfer mode. In this mode, bytes are sent without any
     #: conversion.
     OCTET = 2
-    
+
     #: Deprecated mail transfer mode. This mode could be used by clients to
     #: write a file that would then be sent to a user by e-mail.
     MAIL = 3
@@ -201,6 +204,7 @@ class TransferMode(enum.IntEnum):
         else:
             raise ValueError('Unhandled transfer mode: {0}'.format(self))
 
+
 def data_packet(block_number: int, data: bytes) -> bytes:
     """
     Create a data packet using the given block number and data.
@@ -213,6 +217,7 @@ def data_packet(block_number: int, data: bytes) -> bytes:
         byte sequence representing a data packet.
     """
     return Opcode.DATA.to_bytes() + struct.pack('!H', block_number) + data
+
 
 def decode_ack(data: bytes) -> int:
     """
@@ -233,6 +238,7 @@ def decode_ack(data: bytes) -> int:
         raise ValueError('Packet does not have the right size for an ACK.')
     (block_number,) = struct.unpack_from('!H', data, 2)
     return block_number
+
 
 def decode_error(data: bytes) -> typing.Tuple[ErrorCode, str]:
     """
@@ -261,6 +267,7 @@ def decode_error(data: bytes) -> typing.Tuple[ErrorCode, str]:
         return (error_code, data_parts[0].decode('ascii', 'ignore'))
     else:
         return (error_code, '')
+
 
 def decode_read_request(data: bytes) \
         -> typing.Tuple[str, TransferMode, typing.Mapping[str, str]]:
@@ -305,6 +312,7 @@ def decode_read_request(data: bytes) \
         raise ValueError('Read request is not well-formed.')
     return (filename, transfer_mode, options)
 
+
 def error_packet(error_code: ErrorCode, error_message: str = '') -> bytes:
     """
     Create an error packet using the given error code and message string.
@@ -317,7 +325,8 @@ def error_packet(error_code: ErrorCode, error_message: str = '') -> bytes:
         sequence of bytes representing the error packet.
     """
     return (Opcode.ERROR.to_bytes() + error_code.to_bytes()
-        + error_message.encode('ascii') + b'\0')
+            + error_message.encode('ascii') + b'\0')
+
 
 def options_ack_packet(options: typing.Mapping[str, str]) -> bytes:
     """

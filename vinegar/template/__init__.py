@@ -21,6 +21,7 @@ import importlib
 
 from typing import Any, Mapping
 
+
 class TemplateEngine(abc.ABC):
     """
     Renderer for template files.
@@ -28,8 +29,8 @@ class TemplateEngine(abc.ABC):
     A template engine is used to read template files and provide the output of
     the rendering process.
 
-    Each template engine has to implement the `render` method. This method is used
-    to read a template file and returns is rendering result as a string.
+    Each template engine has to implement the `render` method. This method is
+    used to read a template file and returns is rendering result as a string.
 
     Template engines have to be implemented in a thread-safe manner, so that
     `render` can safely be used by different threads.
@@ -53,8 +54,9 @@ class TemplateEngine(abc.ABC):
         """
         raise NotImplementedError
 
+
 def get_template_engine(
-        name: str, 
+        name: str,
         config: Mapping[Any, Any]) -> TemplateEngine:
     """
     Create the an instance of the template engine with the specified name, using

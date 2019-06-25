@@ -15,6 +15,7 @@ from tempfile import TemporaryDirectory
 from vinegar.data_source.yaml_target import YamlTargetSource
 from vinegar.utils.odict import OrderedDict
 
+
 class TestYamlTargetSource(unittest.TestCase):
     """
     Tests for the `YamlTargetSource`.
@@ -290,7 +291,7 @@ class TestYamlTargetSource(unittest.TestCase):
                 """
                 key: !!set
                     2: null
-                    4: null 
+                    4: null
                     5: null
                 """)
             (data, _) = ds.get_data('dummy', {}, '')
@@ -592,7 +593,7 @@ class TestYamlTargetSource(unittest.TestCase):
                 """
                 include:
                     - b
-                
+
                 some_key: abc
                 """)
             _write_file(
@@ -600,7 +601,7 @@ class TestYamlTargetSource(unittest.TestCase):
                 """
                 include:
                     - a
-                
+
                 some_other_key: 123
                 """)
             # We expect a RuntimeError because of the include loop.
@@ -758,6 +759,7 @@ class TestYamlTargetSource(unittest.TestCase):
                     'dnsdomain': 'example.com'
                 },
                 ds.get_data('www.example.com', {}, '')[0])
+
 
 def _write_file(path, text):
     """

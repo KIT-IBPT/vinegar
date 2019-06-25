@@ -29,6 +29,7 @@ from typing import Any, Callable, Mapping, Sequence, Union
 # This type is defined here so that it can easily be used as a type hint.
 TransformationChain = Sequence[Union[str, Mapping[str, Any]]]
 
+
 def apply_transformation(name: str, *args, **kwargs) -> Any:
     """
     Transform a value using the specified transformation.
@@ -58,6 +59,7 @@ def apply_transformation(name: str, *args, **kwargs) -> Any:
     """
     transform_function = get_transformation_function(name)
     return transform_function(*args, **kwargs)
+
 
 def apply_transformation_chain(chain: TransformationChain, value: Any) -> Any:
     """
@@ -109,6 +111,7 @@ def apply_transformation_chain(chain: TransformationChain, value: Any) -> Any:
         transformation chain.
     """
     return get_transformation_chain(chain)(value)
+
 
 def get_transformation_chain(chain: TransformationChain) -> Callable:
     """
@@ -185,11 +188,14 @@ def get_transformation_chain(chain: TransformationChain) -> Callable:
         elif config is not None:
             args = [config]
         funcs.append((get_transformation_function(name), args, kwargs))
+
     def chain_func(value):
         for func in funcs:
             value = func[0](value, *(func[1]), **(func[2]))
         return value
+
     return chain_func
+
 
 def get_transformation_function(name: str) -> Callable:
     """

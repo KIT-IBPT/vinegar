@@ -79,11 +79,12 @@ Loader = None
 if not _std_dict_is_order_preserving:
     for loader_name in pyyaml.loader.__all__:
         Loader = getattr(pyyaml.loader, loader_name)
-        pyyaml.add_constructor("tag:yaml.org,2002:map", map_constructor, Loader=Loader)
+        pyyaml.add_constructor(
+            "tag:yaml.org,2002:map", map_constructor, Loader=Loader)
 
 
 # Merge PyYAML namespace into ours.
 # This allows users a drop-in replacement:
 #   import oyaml as yaml
 del map_constructor, map_representer, SafeDumper, DangerDumper, Loader
-from yaml import *
+from yaml import *  # noqa

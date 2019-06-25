@@ -10,6 +10,7 @@ from tempfile import TemporaryDirectory
 
 from vinegar.utils.sqlite_store import DataStore, open_data_store
 
+
 class TestDataStore(unittest.TestCase):
     """
     Tests for the `DataStore`.
@@ -156,13 +157,13 @@ class TestDataStore(unittest.TestCase):
             self.assertEqual([], store.list_systems())
             self.assertEqual({}, store.get_data(system_id1))
             self.assertEqual({}, store.get_data(system_id2))
-            # After setting a value, this system should appear.            
+            # After setting a value, this system should appear.
             store.set_value(system_id1, 'a', 123)
             self.assertEqual([system_id1], store.list_systems())
             self.assertEqual({'a': 123}, store.get_data(system_id1))
             self.assertEqual({}, store.get_data(system_id2))
             # After setting a value for another system, that system should
-            # appear, too.            
+            # appear, too.
             store.set_value(system_id2, 'a', [789])
             self.assertEqual([system_id1, system_id2], store.list_systems())
             self.assertEqual({'a': 123}, store.get_data(system_id1))
@@ -219,6 +220,7 @@ class TestDataStore(unittest.TestCase):
                 store.set_value(system_id, key, value)
             with self.assertRaises(TypeError):
                 store.set_value(system_id, key, complex(0, 1))
+
 
 @contextmanager
 def _temporary_data_store(*args, **kwargs):

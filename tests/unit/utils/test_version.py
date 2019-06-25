@@ -12,6 +12,7 @@ from tempfile import TemporaryDirectory
 from vinegar.utils.version import (
     aggregate_version, version_for_file_path, version_for_str)
 
+
 class TestVersionModule(unittest.TestCase):
     """
     Tests for the `vinegar.utils.version`.
@@ -75,7 +76,7 @@ class TestVersionModule(unittest.TestCase):
             sleep_time = 0.01
             while sleep_time < 3.0:
                 with open(test_file_path, mode='w') as file:
-                    file.write('test')            
+                    file.write('test')
                 version5 = version_for_file_path(test_file_path)
                 if version5 != version4:
                     break

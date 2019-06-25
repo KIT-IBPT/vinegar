@@ -7,6 +7,7 @@ a separate module either.
 
 from typing import Any
 
+
 def to_int(value: Any, raise_error_if_malformed: bool = False) -> str:
     """
     Return integer representation of the value.
