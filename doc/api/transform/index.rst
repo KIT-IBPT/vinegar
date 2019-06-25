@@ -12,6 +12,7 @@ Sub modules
   ipv4_address
   mac_address
   misc
+  passlib
   string
 
 Module API

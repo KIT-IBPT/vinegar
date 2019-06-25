@@ -13,7 +13,7 @@ X-Python3-Version: >= 3.5
 Package: python3-vinegar
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends}
-Suggests: vinegar-doc
+Suggests: python3-passlib, vinegar-doc
 Description: Salt-style PXE boot server (Python modules)
  This package provides the Python modules for Vinegar.
 
