@@ -1,3 +1,9 @@
+vinegar (1.1.0beta1) unstable; urgency=low
+
+  * Current development version of Vinegar.
+
+ -- Sebastian Marsching <sebastian.marsching-git-2016@aquenos.com>  Tue, 25 Jun 2019 19:44:44 +0200
+
 vinegar (1.0.0) stable; urgency=low
 
   * Initial release of Vinegar.
