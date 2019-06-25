@@ -7,9 +7,9 @@ import unittest
 from vinegar.transform import apply_transformation
 
 
-class TestMiscModule(unittest.TestCase):
+class TestPasslibModule(unittest.TestCase):
     """
-    Tests for the `vinegar.transform.misc` module.
+    Tests for the `vinegar.transform.passlib` module.
     """
 
     def setUp(self):
