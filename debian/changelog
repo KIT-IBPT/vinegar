@@ -1,3 +1,9 @@
+vinegar (1.0.2beta1) stable; urgency=low
+
+  * Next bugfix release of Vinegar 1.0.x.
+
+ -- Sebastian Marsching <sebastian.marsching-git-2016@aquenos.com>  Thu, 04 Jul 2019 20:22:09 +0200
+
 vinegar (1.0.1) stable; urgency=low
 
   * Fixed a bug causing an exception or wrong results when decoding a
