@@ -1,6 +1,9 @@
 vinegar (1.1.0beta1) unstable; urgency=low
 
   * Current development version of Vinegar.
+  * Fixed a bug causing an exception or wrong results when decoding a
+    TFTP error code. This bug only affected messages in the log file and
+    did not have any impact on the operation of the TFTP server.
 
  -- Sebastian Marsching <sebastian.marsching-git-2016@aquenos.com>  Tue, 25 Jun 2019 19:44:44 +0200
 

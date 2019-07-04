@@ -86,7 +86,7 @@ class ErrorCode(enum.IntEnum):
             start of the sequence).
         """
         (error_code_num,) = struct.unpack_from('!H', data, offset)
-        return Opcode(error_code_num)
+        return ErrorCode(error_code_num)
 
     def to_bytes(self) -> bytes:
         """
