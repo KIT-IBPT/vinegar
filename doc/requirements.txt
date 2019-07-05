@@ -3,5 +3,6 @@
 # version of Sphinx used by readthedocs.io.
 
 Jinja2>=2.10.1
+passlib>=1.7
 PyYAML>=5.1
 Sphinx>=2.0.1
