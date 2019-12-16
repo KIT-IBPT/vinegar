@@ -31,7 +31,7 @@ server's configuration file:
 
 The first part (defining the ``architecture-type`` option) goes into the global
 part of the configuration. The ``architecture-type`` simply is an alias that we
-define so that we cann easily refer to DHCP option 93.
+define so that we can easily refer to DHCP option 93.
 
 The second part can appear in the global part of the configuration, but it can
 also appear inside a ``group`` or ``subnet`` definition. This part matches any
@@ -43,7 +43,7 @@ server. The path depends on the client architecture because we need different
 versions of the boot loader for PC BIOS, UEFI 32 bit, and UEFI 64 bit systems.
 
 If you are using a different kind of DHCP server, you have to refer to its
-documentation in order to find out how to the the IP address of the boot server
+documentation in order to find out how to set the IP address of the boot server
 and the architecture-dependent path to the boot loader.
 
 We are going to set up the boot loader (GRUB 2) in the :ref:`next section
