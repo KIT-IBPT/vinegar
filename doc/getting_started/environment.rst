@@ -34,8 +34,8 @@ system and installing the following packages:
 * shim-signed
 
 At least one of the three is probably already installed on the system. We only
-need the other ones to copy some files. After that, we can remove the from the
-system again.
+need the other ones to copy some files. After that, we can remove the packages
+from the system again.
 
 After installing these packages, we create the target directory and copy the
 files that we need:
@@ -66,7 +66,7 @@ uninstalled again.
 Configuring GRUB 2
 ------------------
 
-In order to configure GRUB, we have to create to configuration files. The first
+In order to configure GRUB, we have to create two configuration files. The first
 file has the same content for all systems. Its main purpose is to setup some
 basic things that are shared for all configurations and load a second,
 system-specific file.
