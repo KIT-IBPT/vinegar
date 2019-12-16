@@ -66,7 +66,7 @@ uninstalled again.
 Configuring GRUB 2
 ------------------
 
-In order to configure GRUB, we have to create to configuration files. The first
+In order to configure GRUB, we have to create two configuration files. The first
 file has the same content for all systems. Its main purpose is to setup some
 basic things that are shared for all configurations and load a second,
 system-specific file.
