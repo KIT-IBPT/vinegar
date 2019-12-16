@@ -34,8 +34,8 @@ system and installing the following packages:
 * shim-signed
 
 At least one of the three is probably already installed on the system. We only
-need the other ones to copy some files. After that, we can remove the from the
-system again.
+need the other ones to copy some files. After that, we can remove the packages
+from the system again.
 
 After installing these packages, we create the target directory and copy the
 files that we need:
