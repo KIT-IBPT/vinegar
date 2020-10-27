@@ -375,7 +375,6 @@ class TftpServer:
 
     def _process_invalid_request(self, req_addr):
         data = error_packet(
-            ErrorCode.
             ErrorCode.ILLEGAL_OPERATION,
             'Only read or write requests are allowed on this port.')
         self._socket.sendto(data, req_addr)
