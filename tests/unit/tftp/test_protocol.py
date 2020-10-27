@@ -32,9 +32,11 @@ class TestErrorCode(unittest.TestCase):
             ErrorCode.FILE_ALREADY_EXISTS, ErrorCode.from_bytes(b'\x00\x06'))
         self.assertEqual(
             ErrorCode.NO_SUCH_USER, ErrorCode.from_bytes(b'\x00\x07'))
+        self.assertEqual(
+            ErrorCode.TRANSFER_ABORTED, ErrorCode.from_bytes(b'\x00\x08'))
         # An invalid error code should result in an exception.
         with self.assertRaises(ValueError):
-            ErrorCode.from_bytes(b'\x00\x08')
+            ErrorCode.from_bytes(b'\x00\x09')
         # We should be able to read an error code with an offset.
         self.assertEqual(
             ErrorCode.FILE_ALREADY_EXISTS,
@@ -52,6 +54,7 @@ class TestErrorCode(unittest.TestCase):
         self.assertEqual(ErrorCode.UNKNOWN_TRANSFER_ID.to_bytes(), b'\x00\x05')
         self.assertEqual(ErrorCode.FILE_ALREADY_EXISTS.to_bytes(), b'\x00\x06')
         self.assertEqual(ErrorCode.NO_SUCH_USER.to_bytes(), b'\x00\x07')
+        self.assertEqual(ErrorCode.TRANSFER_ABORTED.to_bytes(), b'\x00\x08')
 
 
 class TestOpcode(unittest.TestCase):
