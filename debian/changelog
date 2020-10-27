@@ -1,5 +1,18 @@
 vinegar (1.1.0beta1) unstable; urgency=low
 
+  * Next bugfix release of Vinegar 1.0.
+
+ -- Sebastian Marsching <sebastian.marsching-git-2016@aquenos.com>  Tue, 27 Oct 2020 12:57:51 +0100
+
+vinegar (1.0.2) stable; urgency=low
+
+  * Improved handling of error conditions. A client aborting a transfer
+    as part of option negotiation is not considered an error any longer.
+
+ -- Sebastian Marsching <sebastian.marsching-git-2016@aquenos.com>  Tue, 27 Oct 2020 12:56:37 +0100
+
+vinegar (1.0.1) stable; urgency=low
+
   * Current development version of Vinegar.
   * Fixed a bug causing an exception or wrong results when decoding a
     TFTP error code. This bug only affected messages in the log file and

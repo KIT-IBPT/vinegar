@@ -72,6 +72,10 @@ class ErrorCode(enum.IntEnum):
     #: the mail mode).
     NO_SUCH_USER = 7
 
+    #: Transfer aborted. This can happen as part of option negotiation
+    #: (RFC 2437).
+    TRANSFER_ABORTED = 8
+
     @staticmethod
     def from_bytes(data: bytes, offset: int = 0) -> 'ErrorCode':
         """
