@@ -14,7 +14,7 @@ BETA_VERSION_OFFSET = -1000
 #:
 #: When changing the version here, it also has to be changed in
 #: debian/changelog.
-VERSION = (1, 0, 2, BETA_VERSION_OFFSET + 1)
+VERSION = (1, 0, 2)
 
 
 def _version_string():
