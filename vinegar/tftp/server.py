@@ -619,6 +619,12 @@ class _TftpReadRequest:
             self._data = self._data[size:]
             return data
 
+    class _TransferAborted(Exception):
+        """
+        Exception signaling that the transfer has been aborted by the client.
+        """
+        pass
+
     def __init__(
             self,
             filename,
@@ -741,6 +747,14 @@ class _TftpReadRequest:
             # When sending the error, we want to use a fresh timeout value.
             self._socket.settimeout(self._timeout)
             self._send(error_packet(ErrorCode.NOT_DEFINED, message))
+        except _TftpReadRequest._TransferAborted:
+            # The client aborting a transfer is not an error, but we log a
+            # simple informational message.
+            logger.info(
+                'Processing of request for file "%s" from client %s was '
+                'aborted on client request.',
+                self._filename,
+                socket_address_to_str(self._client_address))
         except Exception:
             # Otherwise, there must be some kind of internal error, so we log
             # the exception and send an error code to the client.
@@ -849,6 +863,8 @@ class _TftpReadRequest:
                     'Received malformed ACK packet.')
         elif opcode == Opcode.ERROR:
             (error_code, error_message) = decode_error(data)
+            if error_code == ErrorCode.TRANSFER_ABORTED:
+                raise _TftpReadRequest._TransferAborted()
             if error_code is not None and error_message:
                 raise _TftpReadRequest._ClientError(
                     'Error code {0}: {1}'.format(
