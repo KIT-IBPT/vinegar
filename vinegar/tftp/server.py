@@ -373,7 +373,12 @@ class TftpServer:
             self._max_block_size,
             self._block_counter_wrap_value)
 
-    def _process_invalid_request(self, req_addr):
+    def _process_invalid_request(self, opcode, req_addr):
+        logger.debug(
+            'Received request from %s with opcode %s, but only READ or WRITE '
+            'requests are allowed on this server port.',
+            socket_address_to_str(req_addr),
+            opcode)
         data = error_packet(
             ErrorCode.ILLEGAL_OPERATION,
             'Only read or write requests are allowed on this port.')
@@ -459,11 +464,7 @@ class TftpServer:
         elif opcode == Opcode.WRITE_REQUEST:
             self._process_write_request(req_data, req_addr)
         else:
-            logger.debug(
-                'Received request from %s with opcode %s, but only READ or '
-                'WRITE requests are allowed on this server port.',
-                socket_address_to_str(req_addr),
-                opcode)
+            self._process_invalid_request(opcode, req_addr)
 
     def _process_write_request(self, req_data, req_addr):
         logger.error(
