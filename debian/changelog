@@ -1,10 +1,16 @@
-vinegar (1.1.0beta1) unstable; urgency=low
+vinegar (1.2.0beta1) unstable; urgency=low
+
+  * Next feature release of Vinegar.
+
+ -- Sebastian Marsching <sebastian.marsching-git-2016@aquenos.com>  Tue, 27 Oct 2020 12:57:51 +0100
+
+vinegar (1.1.0) unstable; urgency=low
 
   * Added the set_json_value_from_request_body and
     set_text_value_from_request_body options to the sqlite_update request
     handler.
 
- -- Sebastian Marsching <sebastian.marsching-git-2016@aquenos.com>  Tue, 27 Oct 2020 12:57:51 +0100
+ -- Sebastian Marsching <sebastian.marsching-git-2016@aquenos.com>  Thu, 29 Oct 2020 13:20:23 +0100
 
 vinegar (1.0.2) stable; urgency=low
 
