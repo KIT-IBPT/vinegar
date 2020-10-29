@@ -27,7 +27,7 @@ can be used::
 
 When using the ``set_json_value_from_request_body`` or
 ``set_text_value_from_request_body`` action, the value that shall be set can be
-passed like this:
+passed like this::
 
     curl -X POST --data-binary myvalue \
         http://vinegar.example.com/sqlite-prefix/system-id
