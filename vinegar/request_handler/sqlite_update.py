@@ -25,6 +25,15 @@ can be used::
     curl -X POST http://vinegar.example.com/sqlite-prefix/system-id
     wget -O - --post-data= http://vinegar.example.com/sqlite-prefix/system-id
 
+When using the ``set_json_value_from_request_body`` or
+``set_text_value_from_request_body`` action, the value that shall be set can be
+passed like this:
+
+    curl -X POST --data-binary myvalue \
+        http://vinegar.example.com/sqlite-prefix/system-id
+    wget -O - --post-data=myvalue \
+        http://vinegar.example.com/sqlite-prefix/system-id
+
 .. _access_restrictions:
 
 Access restrictions
@@ -91,7 +100,11 @@ can be used to control its behavior.
     all data stored for the specified system is deleted. If set to
     ``delete_value``, only the key and value specified by the ``key`` option
     are deleted. If set to ``set_value`` the value for the key specified by the
-    ``key`` option is set to the value specified by the ``value`` option.
+    ``key`` option is set to the value specified by the ``value`` option. If set
+    to ``set_json_value_from_request_body``, the value is read from the body of
+    the HTTP request and decoded as JSON. If set to
+    ``set_text_value_from_request_body``, the value is read from the body of the
+    HTTP request (it must be encoded as UTF-8) and stored as a string.
 
 :``db_file`` (mandatory):
     Path to the database file that contains the SQLite database that will be
@@ -121,8 +134,9 @@ can be used to control its behavior.
 
 :``key`` (optional):
     Name of the key in the database that shall be deleted or updated. If the
-    ``action`` is set to ``delete_value`` or ``set_value``, this option must be
-    specified.
+    ``action`` is set to ``delete_value``, ``set_value``,
+    ``set_json_value_from_request_body``, or
+    ``set_text_value_from_request_body``, this option must be specified.
 
 :``value`` (optional):
     Value to be set for the key denoted by the ``key``. When the ``action`` is
@@ -132,6 +146,7 @@ can be used to control its behavior.
 import collections.abc
 import http.client
 import io
+import json
 import re
 import urllib.parse
 
@@ -172,11 +187,16 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
         if not self._request_path.endswith('/'):
             self._request_path += '/'
         self._action = config['action']
-        if self._action not in ('delete_data', 'delete_value', 'set_value'):
+        if self._action not in (
+                'delete_data', 'delete_value', 'set_value',
+                'set_json_value_from_request_body',
+                'set_text_value_from_request_body'):
             raise ValueError(
                 'Invalid action "{0}". Action must be one of "delete_data", '
                 '"delete_value", "set_value".'.format(self._action))
-        if self._action in ('delete_value', 'set_value'):
+        if self._action in (
+                'delete_value', 'set_value', 'set_json_value_from_request_body',
+                'set_text_value_from_request_body'):
             self._key = config['key']
         if self._action == 'set_value':
             self._value = config['value']
@@ -249,6 +269,22 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
             self._data_store.delete_value(system_id, self._key)
         elif self._action == 'set_value':
             self._data_store.set_value(system_id, self._key, self._value)
+        elif self._action == 'set_json_value_from_request_body':
+            try:
+                body_length = int(headers.get('Content-Length', '0'))
+                raw_bytes = body.read(body_length)
+                value = json.load(io.BytesIO(raw_bytes))
+            except:
+                return HTTPStatus.BAD_REQUEST, None, None
+            self._data_store.set_value(system_id, self._key, value)
+        elif self._action == 'set_text_value_from_request_body':
+            try:
+                body_length = int(headers.get('Content-Length', '0'))
+                raw_bytes = body.read(body_length)
+                value = raw_bytes.decode()
+            except:
+                return HTTPStatus.BAD_REQUEST, None, None
+            self._data_store.set_value(system_id, self._key, value)
         else:
             raise RuntimeError('Unimplemented action: {0}'.format(self._action))
         response_headers = {'Content-Type': 'text/plain; charset=UTF-8'}

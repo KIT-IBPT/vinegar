@@ -4,6 +4,7 @@ Tests for `vinegar.request_handler.sqlite_update`.
 
 import contextlib
 import io
+import json
 import os.path
 import shutil
 import unittest
@@ -79,6 +80,36 @@ class TestHttpSQLiteRequestHandler(unittest.TestCase):
                 handler, '/test/' + system_id, expect_status=HTTPStatus.OK)
             self.assertEqual(
                 {'key1': 'some value'},
+                data_store.get_data(system_id))
+        # Test the set_json_value_from_request_body action.
+        config['action'] = 'set_json_value_from_request_body'
+        config['key'] = 'key1'
+        with self._data_store_and_handler(config) as (data_store, handler):
+            system_id = 'system'
+            value = {'abc': 123}
+            body = json.dumps(value).encode()
+            self.assertEqual({}, data_store.get_data(system_id))
+            self._call_handle(
+                handler, '/test/' + system_id, expect_status=HTTPStatus.OK,
+                headers={'Content-Length': str(len(body))},
+                body=io.BytesIO(body))
+            self.assertEqual(
+                {'key1': value},
+                data_store.get_data(system_id))
+        # Test the set_text_value_from_request_body action.
+        config['action'] = 'set_text_value_from_request_body'
+        config['key'] = 'key1'
+        with self._data_store_and_handler(config) as (data_store, handler):
+            system_id = 'system'
+            value = '{abc'
+            body = value.encode()
+            self.assertEqual({}, data_store.get_data(system_id))
+            self._call_handle(
+                handler, '/test/' + system_id, expect_status=HTTPStatus.OK,
+                headers={'Content-Length': str(len(body))},
+                body=io.BytesIO(body))
+            self.assertEqual(
+                {'key1': value},
                 data_store.get_data(system_id))
 
     def test_config_db_file(self):
@@ -286,17 +317,23 @@ class TestHttpSQLiteRequestHandler(unittest.TestCase):
             expect_status=None,
             expect_headers=None,
             client_address=('127.0.0.1', 12345),
-            method='POST'):
+            method='POST',
+            headers=None,
+            body=None):
         """
         Helper method that we use to call ``prepare_context``, ``can_handle``
         and ``handle`` in succession.
         """
+        if headers is None:
+            headers = {}
+        if body is None:
+            body = io.BytesIO(b'')
         context = handler.prepare_context(filename)
         can_handle = handler.can_handle(filename, context)
         self.assertEqual(expect_can_handle, can_handle)
         if can_handle:
             status, headers, file = handler.handle(
-                filename, method, None, None, client_address, context)
+                filename, method, headers, body, client_address, context)
             try:
                 if expect_status is not None:
                     self.assertEqual(expect_status, status)
