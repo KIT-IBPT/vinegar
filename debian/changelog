@@ -1,3 +1,9 @@
+vinegar (1.1.1beta1) unstable; urgency=low
+
+  * Next bugfix release of Vinegar 1.1.
+
+ -- Sebastian Marsching <sebastian.marsching-git-2016@aquenos.com>  Thu, 29 Oct 2020 13:23:14 +0100
+
 vinegar (1.1.0) unstable; urgency=low
 
   * Added the set_json_value_from_request_body and
