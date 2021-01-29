@@ -102,6 +102,70 @@ class TestTextFileSource(unittest.TestCase):
             self.assertIsNone(
                 ds.find_system('net:mac_addr', '02:00:00:00:00:0A'))
 
+    def test_config_iterate_over_elements(self):
+        """
+        Test the ``iterate_over_elements`` configuration option.
+        """
+        with TemporaryDirectory() as tmpdir:
+            config = _get_base_config(
+                tmpdir,
+                """
+                02:00:00:00:00:01;192.168.0.1;System1,alias11
+                02:00:00:00:00:02;192.168.0.2;system2,alias21,alias22
+                02:00:00:00:00:03;192.168.0.3;system3,double
+                02:00:00:00:00:04;192.168.0.4;system4,double
+                """)
+            # When we do not specify the iterate_over_elements option, it
+            # should default to False and not iterate over the elements.
+            ds = TextFileSource(config)
+            self.assertIsNone(ds.find_system('info:extra_names', 'alias11'))
+
+            # If the option is set to True, it should iterate over each element
+            config['iterate_over_elements'] = True
+            ds = TextFileSource(config)
+
+            # variable contains one element
+            self.assertEqual(
+                'system1.mydomain.example.com',
+                ds.find_system('info:extra_names', 'alias11'))
+
+            # variable contains more elements
+            self.assertEqual(
+                'system2.mydomain.example.com',
+                ds.find_system('info:extra_names', 'alias22'))
+
+            # if find_first_match is set to True it should return the first of 
+            # the last two systems
+            config['find_first_match'] = True
+            ds = TextFileSource(config)
+            self.assertEqual(
+                'system3.mydomain.example.com',
+                ds.find_system('info:extra_names', 'double'))
+
+            # if find_first_match is set to True and nothing is found it should
+            # return None
+            self.assertIsNone(ds.find_system('info:extra_names', 'no_defined'))
+            
+            # if find_first_match is set to False it should return None
+            config['find_first_match'] = False
+            ds = TextFileSource(config)
+            self.assertIsNone(ds.find_system('info:extra_names', 'double'))
+
+            # If we explicitly set the option to False, we expect the default
+            # behavior.
+            config['iterate_over_elements'] = False
+            ds = TextFileSource(config)
+            self.assertIsNone(ds.find_system('info:extra_names', 'alias11'))
+
+            # if iterate_over_elements is False it should simply compare
+            # both values
+            ds = TextFileSource(config)
+            self.assertIsNone(ds.find_system('info:extra_names', ['alias21']))
+            self.assertEqual(
+                'system2.mydomain.example.com',
+                ds.find_system('info:extra_names', ['alias21', 'alias22']))
+
+
     def test_config_mismatch_action(self):
         """
         Test the ``mismatch_action`` configuration option.

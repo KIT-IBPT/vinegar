@@ -315,6 +315,13 @@ refer to :ref:`data_source_text_file_file_format` and
     is matched using ``fullmatch``). Consequently, there is no need to use start
     of string or end of string anchors. If ``None`` (the default), no lines are
     ignored.
+
+:``iterate_over_elements`` (optional):
+    If ``True`` and the generated variable is not hashable(could be a list),
+    `~TextFileDataSource.find_system()` will try to iterate over the variable
+    and compare the lookup_value with each element.
+    If ``False`` or the variable is not iterable, it will compare the variable
+    with the lookup_value.
 """
 
 import logging
@@ -360,6 +367,7 @@ class TextFileSource(DataSource):
                     self._duplicate_system_id_action))
         self._file = config['file']
         self._find_first_match = config.get('find_first_match', False)
+        self._iterate_over_elements = config.get('iterate_over_elements', False)
         self._mismatch_action = config.get('mismatch_action', 'warn')
         if self._mismatch_action not in ('error', 'ignore', 'warn'):
             raise ValueError(
@@ -395,19 +403,48 @@ class TextFileSource(DataSource):
                 value_hashable = True
             except TypeError:
                 value_hashable = False
+
+            # force lookup in self._key_value_not_hashable_index if:
+            # - self._iterate_over_elements is true
+            # - lookup_key is in _key_value_not_hashable_index even when value
+            #   is hashable
+            if self._iterate_over_elements and \
+                    lookup_key in self._key_value_not_hashable_index:
+                value_hashable = False
+
             if value_hashable:
                 system_list = self._key_value_index.get(
                     (lookup_key, lookup_value), None)
             else:
                 potential_system_list = \
                     self._key_value_not_hashable_index.get(lookup_key)
-                system_list = [
-                    system_id
-                    for system_id, value in potential_system_list
-                    if value == lookup_value]
+
+                if self._iterate_over_elements:
+                    system_list = []
+                    for system_id, value in potential_system_list:
+                        try:
+                            for item in value:
+                                if item == lookup_value:
+                                    system_list.append(system_id)
+                                    break
+                            # We have found something and only interested for
+                            # the first result. Break to speedup execution.
+                            if system_list and self._find_first_match:
+                                break
+                        except TypeError:
+                            # if value is not iterable
+                            # compare both values
+                            if value == lookup_value:
+                                system_list.append(system_id)
+                else:
+                    system_list = [
+                        system_id
+                        for system_id, value in potential_system_list
+                        if value == lookup_value]
+
             # If there key/value combination is not in the index, there is no
             # matching system.
-            if system_list is None:
+            if not system_list:
                 return None
             # If the combination is in the index, there is at least one system,
             # but there could be more than one. In the latter case, we only
