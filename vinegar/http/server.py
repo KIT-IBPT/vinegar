@@ -227,7 +227,7 @@ class HttpServer:
                         if headers is not None:
                             for header_name, header_value in headers.items():
                                 self.send_header(header_name, header_value)
-                                self.end_headers()
+                            self.end_headers()
                         if body is not None:
                             shutil.copyfileobj(body, self.wfile)
                         return
