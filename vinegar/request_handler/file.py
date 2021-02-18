@@ -298,6 +298,7 @@ are:
 import http.client
 import io
 import logging
+import os
 import os.path
 import urllib.parse
 
@@ -762,6 +763,13 @@ class HttpFileRequestHandler(FileRequestHandlerBase, HttpRequestHandler):
             content_type = self._content_type
         response_headers = {}
         response_headers['Content-Type'] = content_type
+        try:
+            fpos = file.tell()
+            file.seek(0, os.SEEK_END)
+            response_headers['Content-Length'] = str(file.tell() - fpos)
+            file.seek(fpos, os.SEEK_SET)
+        except io.UnsupportedOperation:
+            pass
         if method == 'HEAD':
             file.close()
             file = None

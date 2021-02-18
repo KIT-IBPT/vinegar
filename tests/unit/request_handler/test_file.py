@@ -1175,7 +1175,8 @@ class TestHttpFileRequestHandler(TestFileRequestHandlerBase):
             self.call_handle(
                 handler,
                 '/test',
-                expect_headers={'Content-Type': 'application/octet-stream'},
+                expect_headers={'Content-Type': 'application/octet-stream',
+                                'Content-Length': '8'},
                 expect_status=HTTPStatus.OK)
             # When using a template engine, the default content type is
             # "text/plain; charset=UTF-8".
@@ -1184,7 +1185,8 @@ class TestHttpFileRequestHandler(TestFileRequestHandlerBase):
             self.call_handle(
                 handler,
                 '/test',
-                expect_headers={'Content-Type': 'text/plain; charset=UTF-8'},
+                expect_headers={'Content-Type': 'text/plain; charset=UTF-8',
+                                'Content-Length': '8'},
                 expect_status=HTTPStatus.OK)
             # When explicitly setting a content type, that type should be used
             # regardless of whether we use a template engine or not.
@@ -1193,14 +1195,16 @@ class TestHttpFileRequestHandler(TestFileRequestHandlerBase):
             self.call_handle(
                 handler,
                 '/test',
-                expect_headers={'Content-Type': 'text/html; charset=UTF-8'},
+                expect_headers={'Content-Type': 'text/html; charset=UTF-8',
+                                'Content-Length': '8'},
                 expect_status=HTTPStatus.OK)
             del config['template']
             handler = self.get_request_handler(config)
             self.call_handle(
                 handler,
                 '/test',
-                expect_headers={'Content-Type': 'text/html; charset=UTF-8'},
+                expect_headers={'Content-Type': 'text/html; charset=UTF-8',
+                                'Content-Length': '8'},
                 expect_status=HTTPStatus.OK)
 
     def test_config_content_type_map(self):
@@ -1230,22 +1234,26 @@ class TestHttpFileRequestHandler(TestFileRequestHandlerBase):
             self.call_handle(
                 handler,
                 '/test/test.txt',
-                expect_headers={'Content-Type': 'application/octet-stream'},
+                expect_headers={'Content-Type': 'application/octet-stream',
+                                'Content-Length': '8'},
                 expect_status=HTTPStatus.OK)
             self.call_handle(
                 handler,
                 '/test/test.bin',
-                expect_headers={'Content-Type': 'application/octet-stream'},
+                expect_headers={'Content-Type': 'application/octet-stream',
+                                'Content-Length': '8'},
                 expect_status=HTTPStatus.OK)
             self.call_handle(
                 handler,
                 '/test/test.html',
-                expect_headers={'Content-Type': 'application/octet-stream'},
+                expect_headers={'Content-Type': 'application/octet-stream',
+                                'Content-Length': '8'},
                 expect_status=HTTPStatus.OK)
             self.call_handle(
                 handler,
                 '/test/special_file',
-                expect_headers={'Content-Type': 'application/octet-stream'},
+                expect_headers={'Content-Type': 'application/octet-stream',
+                                'Content-Length': '8'},
                 expect_status=HTTPStatus.OK)
             # If we use a content_type_map, the value of content_type should
             # only be used for files that do not match any of the patterns in
@@ -1258,22 +1266,26 @@ class TestHttpFileRequestHandler(TestFileRequestHandlerBase):
             self.call_handle(
                 handler,
                 '/test/test.txt',
-                expect_headers={'Content-Type': 'text/plain; charset=UTF-8'},
+                expect_headers={'Content-Type': 'text/plain; charset=UTF-8',
+                                'Content-Length': '8'},
                 expect_status=HTTPStatus.OK)
             self.call_handle(
                 handler,
                 '/test/test.bin',
-                expect_headers={'Content-Type': 'application/octet-stream'},
+                expect_headers={'Content-Type': 'application/octet-stream',
+                                'Content-Length': '8'},
                 expect_status=HTTPStatus.OK)
             self.call_handle(
                 handler,
                 '/test/test.html',
-                expect_headers={'Content-Type': 'text/html; charset=UTF-8'},
+                expect_headers={'Content-Type': 'text/html; charset=UTF-8',
+                                'Content-Length': '8'},
                 expect_status=HTTPStatus.OK)
             self.call_handle(
                 handler,
                 '/test/special_file',
-                expect_headers={'Content-Type': 'application/x-super-special'},
+                expect_headers={'Content-Type': 'application/x-super-special',
+                                'Content-Length': '8'},
                 expect_status=HTTPStatus.OK)
             # We should get an exception when we try to set
             # the content_type_map while operating in file mode.
