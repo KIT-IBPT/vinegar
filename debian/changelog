@@ -1,8 +1,12 @@
-vinegar (1.2.0beta1) unstable; urgency=low
+vinegar (1.2.0) stable; urgency=low
 
-  * Next feature release of Vinegar.
+  * Added support for the HTTP content length header. A content length
+    is now provided for HTTP responses when serving static content of
+    known length. For generated content, this header might still be
+    missing because the content length might not be known yet when
+    sending the headers.
 
- -- Sebastian Marsching <sebastian.marsching-git-2016@aquenos.com>  Tue, 27 Oct 2020 12:57:51 +0100
+ -- Sebastian Marsching <sebastian.marsching-git-2016@aquenos.com>  Thu, 01 Apr 2021 10:53:07 +0200
 
 vinegar (1.1.0) unstable; urgency=low
 
