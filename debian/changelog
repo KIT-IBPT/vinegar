@@ -1,3 +1,9 @@
+vinegar (1.2.1beta1) unstable; urgency=low
+
+  * Next patch release of Vinegar.
+
+ -- Sebastian Marsching <sebastian.marsching-git-2016@aquenos.com>  Thu, 01 Apr 2021 10:57:42 +0200
+
 vinegar (1.2.0) stable; urgency=low
 
   * Added support for the HTTP content length header. A content length
