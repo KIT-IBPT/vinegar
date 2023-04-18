@@ -14,9 +14,9 @@ handler can then reset the flag in the database, ensuring that the system will
 not boot into the installer again.
 
 This handler only handles ``POST`` requests. The semantics of ``GET`` requests
-are that are idempotent, meaning that they do not change any state. As this
-request handler makes changes to the state of the database, allowing ``GET``
-requests would violate the semantics of the HTTP protocol.
+are that they are idempotent, meaning that they do not change any state. As
+this request handler makes changes to the state of the database, allowing
+``GET`` requests would violate the semantics of the HTTP protocol.
 
 It is very easy to trigger a ``POST`` request from the command line. Depending
 on which tools are available on the system, either of the following two commands
