@@ -249,11 +249,15 @@ class JinjaEngine(TemplateEngine):
             'extensions': [
                 'jinja2.ext.do',
                 'jinja2.ext.loopcontrols',
-                'jinja2.ext.with_',
                 'vinegar.template.jinja.SerializerExtension'],
             'keep_trailing_newline': True,
             'loader': loader
         }
+        # The with statement has been built into Jinja for a long time, so the
+        # with_ extension was removed in Jinja 3.x. For this reason, we check
+        # whether the extension actually exists before adding it.
+        if hasattr(jinja2.ext, 'with_'):
+            env_options['extensions'] += ['jinja2.ext.with_']
         env_options.update(user_env)
         if relative_includes:
             self._environment = self._Environment(**env_options)
