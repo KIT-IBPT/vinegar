@@ -9,6 +9,7 @@ Sub modules
 .. autosummary::
   :toctree:
 
+  ip_address
   ipv4_address
   ipv6_address
   mac_address
