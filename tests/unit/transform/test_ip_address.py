@@ -21,11 +21,11 @@ class TestIPAddressModule(unittest.TestCase):
         # apply_transformation.
         self.assertEqual(
             "192.168.0.0/24",
-            apply_transformation("ipv4_address.net_address", "192.168.0.1/24"),
+            apply_transformation("ip_address.net_address", "192.168.0.1/24"),
         )
         self.assertEqual(
             "2001:db8::/32",
-            apply_transformation("ipv6_address.net_address", "2001:db8::1/32"),
+            apply_transformation("ip_address.net_address", "2001:db8::1/32"),
         )
         # Test that an address is implicitly normalized
         self.assertEqual("192.168.0.0/24", net_address("192.168.000.1/24"))
@@ -82,11 +82,11 @@ class TestIPAddressModule(unittest.TestCase):
         # apply_transformation.
         self.assertEqual(
             "192.168.0.1",
-            apply_transformation("ipv4_address.normalize", "192.168.000.001"),
+            apply_transformation("ip_address.normalize", "192.168.000.001"),
         )
         self.assertEqual(
             "2001:db8::1",
-            apply_transformation("ipv6_address.normalize", "2001:0db8::1"),
+            apply_transformation("ip_address.normalize", "2001:0db8::1"),
         )
         # Test that leading zeros are removed.
         self.assertEqual("10.0.0.1", normalize("010.000.000000.1"))
@@ -141,11 +141,11 @@ class TestIPAddressModule(unittest.TestCase):
         # apply_transformation.
         self.assertEqual(
             "192.168.0.1",
-            apply_transformation("ipv4_address.strip_mask", "192.168.0.1/24"),
+            apply_transformation("ip_address.strip_mask", "192.168.0.1/24"),
         )
         self.assertEqual(
             "2001:db8::1",
-            apply_transformation("ipv6_address.strip_mask", "2001:db8::1/32"),
+            apply_transformation("ip_address.strip_mask", "2001:db8::1/32"),
         )
         # Test that an address is not implicitly normalized
         self.assertEqual("192.168.000.1", strip_mask("192.168.000.1/24"))
