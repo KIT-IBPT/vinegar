@@ -303,7 +303,7 @@ import os.path
 import urllib.parse
 
 from http import HTTPStatus
-from typing import Any, Mapping, Tuple
+from typing import Any, Mapping, Optional, Tuple
 
 from vinegar.data_source import DataSource, DataSourceAware
 from vinegar.http.server import HttpRequestHandler
@@ -740,7 +740,10 @@ class HttpFileRequestHandler(FileRequestHandlerBase, HttpRequestHandler):
             body: io.BufferedIOBase,
             client_address: Tuple,
             context: Any) \
-            -> Tuple[HTTPStatus, Mapping[str, str], io.BufferedIOBase]:
+            -> Tuple[
+                HTTPStatus,
+                Optional[Mapping[str, str]],
+                Optional[io.BufferedIOBase]]:
         if method not in ('GET', 'HEAD'):
             return HTTPStatus.METHOD_NOT_ALLOWED, None, None
         try:

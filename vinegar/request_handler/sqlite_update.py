@@ -151,7 +151,7 @@ import re
 import urllib.parse
 
 from http import HTTPStatus
-from typing import Any, Mapping, Tuple
+from typing import Any, Mapping, Optional, Tuple
 
 from vinegar.data_source import DataSource, DataSourceAware
 from vinegar.request_handler import HttpRequestHandler
@@ -230,7 +230,10 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
             body: io.BufferedIOBase,
             client_address: Tuple,
             context: Any) \
-            -> Tuple[HTTPStatus, Mapping[str, str], io.BufferedIOBase]:
+            -> Tuple[
+                HTTPStatus,
+                Optional[Mapping[str, str]],
+                Optional[io.BufferedIOBase]]:
         # We only allow requests using the POST method.
         if method != 'POST':
             return HTTPStatus.METHOD_NOT_ALLOWED, None, None
