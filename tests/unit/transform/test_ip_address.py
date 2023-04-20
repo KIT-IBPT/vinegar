@@ -129,8 +129,12 @@ class TestIPAddressModule(unittest.TestCase):
         # Test the special case where an IPv4 address is embedded in an IPv6
         # address.
         self.assertEqual("10.0.0.1", normalize("::ffff:10.0.0.1"))
+        # An address with a subnet mask should not be converted to an IPv4
+        # address, because ::ffff:192.168.0.0/24 is not the same as
+        # 192.168.0.0/24. In fact, 192.168.0.0/24 is the same as
+        # ::ffff:192.168.0.0/120.
         self.assertEqual(
-            "192.168.0.15/24", normalize("::FFFF:192.168.0.15/24")
+            "::ffff:192.168.0.15/24", normalize("::FFFF:192.168.0.15/24")
         )
 
     def test_strip_mask(self):
