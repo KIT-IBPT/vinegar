@@ -49,7 +49,7 @@ def socket_address_to_str(socket_address: typing.Tuple):
         converted to a string.
     """
     if len(socket_address) < 2:
-        return str(socket_address[0])
+        return ipv6_address_unwrap(str(socket_address[0]))
     host = str(socket_address[0])
     port = str(socket_address[1])
     # IPv4 addresses might appear as IPv6 address when we use a dual-stack
