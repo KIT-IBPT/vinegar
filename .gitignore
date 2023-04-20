@@ -2,8 +2,10 @@ __pycache__/
 *.py[cod]
 .DS_Store
 
+/.coverage
 /.idea
 /.vscode
+/build
 /dist
 /doc-build
 /vinegar.egg-info
