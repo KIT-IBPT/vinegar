@@ -4,19 +4,14 @@ Transformations for both IPv4 and IPv6 addresses.
 
 import re
 
+from vinegar.utils.socket import ipv6_address_unwrap as _ipv6_address_unwrap
+
 from .ipv4_address import net_address as _net_address_ipv4
 from .ipv4_address import normalize as _normalize_ipv4
 from .ipv4_address import strip_mask as _strip_mask_ipv4
 from .ipv6_address import net_address as _net_address_ipv6
 from .ipv6_address import normalize as _normalize_ipv6
 from .ipv6_address import strip_mask as _strip_mask_ipv6
-
-# Regular expression that matches an IPv4 address that is encoded inside an IPv6
-# address (e.g. ::ffff:127.0.0.1). This regular expression also matches when a
-# mask is specified.
-_IPV4_IN_IPV6_ADDRESS_REGEXP = re.compile(
-    "::[Ff]{4}:([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+(?:/[0-9]+)?)"
-)
 
 # Regular expression matching an IPv4 address with an optional mask.
 #
@@ -85,14 +80,11 @@ def normalize(value: str, raise_error_if_malformed: bool = False):
     :return:
         normalized form of the input IP address.
     """
-    # If we have an IPv4 address encoded in an IPv6 address, we extract the
-    # IPv4 address before normalizing it. Otherwise, we check whether the value
-    # matches our regular expression for an IPv4 address and delegate to the
-    # ipv4_address module or ipv6_address module, depending on the result of
-    # this test.
-    match = _IPV4_IN_IPV6_ADDRESS_REGEXP.fullmatch(value)
-    if match:
-        return _normalize_ipv4(match.group(1), raise_error_if_malformed)
+    # If we have an IPv4-mapped IPv6 address, we extract the IPv4 address
+    # before normalizing it. Otherwise, we check whether the value matches our
+    # regular expression for an IPv4 address and delegate to the ipv4_address
+    # module or ipv6_address module, depending on the result of this test.
+    value = _ipv6_address_unwrap(value)
     if _IPV4_REGEXP.fullmatch(value):
         return _normalize_ipv4(value, raise_error_if_malformed)
     return _normalize_ipv6(value, raise_error_if_malformed)
