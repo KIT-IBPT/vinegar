@@ -38,7 +38,7 @@ def ipv6_address_unwrap(ipv6_address: str) -> str:
     return ipv6_address
 
 
-def socket_address_to_str(socket_address: typing.Tuple):
+def socket_address_to_str(socket_address: typing.Tuple) -> str:
     """
     Return the string representation of a socket address.
 
