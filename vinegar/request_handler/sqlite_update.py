@@ -255,9 +255,13 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
             # If the actual client address does not match the expected
             # client address, we do not allow the request. The expected client
             # address can be a container (e.g. list, set) of allowed addresses
-            # or it can be a single string.
+            # or it can be a single string. The expected client addresses may
+            # also not be defined at all, in which case we simply use an empty
+            # list.
             if isinstance(expected_client_addresses, str):
                 expected_client_addresses = [expected_client_addresses]
+            elif not expected_client_addresses:
+                expected_client_addresses = []
             request_allowed = False
             for expected_client_address in expected_client_addresses:
                 expected_client_address = normalize_ip_address(
