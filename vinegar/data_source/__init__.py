@@ -23,7 +23,7 @@ import abc
 import collections
 import importlib
 
-from typing import Any, Mapping, Sequence, Tuple, Union
+from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
 from vinegar.utils.odict import OrderedDict
 from vinegar.utils.version import aggregate_version
@@ -64,7 +64,7 @@ class DataSource(abc.ABC):
     """
 
     @abc.abstractmethod
-    def find_system(self, lookup_key: str, lookup_value: Any) -> str:
+    def find_system(self, lookup_key: str, lookup_value: Any) -> Optional[str]:
         """
         Find a system given the specified key and value.
 
@@ -185,7 +185,7 @@ class _CompositeDataSource(DataSource):
         self._data_sources = data_sources
         self._merge_lists = merge_lists
 
-    def find_system(self, lookup_key: str, lookup_value: str) -> str:
+    def find_system(self, lookup_key: str, lookup_value: str) -> Optional[str]:
         # We iterate over the data sources until we find one that returns a
         # successful lookup result or we reach the end of the list.
         for data_source in self._data_sources:

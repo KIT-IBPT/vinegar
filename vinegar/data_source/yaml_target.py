@@ -178,7 +178,7 @@ import vinegar.template
 import vinegar.utils.cache
 import vinegar.utils.system_matcher
 
-from typing import Any, Mapping, Tuple
+from typing import Any, Mapping, Optional, Tuple
 
 from vinegar.data_source import DataSource, merge_data_trees
 from vinegar.utils import oyaml as yaml
@@ -236,7 +236,7 @@ class YamlTargetSource(DataSource):
                 config.get('template', 'jinja'),
                 config.get('template_config', {}))
 
-    def find_system(self, lookup_key: str, lookup_value: Any) -> str:
+    def find_system(self, lookup_key: str, lookup_value: Any) -> Optional[str]:
         # Due to the fact that we use patterns to identify systems, there is
         # absolutely now way to find a system given a key and a value, so we
         # always return None.

@@ -321,7 +321,7 @@ import logging
 import re
 import threading
 
-from typing import Any, Mapping, Tuple
+from typing import Any, Mapping, Optional, Tuple
 
 from vinegar.data_source import DataSource
 from vinegar.transform import get_transformation_chain
@@ -382,7 +382,7 @@ class TextFileSource(DataSource):
         self._file_version = ''
         self._lock = threading.Lock()
 
-    def find_system(self, lookup_key: str, lookup_value: Any) -> str:
+    def find_system(self, lookup_key: str, lookup_value: Any) -> Optional[str]:
         # We need the lock to ensure that we do not access the data while
         # another thread updates it.
         with self._lock:

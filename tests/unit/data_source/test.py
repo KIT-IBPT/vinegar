@@ -5,7 +5,7 @@ Tests for `vinegar.data_source`.
 import unittest
 import unittest.mock
 
-from typing import Any, Mapping, Tuple
+from typing import Any, Mapping, Optional, Tuple
 
 from vinegar.data_source import (
     DataSource,
@@ -127,7 +127,7 @@ class _DummyDataSource(DataSource):
         self._data = data
         self._system_id = system_id
 
-    def find_system(self, lookup_key: str, lookup_value: Any) -> str:
+    def find_system(self, lookup_key: str, lookup_value: Any) -> Optional[str]:
         try:
             if self._data[lookup_key] == lookup_value:
                 return self._system_id

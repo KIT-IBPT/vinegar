@@ -82,7 +82,7 @@ specified. All other options have sensible default values.
 
 import json
 
-from typing import Any, Mapping, Tuple
+from typing import Any, Mapping, Optional, Tuple
 
 from vinegar.data_source import DataSource
 from vinegar.utils.sqlite_store import open_data_store
@@ -130,7 +130,7 @@ class SQLiteSource(DataSource):
         """
         self._data_store.close()
 
-    def find_system(self, lookup_key: str, lookup_value: str) -> str:
+    def find_system(self, lookup_key: str, lookup_value: str) -> Optional[str]:
         if not self._find_system_enabled:
             return None
         if self._key_prefix:
