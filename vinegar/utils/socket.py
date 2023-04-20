@@ -2,13 +2,8 @@
 Utilities for dealing with sockets.
 """
 
-import re
+import socket
 import typing
-
-# Regular expression that matches an IPv4 address that is encoded inside an IPv6
-# address (e.g. ::ffff:127.0.0.1).
-_IPV4_IN_IPV6_ADDRESS_REGEXP = re.compile(
-    '::(?:ffff|FFFF):([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)')
 
 
 def ipv6_address_unwrap(ipv6_address: str) -> str:
@@ -16,11 +11,14 @@ def ipv6_address_unwrap(ipv6_address: str) -> str:
     Unwrap an IPv4 address that is encoded in an IPv6 address.
 
     This function works on IPv6 address in the form ``::ffff:127.0.0.1``
-    (``127.0.0.1`` might be any IPv4 address). If such an address is
-    encountered, the actual IPv4 address is extracted and returned.
+    (``127.0.0.1`` might be any IPv4 address). This so-called IPv4-mapped IPv6
+    addresses are described in RF 4291. If such an address is encountered
+    (regardless of whether it uses the classic decimal-dot notation or the
+    hexadecimal-colon notation), the actual IPv4 address is extracted and
+    returned.
 
-    For any string not matching this pattern, this function simply returns the
-    original string.
+    For any string not representing such an address, this function simply
+    returns the original string.
 
     :param ipv6_address:
         string that might represent an IPv4 address wrapped in an IPv6 address
@@ -29,11 +27,15 @@ def ipv6_address_unwrap(ipv6_address: str) -> str:
         the unwrapped IPv4 address or ``ipv6_address`` if the string does not
         match the expected format.
     """
-    match = _IPV4_IN_IPV6_ADDRESS_REGEXP.fullmatch(ipv6_address)
-    if match:
-        return match.group(1)
-    else:
+    try:
+        addr_bytes = socket.inet_pton(socket.AF_INET6, ipv6_address)
+    except OSError:
+        # This happens when the string does not represent a valid IPv6 address.
         return ipv6_address
+    if addr_bytes.startswith(
+            b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff'):
+        return socket.inet_ntop(socket.AF_INET, addr_bytes[-4:])
+    return ipv6_address
 
 
 def socket_address_to_str(socket_address: typing.Tuple):
