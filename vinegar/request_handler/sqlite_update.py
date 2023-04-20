@@ -47,7 +47,7 @@ Therefore, it is possible to limit access to the data for each system to
 specific clients. This is achieved through the ``client_address_key``
 configuration option. This option specifies a key into the system data. The key
 can consist of multiple components separated by colons (``:``) to point into
-nested dictionary.
+a nested dictionary.
 
 For example, suppose that ``client_address_key`` is set to ``net:ip_addr``. If
 the handler gets a request for the system ID ``myid``, it will ask the data
@@ -155,6 +155,7 @@ from typing import Any, Mapping, Tuple
 
 from vinegar.data_source import DataSource, DataSourceAware
 from vinegar.request_handler import HttpRequestHandler
+from vinegar.transform.ip_address import normalize as normalize_ip_address
 from vinegar.utils.smart_dict import SmartLookupDict
 from vinegar.utils.sqlite_store import open_data_store
 
@@ -240,27 +241,30 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
             # value inside a nested dict.
             system_data, _ = self._data_source.get_data(system_id, {}, '')
             system_data = SmartLookupDict(system_data)
-            expected_client_address = system_data.get(
+            expected_client_addresses = system_data.get(
                 self._client_address_key, None)
             # The IP address part of the client address is the first element of
             # the tuple.
             actual_client_address = client_address[0]
-            # We use an IPv6 socket, so the IP address might actually be an IPv4
-            # address that is encoded as an IPv6 address. We detect such a
-            # situation and use IPv4 address in that case.
-            match = _IPV4_IN_IPV6_ADDRESS_REGEXP.fullmatch(
-                actual_client_address)
-            if match:
-                actual_client_address = match.group(1)
+            # We use an IPv6 socket, so the IP address might actually be an
+            # IPv4 address that is encoded as an IPv6 address. We detect such a
+            # situation and use IPv4 address in that case. We also normalize
+            # the IP address, so that the comparison that we do later will not
+            # fail just because the IP address is formatted in an unusual way.
+            actual_client_address = normalize_ip_address(actual_client_address)
             # If the actual client address does not match the expected
             # client address, we do not allow the request. The expected client
-            # address can be a container (e.g. list, set) of allowed addressed.
-            request_allowed = (
-                actual_client_address == expected_client_address)
-            if (not request_allowed) and isinstance(
-                    expected_client_address, collections.abc.Container):
-                request_allowed = (
-                    actual_client_address in expected_client_address)
+            # address can be a container (e.g. list, set) of allowed addresses
+            # or it can be a single string.
+            if isinstance(expected_client_addresses, str):
+                expected_client_addresses = [expected_client_addresses]
+            request_allowed = False
+            for expected_client_address in expected_client_addresses:
+                expected_client_address = normalize_ip_address(
+                    expected_client_address)
+                if actual_client_address == expected_client_address:
+                    request_allowed = True
+                    break
             if not request_allowed:
                 return HTTPStatus.FORBIDDEN, None, None
         if self._action == 'delete_data':
@@ -317,12 +321,6 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
 
     def set_data_source(self, data_source: DataSource) -> None:
         self._data_source = data_source
-
-
-# Regular expression that matches an IPv4 address that is encoded inside an IPv6
-# address (e.g. ::ffff:127.0.0.1).
-_IPV4_IN_IPV6_ADDRESS_REGEXP = re.compile(
-    '::(?:ffff|FFFF):([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)')
 
 
 def get_instance_http(
