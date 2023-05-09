@@ -31,13 +31,13 @@ MIN_BLOCK_SIZE = 8
 MIN_TIMEOUT = 1
 
 #: Name of the block-size option.
-OPTION_BLOCK_SIZE = 'blksize'
+OPTION_BLOCK_SIZE = "blksize"
 
 #: Name of the timeout-interval option.
-OPTION_TIMEOUT = 'timeout'
+OPTION_TIMEOUT = "timeout"
 
 #: Name of the transfer-size option.
-OPTION_TRANSFER_SIZE = 'tsize'
+OPTION_TRANSFER_SIZE = "tsize"
 
 
 @enum.unique
@@ -77,7 +77,7 @@ class ErrorCode(enum.IntEnum):
     TRANSFER_ABORTED = 8
 
     @staticmethod
-    def from_bytes(data: bytes, offset: int = 0) -> 'ErrorCode':
+    def from_bytes(data: bytes, offset: int = 0) -> "ErrorCode":
         """
         Extract the error code from a sequence of bytes. If the sequence
         contains less than offset plus two bytes or the two bytes do not
@@ -89,7 +89,7 @@ class ErrorCode(enum.IntEnum):
             offset into the sequence of bytes. Default is zero (read from the
             start of the sequence).
         """
-        (error_code_num,) = struct.unpack_from('!H', data, offset)
+        (error_code_num,) = struct.unpack_from("!H", data, offset)
         return ErrorCode(error_code_num)
 
     def to_bytes(self) -> bytes:
@@ -97,7 +97,7 @@ class ErrorCode(enum.IntEnum):
         Return a byte buffer that contains the two bytes that represent this
         error code.
         """
-        return struct.pack('!H', self.value)
+        return struct.pack("!H", self.value)
 
 
 @enum.unique
@@ -127,7 +127,7 @@ class Opcode(enum.IntEnum):
     OPTIONS_ACK = 6
 
     @staticmethod
-    def from_bytes(data: bytes, offset: int = 0) -> 'Opcode':
+    def from_bytes(data: bytes, offset: int = 0) -> "Opcode":
         """
         Extract the opcode from a sequence of bytes. If the sequence contains
         less than offset plus two bytes or the two bytes do not represent a
@@ -139,9 +139,10 @@ class Opcode(enum.IntEnum):
             offset into the sequence of bytes. Default is zero (read from the
             start of the sequence).
         :return:
-            ``Opcode`` represented by the two bytes at the specified ``offset``.
+            ``Opcode`` represented by the two bytes at the specified
+            ``offset``.
         """
-        (opcode_num,) = struct.unpack_from('!H', data, offset)
+        (opcode_num,) = struct.unpack_from("!H", data, offset)
         return Opcode(opcode_num)
 
     def to_bytes(self) -> bytes:
@@ -149,7 +150,7 @@ class Opcode(enum.IntEnum):
         Return a byte buffer that contains the two bytes that represent this
         opcode.
         """
-        return struct.pack('!H', self.value)
+        return struct.pack("!H", self.value)
 
 
 @enum.unique
@@ -171,14 +172,14 @@ class TransferMode(enum.IntEnum):
     MAIL = 3
 
     @staticmethod
-    def from_str(mode: str) -> 'TransferMode':
+    def from_str(mode: str) -> "TransferMode":
         """
         Returns the transfer mode that is equivalent to the specified string.
         The string is not case sensitive and must be one of the three strings
         defined in RFC 1350.
 
-        If the string does not represent one of the well-defined transfer modes,
-        an exception is raised.
+        If the string does not represent one of the well-defined transfer
+        modes, an exception is raised.
 
         :param mode:
             string identifying the transfer mode.
@@ -186,27 +187,27 @@ class TransferMode(enum.IntEnum):
             TFTP transfer mode represented by the specified string.
         """
         mode_lower = mode.lower()
-        if mode_lower == 'netascii':
+        if mode_lower == "netascii":
             return TransferMode.NETASCII
-        elif mode_lower == 'octet':
+        elif mode_lower == "octet":
             return TransferMode.OCTET
-        elif mode_lower == 'mail':
+        elif mode_lower == "mail":
             return TransferMode.MAIL
         else:
-            raise ValueError('Unsupported transfer mode: {0}'.format(mode))
+            raise ValueError("Unsupported transfer mode: {0}".format(mode))
 
     def to_str(self) -> str:
         """
         Return a string representing this transfer mode.
         """
         if self == TransferMode.NETASCII:
-            return 'netascii'
+            return "netascii"
         elif self == TransferMode.OCTET:
-            return 'octet'
+            return "octet"
         elif self == TransferMode.MAIL:
-            return 'mail'
+            return "mail"
         else:
-            raise ValueError('Unhandled transfer mode: {0}'.format(self))
+            raise ValueError("Unhandled transfer mode: {0}".format(self))
 
 
 def data_packet(block_number: int, data: bytes) -> bytes:
@@ -220,7 +221,7 @@ def data_packet(block_number: int, data: bytes) -> bytes:
     :return:
         byte sequence representing a data packet.
     """
-    return Opcode.DATA.to_bytes() + struct.pack('!H', block_number) + data
+    return Opcode.DATA.to_bytes() + struct.pack("!H", block_number) + data
 
 
 def decode_ack(data: bytes) -> int:
@@ -236,11 +237,10 @@ def decode_ack(data: bytes) -> int:
         acknowledged block number specified by the packet.
     """
     if Opcode.from_bytes(data) != Opcode.ACK:
-        raise ValueError(
-            'Data does not represent an ACK (wrong opcode).')
+        raise ValueError("Data does not represent an ACK (wrong opcode).")
     if len(data) != 4:
-        raise ValueError('Packet does not have the right size for an ACK.')
-    (block_number,) = struct.unpack_from('!H', data, 2)
+        raise ValueError("Packet does not have the right size for an ACK.")
+    (block_number,) = struct.unpack_from("!H", data, 2)
     return block_number
 
 
@@ -261,20 +261,21 @@ def decode_error(data: bytes) -> typing.Tuple[ErrorCode, str]:
         is the error message sent by the peer.
     """
     if len(data) < 4:
-        return (None, '')
+        return (None, "")
     try:
         error_code = ErrorCode.from_bytes(data, offset=2)
     except struct.error:
         error_code = None
-    data_parts = data[4:].split(b'\0')
+    data_parts = data[4:].split(b"\0")
     if data_parts:
-        return (error_code, data_parts[0].decode('ascii', 'ignore'))
+        return (error_code, data_parts[0].decode("ascii", "ignore"))
     else:
-        return (error_code, '')
+        return (error_code, "")
 
 
-def decode_read_request(data: bytes) \
-        -> typing.Tuple[str, TransferMode, typing.Mapping[str, str]]:
+def decode_read_request(
+    data: bytes,
+) -> typing.Tuple[str, TransferMode, typing.Mapping[str, str]]:
     """
     Decode a packet that represents a read request. Throws an exception if the
     packet does not represent a valid read request.
@@ -291,33 +292,35 @@ def decode_read_request(data: bytes) \
     """
     if Opcode.from_bytes(data) != Opcode.READ_REQUEST:
         raise ValueError(
-            'Data does not represent a read request (wrong opcode).')
-    data_parts = data[2:].split(b'\0')
+            "Data does not represent a read request (wrong opcode)."
+        )
+    data_parts = data[2:].split(b"\0")
     # There must be at least three parts: The filename, the transfer mode, and
     # an empty part because of the terminating null-byte.
     if len(data_parts) < 3:
-        raise ValueError('Read request is not well-formed')
-    filename = data_parts[0].decode('ascii', 'ignore')
+        raise ValueError("Read request is not well-formed")
+    filename = data_parts[0].decode("ascii", "ignore")
     transfer_mode = TransferMode.from_str(
-        data_parts[1].decode('ascii', 'ignore'))
+        data_parts[1].decode("ascii", "ignore")
+    )
     next_index = 2
     options = {}
     # If there is one more option, there must be three more parts: The first
     # part is for the option name, the second part is for the option value, and
-    # the third part is an empty part that is present because of the terminating
-    # null-byte.
+    # the third part is an empty part that is present because of the
+    # terminating null-byte.
     while next_index <= len(data_parts) - 3:
-        option_name = data_parts[next_index].decode('ascii', 'ignore')
-        option_value = data_parts[next_index + 1].decode('ascii', 'ignore')
+        option_name = data_parts[next_index].decode("ascii", "ignore")
+        option_value = data_parts[next_index + 1].decode("ascii", "ignore")
         options[option_name] = option_value
         next_index += 2
     # If the packet was well-formed, there should be only one empty part left.
     if (next_index != len(data_parts) - 1) or len(data_parts[next_index]):
-        raise ValueError('Read request is not well-formed.')
+        raise ValueError("Read request is not well-formed.")
     return (filename, transfer_mode, options)
 
 
-def error_packet(error_code: ErrorCode, error_message: str = '') -> bytes:
+def error_packet(error_code: ErrorCode, error_message: str = "") -> bytes:
     """
     Create an error packet using the given error code and message string.
 
@@ -328,8 +331,12 @@ def error_packet(error_code: ErrorCode, error_message: str = '') -> bytes:
     :return:
         sequence of bytes representing the error packet.
     """
-    return (Opcode.ERROR.to_bytes() + error_code.to_bytes()
-            + error_message.encode('ascii') + b'\0')
+    return (
+        Opcode.ERROR.to_bytes()
+        + error_code.to_bytes()
+        + error_message.encode("ascii")
+        + b"\0"
+    )
 
 
 def options_ack_packet(options: typing.Mapping[str, str]) -> bytes:
@@ -344,9 +351,9 @@ def options_ack_packet(options: typing.Mapping[str, str]) -> bytes:
         sequence of bytes representing the options acknowledgement packet.
     """
     if not options:
-        raise ValueError('The options mapping must not be empty.')
+        raise ValueError("The options mapping must not be empty.")
     data = Opcode.OPTIONS_ACK.to_bytes()
-    for (name, value) in options.items():
-        data += name.encode('ascii') + b'\0'
-        data += value.encode('ascii') + b'\0'
+    for name, value in options.items():
+        data += name.encode("ascii") + b"\0"
+        data += value.encode("ascii") + b"\0"
     return data

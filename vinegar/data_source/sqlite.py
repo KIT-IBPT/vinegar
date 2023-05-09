@@ -6,11 +6,11 @@ The data source provided by this module uses an instance of
 makes it most suitable for scenarios, where separate configuration values have
 to be managed for each individual systems.
 
-Due to the nature of the backing data store, concurrent updates of configuration
-data are safely possible. This data source does not employ any caching
-techniques because these techniques would collide with the goal of providing
-safe, immediate updates in an environment where multiple processes might access
-the database.
+Due to the nature of the backing data store, concurrent updates of
+configuration data are safely possible. This data source does not employ any
+caching techniques because these techniques would collide with the goal of
+providing safe, immediate updates in an environment where multiple processes
+might access the database.
 
 The data source provided by this module has a `~SQLiteSource.close()` method
 that can be used to close the data store backing the source. In a regular
@@ -24,9 +24,9 @@ Using ``find_system``
 
 Due to the lack of a cache, every call to `~SQLiteSource.find_system` or
 `~SQLiteSource.get_data` will result in a lookup in the database and
-consequently access to the file system. In order to limit the amount of lookups,
-the ``find_system`` function can be disabled when it is not needed by setting
-``find_system_enabled`` configuration option to ``False`` (see below).
+consequently access to the file system. In order to limit the amount of
+lookups, the ``find_system`` function can be disabled when it is not needed by
+setting ``find_system_enabled`` configuration option to ``False`` (see below).
 
 When ``find_system`` is enabled, it will only return a system ID if that system
 is a unique match, meaning that this is the only system in the data store that
@@ -36,8 +36,8 @@ found, ``None`` is returned.
 Specifying a key prefix
 -----------------------
 
-When the ``key_prefix`` configuration option is used, ``find_system`` only looks
-for matching system when the ``key_prefix`` matches the specified key and
+When the ``key_prefix`` configuration option is used, ``find_system`` only
+looks for matching system when the ``key_prefix`` matches the specified key and
 removes the prefix from the specified key before looking it up in the database.
 
 For example, if ``key_prefix`` is set to ``abc:def`` and ``find_system`` is
@@ -65,19 +65,19 @@ specified. All other options have sensible default values.
 
 :``find_system_enabled``:
     If ``True`` (the default) the `~SQLiteSource.find_system` function is
-    enabled. If set to ``False`` it is disabled completely. This makes sense for
-    performance reasons if one knows that this data source will not make any
-    meaningful contribution to a lookup through ``find_system``.
+    enabled. If set to ``False`` it is disabled completely. This makes sense
+    for performance reasons if one knows that this data source will not make
+    any meaningful contribution to a lookup through ``find_system``.
 
 :``key_prefix``:
     Prefix to be used for data item keys (a ``str``). If this is the empty
     (the default), the keys from the database are used as is, both by
     ``find_system`` and ``get_data``. If it is set to a non-empty strings, the
     data is returned wrapped in a ``dict`` for each component in the
-    ``key_prefix`` (the ``:`` character serves as the component separator). This
-    can be useful to put the data from the database in a sub-structure of the
-    hierarchy forming the data tree, as the backing data store only uses a flat
-    key structure.
+    ``key_prefix`` (the ``:`` character serves as the component separator).
+    This can be useful to put the data from the database in a sub-structure of
+    the hierarchy forming the data tree, as the backing data store only uses a
+    flat key structure.
 """
 
 import json
@@ -110,10 +110,10 @@ class SQLiteSource(DataSource):
             `module documentation <vinegar.data_source.sqlite>` for a list of
             supported options.
         """
-        db_file = config['db_file']
+        db_file = config["db_file"]
         self._data_store = open_data_store(db_file)
-        self._find_system_enabled = config.get('find_system_enabled', True)
-        self._key_prefix = config.get('key_prefix', '')
+        self._find_system_enabled = config.get("find_system_enabled", True)
+        self._key_prefix = config.get("key_prefix", "")
 
     def close(self):
         """
@@ -125,8 +125,8 @@ class SQLiteSource(DataSource):
         Python's garbage collection is fine for closing the underlying data
         store. However, if an application rapidly creates and discards data
         source instances (e.g. for automated tests), closing the data source
-        explicitly can be beneficial because it helps to release resources early
-        on.
+        explicitly can be beneficial because it helps to release resources
+        early on.
         """
         self._data_store.close()
 
@@ -134,8 +134,8 @@ class SQLiteSource(DataSource):
         if not self._find_system_enabled:
             return None
         if self._key_prefix:
-            if lookup_key.startswith(self._key_prefix + ':'):
-                lookup_key = lookup_key[(len(self._key_prefix) + 1):]
+            if lookup_key.startswith(self._key_prefix + ":"):
+                lookup_key = lookup_key[(len(self._key_prefix) + 1) :]
             else:
                 return None
         systems = self._data_store.find_systems(lookup_key, lookup_value)
@@ -145,13 +145,14 @@ class SQLiteSource(DataSource):
             return None
 
     def get_data(
-            self,
-            system_id: str,
-            preceding_data: Mapping[Any, Any],
-            preceding_data_version: str) -> Tuple[Mapping[Any, Any], str]:
+        self,
+        system_id: str,
+        preceding_data: Mapping[Any, Any],
+        preceding_data_version: str,
+    ) -> Tuple[Mapping[Any, Any], str]:
         data = self._data_store.get_data(system_id)
         if self._key_prefix:
-            prefix_components = self._key_prefix.split(':')
+            prefix_components = self._key_prefix.split(":")
             prefix_components.reverse()
             for prefix_component in prefix_components:
                 data = {prefix_component: data}

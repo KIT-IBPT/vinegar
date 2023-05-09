@@ -33,11 +33,12 @@ def aggregate_version(versions: typing.Iterable[str]) -> str:
     :return:
         aggregate version string based on the input versions.
     """
-    return _hash_str('|'.join(versions))
+    return _hash_str("|".join(versions))
 
 
 def version_for_file_path(
-        file_path: typing.Union[str, pathlib.PurePath]) -> str:
+    file_path: typing.Union[str, pathlib.PurePath]
+) -> str:
     """
     Return a version string for a file.
 
@@ -60,23 +61,28 @@ def version_for_file_path(
         file_path = str(file_path)
     try:
         file_stat = os.stat(file_path)
-        file_info = \
-            'file_path={0},ctime={1},mtime={2},dev={3},ino={4},size={5}'.format(
+        file_info = (
+            "file_path={0},ctime={1},mtime={2},dev={3},ino={4},"
+            "size={5}".format(
                 file_path,
                 file_stat.st_ctime_ns,
                 file_stat.st_mtime_ns,
                 file_stat.st_dev,
                 file_stat.st_ino,
-                file_stat.st_size)
+                file_stat.st_size,
+            )
+        )
         return _hash_str(file_info)
     except Exception:
         # If we cannot stat the file, we calculate the version based on the
-        # file path only. We also encode the exception type, so that a file that
-        # cannot be found has a different version string than a file that exists
-        # but cannot be read.
+        # file path only. We also encode the exception type, so that a file
+        # that cannot be found has a different version string than a file that
+        # exists but cannot be read.
         return _hash_str(
-            'file_path={0},exception={1}'.format(
-                file_path, str(sys.exc_info()[0])))
+            "file_path={0},exception={1}".format(
+                file_path, str(sys.exc_info()[0])
+            )
+        )
 
 
 def version_for_str(data: str) -> str:
@@ -110,5 +116,5 @@ except ImportError:
 
     def _hash_str(data: str):
         hasher = hashlib.md5()
-        hasher.update(data.encode(errors='ignore'))
+        hasher.update(data.encode(errors="ignore"))
         return hasher.hexdigest()

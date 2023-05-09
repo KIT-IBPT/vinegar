@@ -15,9 +15,9 @@ two following expressions::
     value = regular_dict['key1']['key2']['key3']
     value = regular_dict.get('key1').get('key2').get('key3')
 
-This is particularly bothersome if one cannot be sure that the nested value even
-exists. In order to use a default value if one of the keys is missing, one could
-use nested calls to ``get`` with default values::
+This is particularly bothersome if one cannot be sure that the nested value
+even exists. In order to use a default value if one of the keys is missing, one
+could use nested calls to ``get`` with default values::
 
     value = regular_dict.get(
         'key1', {}).get('key2', {}).get('key3', 'default value')
@@ -52,9 +52,9 @@ not found and no default value is provided.
 
 The are two versions of the smart lookup dict:
 
-`SmartLookupDict` uses ``dict`` as its base class. ``SmartLookupOrderedDict`` on
-the other hand uses ``vinegar.utils.odict.OrderedDict`` as its base class. This
-ensures that the dictionary preserves the insertion order of keys (see
+`SmartLookupDict` uses ``dict`` as its base class. ``SmartLookupOrderedDict``
+on the other hand uses ``vinegar.utils.odict.OrderedDict`` as its base class.
+This ensures that the dictionary preserves the insertion order of keys (see
 `vinegar.utils.odict` for details).
 """
 
@@ -62,7 +62,6 @@ from vinegar.utils.odict import OrderedDict
 
 
 class SmartLookupDict(dict):
-
     def get(self, key, *args, **kwargs):
         """
         Return the value for ``key``.
@@ -76,9 +75,9 @@ class SmartLookupDict(dict):
         the first component being used at the top level.
 
         :param key:
-            key for which the value shall be looked up. This can be a nested key
-            into nested dictionaries. ``sep`` is used to separate components of
-            the key.
+            key for which the value shall be looked up. This can be a nested
+            key into nested dictionaries. ``sep`` is used to separate
+            components of the key.
         :param default:
             default value to be returned if this dictionary (or one of the
             nested dictionaries) does not contain ``key``. If not specified, a
@@ -91,7 +90,7 @@ class SmartLookupDict(dict):
         """
         return _smart_get(self, key, *args, **kwargs)
 
-    def setdefault(self, key, default=None, sep=':', dict_type=dict):
+    def setdefault(self, key, default=None, sep=":", dict_type=dict):
         """
         Return the value for ``key`` inserting and returning ``default`` if
         ``key`` does not exist yet.
@@ -101,16 +100,17 @@ class SmartLookupDict(dict):
         each component is used as the key on one level of nested dictionaries,
         the first component being used at the top level.
 
-        If one of the key components except the last key component is not found,
-        a new dictionary of type ``dict_type`` is inserted automatically.
+        If one of the key components except the last key component is not
+        found, a new dictionary of type ``dict_type`` is inserted
+        automatically.
 
         :param key:
-            key for which the value shall be looked up. This can be a nested key
-            into nested dictionaries. ``sep`` is used to separate components of
-            the key.
+            key for which the value shall be looked up. This can be a nested
+            key into nested dictionaries. ``sep`` is used to separate
+            components of the key.
         :param default:
-            default value to be inserted and returned if this dictionary (or one
-            of the nested dictionaries) does not contain ``key``.
+            default value to be inserted and returned if this dictionary (or
+            one of the nested dictionaries) does not contain ``key``.
         :param dict_type:
             the type of dictionary that is created when a new dictionary has to
             be inserted. The default is ``dict``.
@@ -121,7 +121,6 @@ class SmartLookupDict(dict):
 
 
 class SmartLookupOrderedDict(OrderedDict):
-
     def get(self, key, *args, **kwargs):
         """
         Return the value for ``key``.
@@ -135,9 +134,9 @@ class SmartLookupOrderedDict(OrderedDict):
         the first component being used at the top level.
 
         :param key:
-            key for which the value shall be looked up. This can be a nested key
-            into nested dictionaries. ``sep`` is used to separate components of
-            the key.
+            key for which the value shall be looked up. This can be a nested
+            key into nested dictionaries. ``sep`` is used to separate
+            components of the key.
         :param default:
             default value to be returned if this dictionary (or one of the
             nested dictionaries) does not contain ``key``. If not specified, a
@@ -150,7 +149,7 @@ class SmartLookupOrderedDict(OrderedDict):
         """
         return _smart_get(self, key, *args, **kwargs)
 
-    def setdefault(self, key, default=None, sep=':', dict_type=dict):
+    def setdefault(self, key, default=None, sep=":", dict_type=dict):
         """
         Return the value for ``key`` inserting and returning ``default`` if
         ``key`` does not exist yet.
@@ -160,16 +159,17 @@ class SmartLookupOrderedDict(OrderedDict):
         each component is used as the key on one level of nested dictionaries,
         the first component being used at the top level.
 
-        If one of the key components except the last key component is not found,
-        a new dictionary of type ``dict_type`` is inserted automatically.
+        If one of the key components except the last key component is not
+        found, a new dictionary of type ``dict_type`` is inserted
+        automatically.
 
         :param key:
-            key for which the value shall be looked up. This can be a nested key
-            into nested dictionaries. ``sep`` is used to separate components of
-            the key.
+            key for which the value shall be looked up. This can be a nested
+            key into nested dictionaries. ``sep`` is used to separate
+            components of the key.
         :param default:
-            default value to be inserted and returned if this dictionary (or one
-            of the nested dictionaries) does not contain ``key``.
+            default value to be inserted and returned if this dictionary (or
+            one of the nested dictionaries) does not contain ``key``.
         :param dict_type:
             the type of dictionary that is created when a new dictionary has to
             be inserted. The default is ``vinegar.utils.odict.OrderedDict``.
@@ -185,36 +185,40 @@ def _smart_get(d, key, *args, **kwargs):
     ``SmartLookupOrderedDict``.
     """
     have_default = False
-    sep = ':'
+    sep = ":"
     if len(args) > 2:
         raise TypeError(
-            'get expected at most 3 arguments, got %d' % (len(args) + 1))
+            "get expected at most 3 arguments, got %d" % (len(args) + 1)
+        )
     if len(args) >= 1:
-        if 'default' in kwargs:
+        if "default" in kwargs:
             raise TypeError(
-                'Default value must not be given both as a positional and a '
-                'keyword argument.')
+                "Default value must not be given both as a positional and a "
+                "keyword argument."
+            )
         default = args[0]
         have_default = True
     if len(args) >= 2:
-        if 'sep' in kwargs:
+        if "sep" in kwargs:
             raise TypeError(
-                'Separator must not be given both as a positional argument and '
-                'a keyword argument.')
+                "Separator must not be given both as a positional argument "
+                "and a keyword argument."
+            )
         sep = args[1]
     try:
-        default = kwargs['default']
+        default = kwargs["default"]
         have_default = True
     except KeyError:
         pass
     try:
-        sep = kwargs['sep']
+        sep = kwargs["sep"]
     except KeyError:
         pass
     for kwarg_key in kwargs:
-        if kwarg_key not in ('default', 'sep'):
+        if kwarg_key not in ("default", "sep"):
             raise TypeError(
-                'test() got an unexpected keyword argument \'%s\'' % kwarg_key)
+                "test() got an unexpected keyword argument '%s'" % kwarg_key
+            )
     keys = key.split(sep)
     nested_value = d
     try:

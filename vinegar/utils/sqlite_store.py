@@ -77,7 +77,8 @@ class DataStore:
         # access to the connection with our own mutex.
         self._strict_value_checking = strict_value_checking
         self._connection = sqlite3.connect(
-            db_file, isolation_level=None, check_same_thread=False)
+            db_file, isolation_level=None, check_same_thread=False
+        )
         self._lock = threading.Lock()
         self._create_tables()
 
@@ -104,23 +105,25 @@ class DataStore:
         """
         with self._lock:
             self._connection.execute(
-                'DELETE FROM system_data WHERE system_id=?;', (system_id,))
+                "DELETE FROM system_data WHERE system_id=?;", (system_id,)
+            )
 
     def delete_value(self, system_id: str, key: str) -> None:
         """
         Delete data associated with a system ID and a specific key.
 
         :param system_id:
-            system_id for which the piece of data identified by ``key`` shall be
-            deleted.
+            system_id for which the piece of data identified by ``key`` shall
+            be deleted.
         :param key:
             key which shall be deleted. Data stored under different keys is not
             affected by this operation.
         """
         with self._lock:
             self._connection.execute(
-                'DELETE FROM system_data WHERE system_id=? and key=?;',
-                (system_id, key))
+                "DELETE FROM system_data WHERE system_id=? and key=?;",
+                (system_id, key),
+            )
 
     def find_systems(self, key: str, value: Any) -> Sequence:
         """
@@ -140,8 +143,10 @@ class DataStore:
         """
         with self._lock:
             cursor = self._connection.execute(
-                'SELECT system_id FROM system_data WHERE key=? AND value=? '
-                'ORDER BY system_id;', (key, json.dumps(value)))
+                "SELECT system_id FROM system_data WHERE key=? AND value=? "
+                "ORDER BY system_id;",
+                (key, json.dumps(value)),
+            )
             try:
                 cursor.arraysize = 16
                 rows = cursor.fetchall()
@@ -168,18 +173,19 @@ class DataStore:
         """
         with self._lock:
             cursor = self._connection.execute(
-                'SELECT key, value FROM system_data WHERE system_id=? ORDER BY '
-                'key;',
-                (system_id,))
+                "SELECT key, value FROM system_data WHERE system_id=? ORDER "
+                "BY key;",
+                (system_id,),
+            )
             try:
                 cursor.arraysize = 16
                 rows = cursor.fetchall()
             finally:
                 cursor.close()
         data = {
-            row[0]: json.loads(
-                row[1], object_pairs_hook=OrderedDict)
-            for row in rows}
+            row[0]: json.loads(row[1], object_pairs_hook=OrderedDict)
+            for row in rows
+        }
         return data
 
     def get_value(self, system_id: str, key: str) -> Any:
@@ -190,8 +196,8 @@ class DataStore:
         ``KeyError`` is raised.
 
         :param system_id:
-            system_id for which the piece of data identified by ``key`` shall be
-            retrieved.
+            system_id for which the piece of data identified by ``key`` shall
+            be retrieved.
         :param key:
             key for which the value shall be retrieved.
         :return:
@@ -199,9 +205,10 @@ class DataStore:
         """
         with self._lock:
             cursor = self._connection.execute(
-                'SELECT value FROM system_data WHERE system_id=? AND '
-                'KEY=?;',
-                (system_id, key))
+                "SELECT value FROM system_data WHERE system_id=? AND "
+                "KEY=?;",
+                (system_id, key),
+            )
             try:
                 row = cursor.fetchone()
             finally:
@@ -222,8 +229,9 @@ class DataStore:
         """
         with self._lock:
             cursor = self._connection.execute(
-                'SELECT DISTINCT system_id FROM system_data '
-                'ORDER BY system_id;')
+                "SELECT DISTINCT system_id FROM system_data "
+                "ORDER BY system_id;"
+            )
             try:
                 cursor.arraysize = 16
                 rows = cursor.fetchall()
@@ -236,24 +244,25 @@ class DataStore:
         """
         Store a value for the specified system ID and key.
 
-        The data store internally uses JSON to serialize the value, so there are
-        some restrictions on which kind of values are supported.
+        The data store internally uses JSON to serialize the value, so there
+        are some restrictions on which kind of values are supported.
 
         In general, only objects that can be serialized by ``json.dumps`` are
         supported. In particular, passing an object that has a circular
-        reference (e.g. a ``dict`` that refers back to itself through one of its
-        values) results in a ``ValueError`` being raised. Passing another kind
-        of object that cannot be serialized by ``json.dumps`` results in a
+        reference (e.g. a ``dict`` that refers back to itself through one of
+        its values) results in a ``ValueError`` being raised. Passing another
+        kind of object that cannot be serialized by ``json.dumps`` results in a
         ``TypeError`` being raised.
 
         If the ``strict_value_checking`` option is enabled for this data store
-        (see `open_data_store`) some additional checks apply. JSON natively only
-        supports the elementary data types ``bool``, ``float``, ``int`` and
-        ``str`` as well as ``list`` and ``dict`` instances using these types.
-        The values stored in a ``list`` or a ``dict`` must also be of one of
-        these types. The keys of a ``dict`` are further constrained: They must
-        be instances of ``str``. In additon to the aforementioned types, the
-        special value ``None`` is also supported (but not as a ``dict`` key).
+        (see `open_data_store`) some additional checks apply. JSON natively
+        only supports the elementary data types ``bool``, ``float``, ``int``
+        and ``str`` as well as ``list`` and ``dict`` instances using these
+        types. The values stored in a ``list`` or a ``dict`` must also be of
+        one of these types. The keys of a ``dict`` are further constrained:
+        They must be instances of ``str``. In additon to the aforementioned
+        types, the special value ``None`` is also supported (but not as a
+        ``dict`` key).
 
         Enforcing these limitations has the advantage that values will be
         deserialized to their original representations. For example,
@@ -281,9 +290,10 @@ class DataStore:
         json_value = json.dumps(value)
         with self._lock:
             self._connection.execute(
-                'INSERT OR REPLACE INTO system_data (system_id, key, value) '
-                'VALUES (?, ?, ?);',
-                (system_id, key, json_value))
+                "INSERT OR REPLACE INTO system_data (system_id, key, value) "
+                "VALUES (?, ?, ?);",
+                (system_id, key, json_value),
+            )
 
     def _check_value(self, value, parents=[]):
         if value is None:
@@ -295,14 +305,16 @@ class DataStore:
         # of stack space.
         for parent_val in parents:
             if parent_val is value:
-                raise ValueError('Circular reference detected.')
+                raise ValueError("Circular reference detected.")
         if isinstance(value, dict):
             for key, dict_val in value.items():
                 if not isinstance(key, str):
                     raise TypeError(
-                        'Object of type {0} is not strictly JSON serializable '
-                        'when used as the key of a dict.'.format(
-                            type(key).__name__))
+                        "Object of type {0} is not strictly JSON serializable "
+                        "when used as the key of a dict.".format(
+                            type(key).__name__
+                        )
+                    )
                 self._check_value(dict_val, parents + [value])
             return
         if isinstance(value, list):
@@ -310,17 +322,19 @@ class DataStore:
                 self._check_value(list_val, parents + [value])
             return
         raise TypeError(
-            'Object of type {0} is not strictly JSON serializable.'.format(
-                type(value).__name__))
+            "Object of type {0} is not strictly JSON serializable.".format(
+                type(value).__name__
+            )
+        )
 
     def _create_tables(self):
-        # We store the data in a single table. In addition to the implicit index
-        # that is created on the primary key, we create an index that allows us
-        # to quickly find all rows for a certain systen and an index that allows
-        # us to quickly find all rows with certain key value pairs.
+        # We store the data in a single table. In addition to the implicit
+        # index that is created on the primary key, we create an index that
+        # allows us to quickly find all rows for a certain systen and an index
+        # that allows us to quickly find all rows with certain key value pairs.
         with self._lock:
             self._connection.executescript(
-                '''
+                """
                 CREATE TABLE IF NOT EXISTS system_data (
                     system_id TEXT NOT NULL,
                     key TEXT NOT NULL,
@@ -330,7 +344,8 @@ class DataStore:
                     ON system_data (system_id);
                 CREATE INDEX IF NOT EXISTS key_value_index
                     ON system_data (key, value);
-                ''')
+                """
+            )
 
     def __enter__(self):
         # We do not have to do anything here because we already opened the
@@ -349,9 +364,9 @@ def open_data_store(db_file: str, strict_value_checking=True) -> DataStore:
 
     The `strict_value_checking` option controls the behavior of the
     `~DataStore.set_value` method. If the option is set to ``True`` (the
-    default), ``set_value`` raises an exception if the specified value cannot be
-    safely serialized as JSON (see that method for details about which types can
-    be serialized safely).
+    default), ``set_value`` raises an exception if the specified value cannot
+    be safely serialized as JSON (see that method for details about which types
+    can be serialized safely).
 
     A data store that has been created should be closed when it is not
     needed any longer by calling its `close` method. This ensures that

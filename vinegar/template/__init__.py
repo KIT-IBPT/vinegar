@@ -47,8 +47,8 @@ class TemplateEngine(abc.ABC):
         :param: context:
             context available to the template. The objects supplied by this
             mapping should be made available to the template code when
-            rendering. The details of how the context objects are made available
-            depends on the template engine.
+            rendering. The details of how the context objects are made
+            available depends on the template engine.
         :return:
             result of rendering the template.
         """
@@ -56,11 +56,11 @@ class TemplateEngine(abc.ABC):
 
 
 def get_template_engine(
-        name: str,
-        config: Mapping[Any, Any]) -> TemplateEngine:
+    name: str, config: Mapping[Any, Any]
+) -> TemplateEngine:
     """
-    Create the an instance of the template engine with the specified name, using
-    the specified configuration.
+    Create the an instance of the template engine with the specified name,
+    using the specified configuration.
 
     :param name:
         name of the template engine. If the name contains a dot, it is treated
@@ -72,6 +72,6 @@ def get_template_engine(
     :return:
         newly created template engine.
     """
-    module_name = name if '.' in name else '{0}.{1}'.format(__name__, name)
+    module_name = name if "." in name else "{0}.{1}".format(__name__, name)
     template_engine_module = importlib.import_module(module_name)
     return template_engine_module.get_instance(config)

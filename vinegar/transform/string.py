@@ -43,8 +43,8 @@ def split(value: str, sep: str = None, maxsplit: int = -1) -> str:
         separator along which to split. If ``None`` the string is split along
         sequences of whitespace.
     :param maxsplit:
-        max. number of elements into which the string should be split. If ``-1``
-        (the default), there is no limit.
+        max. number of elements into which the string should be split. If
+        ``-1`` (the default), there is no limit.
     :return:
         ``value.split(sep, maxsplit)``
     """

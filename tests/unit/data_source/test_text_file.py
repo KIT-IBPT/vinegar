@@ -33,39 +33,40 @@ class TestTextFileSource(unittest.TestCase):
                 02:00:00:00:00:0a;192.168.000.3;system3
                 02:00:00:00:00:0A;192.168.0.4;system4
                 02:00:00:00:00:0b;192.168.0.5;system4
-                """)
+                """,
+            )
             # When we do not specify the duplicate_system_id option, it should
             # default to warn.
             ds = TextFileSource(config)
             with unittest.mock.patch(
-                    'vinegar.data_source.text_file.logger',
-                    autospec=True) as mock_logger:
-                ds.get_data('system', {}, '')
+                "vinegar.data_source.text_file.logger", autospec=True
+            ) as mock_logger:
+                ds.get_data("system", {}, "")
                 # assert_called_once does not exist in Python 3.5, so we use a
                 # workaround here.
                 self.assertEqual(1, mock_logger.warning.call_count)
             # If the option is set to error, we expect an exception.
-            config['duplicate_system_id_action'] = 'error'
+            config["duplicate_system_id_action"] = "error"
             ds = TextFileSource(config)
             with self.assertRaises(ValueError):
-                ds.get_data('system', {}, '')
+                ds.get_data("system", {}, "")
             # If the option is set to ignore, we do not expect a warning to be
             # logged.
-            config['duplicate_system_id_action'] = 'ignore'
+            config["duplicate_system_id_action"] = "ignore"
             ds = TextFileSource(config)
             with unittest.mock.patch(
-                    'vinegar.data_source.text_file.logger',
-                    autospec=True) as mock_logger:
-                ds.get_data('system', {}, '')
+                "vinegar.data_source.text_file.logger", autospec=True
+            ) as mock_logger:
+                ds.get_data("system", {}, "")
                 mock_logger.warning.assert_not_called()
             # If the option is explicitly set to warn, we expect the default
             # behavior.
-            config['duplicate_system_id_action'] = 'warn'
+            config["duplicate_system_id_action"] = "warn"
             ds = TextFileSource(config)
             with unittest.mock.patch(
-                    'vinegar.data_source.text_file.logger',
-                    autospec=True) as mock_logger:
-                ds.get_data('system', {}, '')
+                "vinegar.data_source.text_file.logger", autospec=True
+            ) as mock_logger:
+                ds.get_data("system", {}, "")
                 # assert_called_once does not exist in Python 3.5, so we use a
                 # workaround here.
                 self.assertEqual(1, mock_logger.warning.call_count)
@@ -82,25 +83,29 @@ class TestTextFileSource(unittest.TestCase):
                 02:00:00:00:00:02;192.168.0.2;system2,alias1,Alias2
                 02:00:00:00:00:0a;192.168.000.3;system3
                 02:00:00:00:00:0A;192.168.0.4;system4
-                """)
+                """,
+            )
             # When we do not specify the find_first_match option, it should
             # default to False.
             ds = TextFileSource(config)
             self.assertIsNone(
-                ds.find_system('net:mac_addr', '02:00:00:00:00:0A'))
+                ds.find_system("net:mac_addr", "02:00:00:00:00:0A")
+            )
             # If the option is set to True, we expect the first of the two
             # systems to be returned.
-            config['find_first_match'] = True
+            config["find_first_match"] = True
             ds = TextFileSource(config)
             self.assertEqual(
-                'system3.mydomain.example.com',
-                ds.find_system('net:mac_addr', '02:00:00:00:00:0A'))
+                "system3.mydomain.example.com",
+                ds.find_system("net:mac_addr", "02:00:00:00:00:0A"),
+            )
             # If we explicitly set the option to False, we expect the default
             # behavior.
-            config['find_first_match'] = False
+            config["find_first_match"] = False
             ds = TextFileSource(config)
             self.assertIsNone(
-                ds.find_system('net:mac_addr', '02:00:00:00:00:0A'))
+                ds.find_system("net:mac_addr", "02:00:00:00:00:0A")
+            )
 
     def test_config_mismatch_action(self):
         """
@@ -116,38 +121,39 @@ class TestTextFileSource(unittest.TestCase):
                 xx:00:00:00:00:02;192.168.0.2;system2,alias1,Alias2
                 02:00:00:00:00:0a;192.168.000.3;system3
                 02:00:00:00:00:0A;192.168.0.4;system4
-                """)
+                """,
+            )
             # The default mismatch_action is warn, so we should receive a
             # warning about the line with the invalid MAC address.
             ds = TextFileSource(config)
             with unittest.mock.patch(
-                    'vinegar.data_source.text_file.logger',
-                    autospec=True) as mock_logger:
-                ds.get_data('system', {}, '')
+                "vinegar.data_source.text_file.logger", autospec=True
+            ) as mock_logger:
+                ds.get_data("system", {}, "")
                 # assert_called_once does not exist in Python 3.5, so we use a
                 # workaround here.
                 self.assertEqual(1, mock_logger.warning.call_count)
             # If we set it to error, we expect an exception.
-            config['mismatch_action'] = 'error'
+            config["mismatch_action"] = "error"
             ds = TextFileSource(config)
             with self.assertRaises(ValueError):
-                ds.get_data('system', {}, '')
+                ds.get_data("system", {}, "")
             # If we set it to ignore, we expect no warning.
-            config['mismatch_action'] = 'ignore'
+            config["mismatch_action"] = "ignore"
             ds = TextFileSource(config)
             with unittest.mock.patch(
-                    'vinegar.data_source.text_file.logger',
-                    autospec=True) as mock_logger:
-                ds.get_data('system', {}, '')
+                "vinegar.data_source.text_file.logger", autospec=True
+            ) as mock_logger:
+                ds.get_data("system", {}, "")
                 mock_logger.warning.assert_not_called()
             # Setting it to warn should have the same effects as the default
             # setting.
-            config['mismatch_action'] = 'warn'
+            config["mismatch_action"] = "warn"
             ds = TextFileSource(config)
             with unittest.mock.patch(
-                    'vinegar.data_source.text_file.logger',
-                    autospec=True) as mock_logger:
-                ds.get_data('system', {}, '')
+                "vinegar.data_source.text_file.logger", autospec=True
+            ) as mock_logger:
+                ds.get_data("system", {}, "")
                 # assert_called_once does not exist in Python 3.5, so we use a
                 # workaround here.
                 self.assertEqual(1, mock_logger.warning.call_count)
@@ -166,24 +172,25 @@ class TestTextFileSource(unittest.TestCase):
                 02:00:00:00:00:02;192.168.0.2;system2,alias1,Alias2
                 02:00:00:00:00:0a;192.168.000.3;system3
                 02:00:00:00:00:0A;192.168.0.4;system4
-                """)
+                """,
+            )
             # Our base configuration already sets a regular expression that
             # ignores empty lines and lines starting with #, so we test that
             # first.
             ds = TextFileSource(config)
             with unittest.mock.patch(
-                    'vinegar.data_source.text_file.logger',
-                    autospec=True) as mock_logger:
-                ds.get_data('system', {}, '')
+                "vinegar.data_source.text_file.logger", autospec=True
+            ) as mock_logger:
+                ds.get_data("system", {}, "")
                 mock_logger.warning.assert_not_called()
             # Now we set regular_expression_ignore to None. This should result
             # in two warnings as mismatch_action is set to warn by default.
-            config['regular_expression_ignore'] = None
+            config["regular_expression_ignore"] = None
             ds = TextFileSource(config)
             with unittest.mock.patch(
-                    'vinegar.data_source.text_file.logger',
-                    autospec=True) as mock_logger:
-                ds.get_data('system', {}, '')
+                "vinegar.data_source.text_file.logger", autospec=True
+            ) as mock_logger:
+                ds.get_data("system", {}, "")
                 self.assertEqual(2, mock_logger.warning.call_count)
 
     def test_find_system(self):
@@ -198,36 +205,43 @@ class TestTextFileSource(unittest.TestCase):
                 02:00:00:00:00:0a;192.168.0.2;system2,alias1,Alias2
                 02:00:00:00:00:0b;192.168.000.3;system3
                 02:00:00:00:00:0B;192.168.0.4;system4
-                """)
+                """,
+            )
             ds = TextFileSource(config)
             # We should be able to find system1 and system2 based on the MAC
             # address.
             self.assertEqual(
-                'system1.mydomain.example.com',
-                ds.find_system('net:mac_addr', '02:00:00:00:00:01'))
+                "system1.mydomain.example.com",
+                ds.find_system("net:mac_addr", "02:00:00:00:00:01"),
+            )
             self.assertEqual(
-                'system2.mydomain.example.com',
-                ds.find_system('net:mac_addr', '02:00:00:00:00:0A'))
+                "system2.mydomain.example.com",
+                ds.find_system("net:mac_addr", "02:00:00:00:00:0A"),
+            )
             # We should not be able to find system3 and system4 because they
             # share the same MAC address and find_first_match is not set. The
             # effects of setting find_first_match to True are covered by a
             # separate test.
             self.assertIsNone(
-                ds.find_system('net:mac_addr', '02:00:00:00:00:0B'))
+                ds.find_system("net:mac_addr", "02:00:00:00:00:0B")
+            )
             # However, we should be able to find both systems by their IP
             # addresses.
             self.assertEqual(
-                'system3.mydomain.example.com',
-                ds.find_system('net:ipv4_addr', '192.168.0.3'))
+                "system3.mydomain.example.com",
+                ds.find_system("net:ipv4_addr", "192.168.0.3"),
+            )
             self.assertEqual(
-                'system4.mydomain.example.com',
-                ds.find_system('net:ipv4_addr', '192.168.0.4'))
+                "system4.mydomain.example.com",
+                ds.find_system("net:ipv4_addr", "192.168.0.4"),
+            )
             # We should be able to find system2 by its extra names. We do this
             # tests because finding non-hashable values (like lists) has a
             # different code path.
             self.assertEqual(
-                'system2.mydomain.example.com',
-                ds.find_system('info:extra_names', ['alias1', 'alias2']))
+                "system2.mydomain.example.com",
+                ds.find_system("info:extra_names", ["alias1", "alias2"]),
+            )
 
     def test_get_data(self):
         """
@@ -245,56 +259,68 @@ class TestTextFileSource(unittest.TestCase):
                 02:00:00:00:00:0a;192.168.000.3;system3
                 02:00:00:00:00:0A;192.168.0.4;system4
                 02:00:00:00:00:0b;192.168.0.5;system4
-                """)
+                """,
+            )
             # We disable warnings about duplicate system IDs and mismatches.
             # We test these in separate tests. This test is only about finding
             # that those lines are ignored and other lines are still parsed
             # correctly.
-            config['duplicate_system_id_action'] = 'ignore'
-            config['mismatch_action'] = 'ignore'
+            config["duplicate_system_id_action"] = "ignore"
+            config["mismatch_action"] = "ignore"
             ds = TextFileSource(config)
             expected_data1a = {
-                'net': {
-                    'fqdn': 'system1.mydomain.example.com',
-                    'hostname': 'system1',
-                    'ipv4_addr': '192.168.0.1',
-                    'mac_addr': '02:00:00:00:00:01'}}
+                "net": {
+                    "fqdn": "system1.mydomain.example.com",
+                    "hostname": "system1",
+                    "ipv4_addr": "192.168.0.1",
+                    "mac_addr": "02:00:00:00:00:01",
+                }
+            }
             data, version1a = ds.get_data(
-                'system1.mydomain.example.com', {}, '')
+                "system1.mydomain.example.com", {}, ""
+            )
             self.assertEqual(expected_data1a, data)
             expected_data2 = {
-                'info': {
-                    'extra_names': ['alias1', 'alias2']},
-                'net': {
-                    'fqdn': 'system2.mydomain.example.com',
-                    'hostname': 'system2',
-                    'ipv4_addr': '192.168.0.2',
-                    'mac_addr': '02:00:00:00:00:02'}}
+                "info": {"extra_names": ["alias1", "alias2"]},
+                "net": {
+                    "fqdn": "system2.mydomain.example.com",
+                    "hostname": "system2",
+                    "ipv4_addr": "192.168.0.2",
+                    "mac_addr": "02:00:00:00:00:02",
+                },
+            }
             data, version2a = ds.get_data(
-                'system2.mydomain.example.com', {}, '')
+                "system2.mydomain.example.com", {}, ""
+            )
             self.assertEqual(expected_data2, data)
             expected_data3 = {
-                'net': {
-                    'fqdn': 'system3.mydomain.example.com',
-                    'hostname': 'system3',
-                    'ipv4_addr': '192.168.0.3',
-                    'mac_addr': '02:00:00:00:00:0A'}}
+                "net": {
+                    "fqdn": "system3.mydomain.example.com",
+                    "hostname": "system3",
+                    "ipv4_addr": "192.168.0.3",
+                    "mac_addr": "02:00:00:00:00:0A",
+                }
+            }
             data, version3a = ds.get_data(
-                'system3.mydomain.example.com', {}, '')
+                "system3.mydomain.example.com", {}, ""
+            )
             self.assertEqual(expected_data3, data)
             expected_data4 = {
-                'net': {
-                    'fqdn': 'system4.mydomain.example.com',
-                    'hostname': 'system4',
-                    'ipv4_addr': '192.168.0.4',
-                    'mac_addr': '02:00:00:00:00:0A'}}
+                "net": {
+                    "fqdn": "system4.mydomain.example.com",
+                    "hostname": "system4",
+                    "ipv4_addr": "192.168.0.4",
+                    "mac_addr": "02:00:00:00:00:0A",
+                }
+            }
             data, version4a = ds.get_data(
-                'system4.mydomain.example.com', {}, '')
+                "system4.mydomain.example.com", {}, ""
+            )
             self.assertEqual(expected_data4, data)
             # Now we write a fresh data file that uses the same lines for most
             # systems, but changes the line for system1. This should result in
             # a change of the version number for that system only.
-            data_file = os.path.join(tmpdir, 'test.txt')
+            data_file = os.path.join(tmpdir, "test.txt")
             # We actually try several times with increasing sleep times. On
             # systems, where the time stamp is very precise, the test finishes
             # quickly, on other ones it takes a bit longer.
@@ -307,31 +333,38 @@ class TestTextFileSource(unittest.TestCase):
                     02:00:00:00:00:02;192.168.0.2;system2,alias1,Alias2
                     02:00:00:00:00:0a;192.168.000.3;system3
                     02:00:00:00:00:0A;192.168.0.4;system4
-                    """)
+                    """,
+                )
                 data, version1b = ds.get_data(
-                    'system1.mydomain.example.com', {}, '')
+                    "system1.mydomain.example.com", {}, ""
+                )
                 if version1a != version1b:
                     break
                 time.sleep(sleep_time)
                 sleep_time *= 2
             expected_data1b = {
-                'net': {
-                    'fqdn': 'system1.mydomain.example.com',
-                    'hostname': 'system1',
-                    'ipv4_addr': '192.168.0.6',
-                    'mac_addr': '02:00:00:00:00:01'}}
+                "net": {
+                    "fqdn": "system1.mydomain.example.com",
+                    "hostname": "system1",
+                    "ipv4_addr": "192.168.0.6",
+                    "mac_addr": "02:00:00:00:00:01",
+                }
+            }
             self.assertEqual(expected_data1b, data)
             self.assertNotEqual(version1a, version1b)
             data, version2b = ds.get_data(
-                'system2.mydomain.example.com', {}, '')
+                "system2.mydomain.example.com", {}, ""
+            )
             self.assertEqual(expected_data2, data)
             self.assertEqual(version2a, version2b)
             data, version3b = ds.get_data(
-                'system3.mydomain.example.com', {}, '')
+                "system3.mydomain.example.com", {}, ""
+            )
             self.assertEqual(expected_data3, data)
             self.assertEqual(version3a, version3b)
             data, version4b = ds.get_data(
-                'system4.mydomain.example.com', {}, '')
+                "system4.mydomain.example.com", {}, ""
+            )
             self.assertEqual(expected_data4, data)
             self.assertEqual(version4a, version4b)
 
@@ -341,13 +374,12 @@ def _get_base_config(dir_path, data_text):
     Call `_write_test_data_file` and return a basic configuration that uses the
     generated file.
     """
-    file_path = os.path.join(dir_path, 'test.txt')
+    file_path = os.path.join(dir_path, "test.txt")
     _write_file(file_path, data_text)
     return {
-        'file': file_path,
-        'regular_expression':
-            inspect.cleandoc(
-                '''
+        "file": file_path,
+        "regular_expression": inspect.cleandoc(
+            """
                 (?x)
                 # We expect a CSV file with three columns that are separated by
                 # semicolons.
@@ -359,33 +391,42 @@ def _get_base_config(dir_path, data_text):
                 # of additional names.
                 (?P<hostname>[^,]+)
                 (,(?P<extra_names>.+))?
-                '''),
-        'regular_expression_ignore': '|(?:#.*)',
-        'system_id': {
-            'source': 'hostname',
-            'transform': [
-                {'string.add_suffix': '.mydomain.example.com'},
-                'string.to_lower']},
-        'variables': {
-            'info:extra_names': {
-                'source': 'extra_names',
-                'transform': [
-                    'string.to_lower',
-                    {'string.split': ','}]},
-            'net:fqdn': {
-                'source': 'hostname',
-                'transform': [
-                    {'string.add_suffix': '.mydomain.example.com'},
-                    'string.to_lower']},
-            'net:hostname': {
-                'source': 'hostname',
-                'transform': ['string.to_lower']},
-            'net:ipv4_addr': {
-                'source': 'ip',
-                'transform': ['ipv4_address.normalize']},
-            'net:mac_addr': {
-                'source': 'mac',
-                'transform': ['mac_address.normalize']}}}
+                """
+        ),
+        "regular_expression_ignore": "|(?:#.*)",
+        "system_id": {
+            "source": "hostname",
+            "transform": [
+                {"string.add_suffix": ".mydomain.example.com"},
+                "string.to_lower",
+            ],
+        },
+        "variables": {
+            "info:extra_names": {
+                "source": "extra_names",
+                "transform": ["string.to_lower", {"string.split": ","}],
+            },
+            "net:fqdn": {
+                "source": "hostname",
+                "transform": [
+                    {"string.add_suffix": ".mydomain.example.com"},
+                    "string.to_lower",
+                ],
+            },
+            "net:hostname": {
+                "source": "hostname",
+                "transform": ["string.to_lower"],
+            },
+            "net:ipv4_addr": {
+                "source": "ip",
+                "transform": ["ipv4_address.normalize"],
+            },
+            "net:mac_addr": {
+                "source": "mac",
+                "transform": ["mac_address.normalize"],
+            },
+        },
+    }
 
 
 def _write_file(path, text):
@@ -394,5 +435,5 @@ def _write_file(path, text):
 
     We use this to generate files for tests.
     """
-    with open(path, mode='w') as file:
+    with open(path, mode="w") as file:
         file.write(inspect.cleandoc(text))

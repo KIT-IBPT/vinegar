@@ -12,7 +12,8 @@ from vinegar.data_source import (
     DataSourceAware,
     get_composite_data_source,
     inject_data_source,
-    merge_data_trees)
+    merge_data_trees,
+)
 
 
 class TestDataSourceModule(unittest.TestCase):
@@ -24,38 +25,41 @@ class TestDataSourceModule(unittest.TestCase):
         """
         Test the `get_composite_data_source` function.
         """
-        data1 = {'a': 1, 'b': 2}
-        data2 = {'a': 3, 'c': 4}
-        system_id1 = 'system1'
-        system_id2 = 'system2'
+        data1 = {"a": 1, "b": 2}
+        data2 = {"a": 3, "c": 4}
+        system_id1 = "system1"
+        system_id2 = "system2"
         sources = [
             _DummyDataSource(data1, system_id1),
             _DummyDataSource(data2, system_id2),
             _DummyDataSource(data2, system_id1),
-            _DummyDataSource(data1, system_id2)]
+            _DummyDataSource(data1, system_id2),
+        ]
         composite = get_composite_data_source(sources)
         # We test for system1 with different inputs.
-        result_data1, result_version1 = composite.get_data(system_id1, {}, '0')
-        self.assertEqual({'a': 3, 'b': 2, 'c': 4}, result_data1)
+        result_data1, result_version1 = composite.get_data(system_id1, {}, "0")
+        self.assertEqual({"a": 3, "b": 2, "c": 4}, result_data1)
         result_data2, result_version2 = composite.get_data(
-            system_id1, {'d': 5}, '1')
-        self.assertEqual({'d': 5, 'a': 3, 'b': 2, 'c': 4}, result_data2)
+            system_id1, {"d": 5}, "1"
+        )
+        self.assertEqual({"d": 5, "a": 3, "b": 2, "c": 4}, result_data2)
         self.assertNotEqual(result_version1, result_version2)
         # We also test for system2 with different inputs.
-        result_data1, result_version1 = composite.get_data(system_id2, {}, '0')
-        self.assertEqual({'a': 1, 'c': 4, 'b': 2}, result_data1)
+        result_data1, result_version1 = composite.get_data(system_id2, {}, "0")
+        self.assertEqual({"a": 1, "c": 4, "b": 2}, result_data1)
         result_data2, result_version2 = composite.get_data(
-            system_id2, {'e': 6}, '1')
-        self.assertEqual({'e': 6, 'a': 1, 'c': 4, 'b': 2}, result_data2)
+            system_id2, {"e": 6}, "1"
+        )
+        self.assertEqual({"e": 6, "a": 1, "c": 4, "b": 2}, result_data2)
         self.assertNotEqual(result_version1, result_version2)
         # Finally, we test find_system.
         # We find system1 for a == 1 because the respective data source comes
         # earliest in the chain.
-        self.assertEqual(system_id1, composite.find_system('a', 1))
+        self.assertEqual(system_id1, composite.find_system("a", 1))
         # For a == 3, we find system2 for the same reason
-        self.assertEqual(system_id2, composite.find_system('a', 3))
+        self.assertEqual(system_id2, composite.find_system("a", 3))
         # For a == 2, we do not find any system at all.
-        self.assertIsNone(composite.find_system('a', 2))
+        self.assertIsNone(composite.find_system("a", 2))
 
     def test_inject_data_source(self):
         """
@@ -89,7 +93,8 @@ class TestDataSourceModule(unittest.TestCase):
         self.assertEqual([1, 2, 4, 3, 5], list(result.keys()))
         # Next, we test that dictionary values are merged as well.
         self.assertEqual(
-            {0: expected_result}, merge_data_trees({0: d1}, {0: d2}))
+            {0: expected_result}, merge_data_trees({0: d1}, {0: d2})
+        )
         # Now, we test that lists are not merged unless merge_lists is set to
         # True.
         d1 = {0: [1, 3, 4]}
@@ -137,13 +142,14 @@ class _DummyDataSource(DataSource):
             return None
 
     def get_data(
-            self,
-            system_id: str,
-            preceding_data: Mapping[Any, Any],
-            preceding_data_version: str) -> Tuple[Mapping[Any, Any], str]:
-        # We can use an empty string for the version number because we know that
-        # we always return the same data.
+        self,
+        system_id: str,
+        preceding_data: Mapping[Any, Any],
+        preceding_data_version: str,
+    ) -> Tuple[Mapping[Any, Any], str]:
+        # We can use an empty string for the version number because we know
+        # that we always return the same data.
         if self._system_id is None or self._system_id == system_id:
-            return self._data, ''
+            return self._data, ""
         else:
-            return {}, ''
+            return {}, ""

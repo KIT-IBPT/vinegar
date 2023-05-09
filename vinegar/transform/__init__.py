@@ -9,8 +9,8 @@ that provide the actual functions. The functions from these modules can be
 called directly.
 
 The `apply_transformation` function in this module helps with calling
-transformation functions that are not known at the time of writing the code. For
-example, code might allow a user to choose the transformation function at
+transformation functions that are not known at the time of writing the code.
+For example, code might allow a user to choose the transformation function at
 runtime.
 
 The `apply_transformation_chain` function can be used when a user can specify a
@@ -35,9 +35,10 @@ def apply_transformation(name: str, *args, **kwargs) -> Any:
     Transform a value using the specified transformation.
 
     The name of the transformation function that shall be used is specified in
-    the form ``module_name.function_name``, where ``module_name`` is the name of
-    one of the modules in the ``vinegar.transform`` package and
-    ``function_name`` is the name of the transformation function in that module.
+    the form ``module_name.function_name``, where ``module_name`` is the name
+    of one of the modules in the ``vinegar.transform`` package and
+    ``function_name`` is the name of the transformation function in that
+    module.
 
     Typically, transformation functions take the value to be transformed as
     their first positional argument.
@@ -104,8 +105,8 @@ def apply_transformation_chain(chain: TransformationChain, value: Any) -> Any:
         list describing the transformation chain. Please refer to the function
         description for details.
     :param value:
-        value that shall be transformed. This is the input to the first function
-        in the transformation chain.
+        value that shall be transformed. This is the input to the first
+        function in the transformation chain.
     :return:
         transformed value. This is the return value of the last function in the
         transformation chain.
@@ -167,8 +168,9 @@ def get_transformation_chain(chain: TransformationChain) -> Callable:
         if isinstance(transformation, collections.abc.Mapping):
             if len(transformation) != 1:
                 raise ValueError(
-                    'Invalid transformation: A transformation entry either '
-                    'has to be a str or a dict with exactly one item.')
+                    "Invalid transformation: A transformation entry either "
+                    "has to be a str or a dict with exactly one item."
+                )
             name = next(iter(transformation.keys()))
             config = next(iter(transformation.values()))
         else:
@@ -176,14 +178,17 @@ def get_transformation_chain(chain: TransformationChain) -> Callable:
             config = None
         if not isinstance(name, str):
             raise ValueError(
-                'Transformation name is a {0} not a str: {1}'.format(
-                    type(name).__name__, name))
+                "Transformation name is a {0} not a str: {1}".format(
+                    type(name).__name__, name
+                )
+            )
         args = []
         kwargs = {}
         if isinstance(config, collections.abc.Mapping):
             kwargs = config
         elif isinstance(config, collections.abc.Sequence) and not isinstance(
-                config, (bytearray, bytes, memoryview, str)):
+            config, (bytearray, bytes, memoryview, str)
+        ):
             args = config
         elif config is not None:
             args = [config]
@@ -202,9 +207,10 @@ def get_transformation_function(name: str) -> Callable:
     Return a transformation by name.
 
     The name of the transformation function that shall be used is specified in
-    the form ``module_name.function_name``, where ``module_name`` is the name of
-    one of the modules in the ``vinegar.transform`` package and
-    ``function_name`` is the name of the transformation function in that module.
+    the form ``module_name.function_name``, where ``module_name`` is the name
+    of one of the modules in the ``vinegar.transform`` package and
+    ``function_name`` is the name of the transformation function in that
+    module.
 
     If the specified module cannot be found, a ``ModuleNotFoundError`` is
     raised. If the module is found, but the transformation function does not
@@ -222,18 +228,22 @@ def get_transformation_function(name: str) -> Callable:
     # If there are more than two components, we assume that all but the last
     # component form the module name and the last one is the function name.
     # If there are less than two components, this is considered an error.
-    module_name, _, function_name = name.rpartition('.')
+    module_name, _, function_name = name.rpartition(".")
     if not module_name:
         raise ValueError(
-            'Missing module name in transformation name: {0}'.format(name))
-    if '.' in module_name:
+            "Missing module name in transformation name: {0}".format(name)
+        )
+    if "." in module_name:
         raise ValueError(
-            'Module name must not contain a dot: {0}'.format(module_name))
-    module_name = '{0}.{1}'.format(__name__, module_name)
+            "Module name must not contain a dot: {0}".format(module_name)
+        )
+    module_name = "{0}.{1}".format(__name__, module_name)
     transform_module = importlib.import_module(module_name)
     transform_function = getattr(transform_module, function_name)
     if not isinstance(transform_function, collections.abc.Callable):
         raise TypeError(
-            '\'{0}\' object is not callable'.format(
-                type(transform_function).__name__))
+            "'{0}' object is not callable".format(
+                type(transform_function).__name__
+            )
+        )
     return transform_function

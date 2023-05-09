@@ -1,8 +1,8 @@
 """
 Vinegar server daemon.
 
-If executed as a Python script, this module starts a Vinegar server, looking for
-a configuration file in ``/etc/vinegar/vinegar-server.yaml``.
+If executed as a Python script, this module starts a Vinegar server, looking
+for a configuration file in ``/etc/vinegar/vinegar-server.yaml``.
 
 The path to the configuration file can be overridden through the
 ``--config-file`` command line argument.
@@ -38,9 +38,9 @@ them are optional):
     previous data, but not in the data from the next data source. This process
     also applies to nested mappings. If ``data_sources_merge_lists`` is set to
     ``True``, sequences are also merged, meaning that elements that are not
-    present in the list in the previous data are added to the list. If ``False``
-    (the default), sequences replace each other, removing all elements that were
-    only present in the previous data.
+    present in the list in the previous data are added to the list. If
+    ``False`` (the default), sequences replace each other, removing all
+    elements that were only present in the previous data.
 
 :``data_sources_merge_sets``:
     Flag controlling the behavior of the composite data source that is created
@@ -49,23 +49,24 @@ them are optional):
     This happens by merging mappings, preserving keys that are present in the
     previous data, but not in the data from the next data source. This process
     also applies to nested mappings. If ``data_sources_merge_sets`` is set to
-    ``True`` (the default), sets are also merged, meaning that the resulting set
-    is the union of the set in the previous data and the set returned by the
-    data source. If ``False``, sets replace each other, removing all elements
-    that were only present in the previous data.
+    ``True`` (the default), sets are also merged, meaning that the resulting
+    set is the union of the set in the previous data and the set returned by
+    the data source. If ``False``, sets replace each other, removing all
+    elements that were only present in the previous data.
 
 :``http``:
     Dictionary of configuration options for the HTTP server. The options are
     passed on to `vinegar.server.http.create_http_server`. The only exception
     is the ``request_handlers`` option. That option expects a list, where each
     item is a dictionary. This dictionary must have a key ``name`` that
-    specifies the type of the request handler. Please refer to the documentation
-    of `vinegar.request_handler.get_http_request_handler` to learn more about
-    how the name is resolved. All other keys are used for the configuration
-    dictionary that is passed to the request handler. It is perfectly legal to
-    use multiple request handlers with the same name, but having a different
-    configuration. Please refer to the documentation of the request handlers to
-    learn more about the configuration options for each request handler.
+    specifies the type of the request handler. Please refer to the
+    documentation of `vinegar.request_handler.get_http_request_handler` to
+    learn more about how the name is resolved. All other keys are used for the
+    configuration dictionary that is passed to the request handler. It is
+    perfectly legal to use multiple request handlers with the same name, but
+    having a different configuration. Please refer to the documentation of the
+    request handlers to learn more about the configuration options for each
+    request handler.
 
 :``logging_config_file``:
     Path to a logging configuration file. This file must be in the
@@ -83,14 +84,15 @@ them are optional):
     passed on to `vinegar.server.tftp.create_tftp_server`. The only exception
     is the ``request_handlers`` option. That option expects a list, where each
     item is a dictionary. This dictionary must have a key ``name`` that
-    specifies the type of the request handler. Please refer to the documentation
-    of `vinegar.request_handler.get_tftp_request_handler` to learn more about
-    how the name is resolved. All other keys are used for the configuration
-    dictionary that is passed to the request handler. It is perfectly legal to
-    use multiple request handlers with the same name, but having a different
-    configuration. Please refer to the documentation of the request handlers to
-    learn more about the configuration options for each request handler.
-"""  # nopep8
+    specifies the type of the request handler. Please refer to the
+    documentation of `vinegar.request_handler.get_tftp_request_handler` to
+    learn more about how the name is resolved. All other keys are used for the
+    configuration dictionary that is passed to the request handler. It is
+    perfectly legal to use multiple request handlers with the same name, but
+    having a different configuration. Please refer to the documentation of the
+    request handlers to learn more about the configuration options for each
+    request handler.
+"""  # nopep8 pylint: disable=line-too-long
 
 import argparse
 import collections.abc
@@ -118,19 +120,21 @@ def main():
     This function parses the command-line arguments, calls
     `reader_server_config`, and subsequently calls `run_server`.
     """
-    parser = argparse.ArgumentParser(description='Run the Vinegar server.')
+    parser = argparse.ArgumentParser(description="Run the Vinegar server.")
     parser.add_argument(
-        '--config-file',
-        dest='config_file',
-        help='path to the configuration file')
+        "--config-file",
+        dest="config_file",
+        help="path to the configuration file",
+    )
     parser.add_argument(
-        '--version',
-        action='store_true',
-        dest='version',
-        help='show program\'s version number and exit')
+        "--version",
+        action="store_true",
+        dest="version",
+        help="show program's version number and exit",
+    )
     args = parser.parse_args()
     if args.version:
-        print('Vinegar server %s' % vinegar.version.VERSION_STRING)
+        print("Vinegar server %s" % vinegar.version.VERSION_STRING)
         sys.exit(0)
     config_file = args.config_file
     config = read_server_config(config_file)
@@ -138,7 +142,8 @@ def main():
 
 
 def read_server_config(
-        config_file: str = None) -> typing.Mapping[str, typing.Any]:
+    config_file: str = None,
+) -> typing.Mapping[str, typing.Any]:
     """
     Read the server configuration.
 
@@ -155,11 +160,11 @@ def read_server_config(
         configuration read from the file.
     """
     if config_file is None:
-        if sys.platform == 'win32':
-            config_file = 'C:\\Vinegar\\conf\\vinegar-server.yaml'
+        if sys.platform == "win32":
+            config_file = "C:\\Vinegar\\conf\\vinegar-server.yaml"
         else:
-            config_file = '/etc/vinegar/vinegar-server.yaml'
-    with open(config_file, mode='r', encoding='utf-8') as f:
+            config_file = "/etc/vinegar/vinegar-server.yaml"
+    with open(config_file, mode="r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
     if config is None:
         config = {}
@@ -183,26 +188,34 @@ def run_server(config: typing.Mapping[str, typing.Any]) -> None:
     """
     # We configure the logging first. This way, we can log any error that
     # occurs during startup.
-    if 'logging_config_file' in config:
-        if 'logging_level' in config:
+    if "logging_config_file" in config:
+        if "logging_level" in config:
             raise ValueError(
-                'Only one of the logging_config_file and logging_level option '
-                'can be used.')
+                "Only one of the logging_config_file and logging_level option "
+                "can be used."
+            )
         logging.config.fileConfig(
-            config['logging_config_file'], disable_existing_loggers=False)
+            config["logging_config_file"], disable_existing_loggers=False
+        )
     else:
-        logging_level = config.get('logging_level', 'INFO')
+        logging_level = config.get("logging_level", "INFO")
         if logging_level not in (
-                'CRITICAL', 'DEBUG', 'ERROR', 'INFO', 'WARNING'):
+            "CRITICAL",
+            "DEBUG",
+            "ERROR",
+            "INFO",
+            "WARNING",
+        ):
             raise ValueError(
                 'Invalid logging_level "%s". Must be one of CRITICAL, DEBUG, '
-                'ERROR, INFO, WARNING.' % logging_level)
+                "ERROR, INFO, WARNING." % logging_level
+            )
         logging_level = getattr(logging, logging_level)
         logging.basicConfig(level=logging_level)
     try:
         _run_server_internal(config)
     except BaseException:
-        logging.getLogger(__name__).exception('Server startup failed.')
+        logging.getLogger(__name__).exception("Server startup failed.")
         # We still raise the exception so that it is printed to the output.
         raise
 
@@ -216,95 +229,111 @@ def _run_server_internal(config):
     """
     if not isinstance(config, collections.abc.Mapping):
         raise TypeError(
-            'Configuration object must be a mapping, but got an object of type '
-            '\'%s\'.' % type(config).__name__)
+            "Configuration object must be a mapping, but got an object of "
+            "type '%s'." % type(config).__name__
+        )
     # Configure data sources.
     data_sources = []
-    data_source_configs = config.get('data_sources', [])
+    data_source_configs = config.get("data_sources", [])
     if not isinstance(data_source_configs, collections.abc.Sequence):
         raise TypeError(
-            'Expected a list for the data_sources key, but found an object of '
-            'type \'%s\'.' % type(data_source_configs).__name__)
+            "Expected a list for the data_sources key, but found an object of "
+            "type '%s'." % type(data_source_configs).__name__
+        )
     for data_source_config in data_source_configs:
         if not isinstance(data_source_config, collections.abc.Mapping):
             raise TypeError(
-                'Expected a dictionary for the items in the data_sources list, '
-                'but found an object of type \'%s\'.'
-                % type(data_source_configs).__name__)
-        if 'name' not in data_source_config:
-            raise KeyError('Data source configuration must have a name.')
+                "Expected a dictionary for the items in the data_sources "
+                "list, but found an object of type '%s'."
+                % type(data_source_configs).__name__
+            )
+        if "name" not in data_source_config:
+            raise KeyError("Data source configuration must have a name.")
         data_sources.append(
             vinegar.data_source.get_data_source(
-                data_source_config['name'], data_source_config))
-    data_sources_merge_lists = config.get('data_sources_merge_lists', False)
-    data_sources_merge_sets = config.get('data_sources_merge_sets', True)
+                data_source_config["name"], data_source_config
+            )
+        )
+    data_sources_merge_lists = config.get("data_sources_merge_lists", False)
+    data_sources_merge_sets = config.get("data_sources_merge_sets", True)
     data_source = vinegar.data_source.get_composite_data_source(
-        data_sources, data_sources_merge_lists, data_sources_merge_sets)
+        data_sources, data_sources_merge_lists, data_sources_merge_sets
+    )
     # Configure the HTTP server.
-    http_config = config.get('http', {})
+    http_config = config.get("http", {})
     if not isinstance(http_config, collections.abc.Mapping):
         raise TypeError(
-            'Expected a dictionary for the http key, but found an object of '
-            'type \'%s\'.' % type(http_config).__name__)
+            "Expected a dictionary for the http key, but found an object of "
+            "type '%s'." % type(http_config).__name__
+        )
     http_request_handlers = []
-    request_handler_configs = http_config.get('request_handlers', [])
+    request_handler_configs = http_config.get("request_handlers", [])
     if not isinstance(request_handler_configs, collections.abc.Sequence):
         raise TypeError(
-            'Expected a list for the http:request_handlers key, but found an '
-            'object of type \'%s\'.' % type(request_handler_configs).__name__)
+            "Expected a list for the http:request_handlers key, but found an "
+            "object of type '%s'." % type(request_handler_configs).__name__
+        )
     for request_handler_config in request_handler_configs:
-        if 'name' not in request_handler_config:
-            raise KeyError('Request handler configuration must specify a name.')
+        if "name" not in request_handler_config:
+            raise KeyError(
+                "Request handler configuration must specify a name."
+            )
         request_handler = vinegar.request_handler.get_http_request_handler(
-            request_handler_config['name'],
-            request_handler_config)
+            request_handler_config["name"], request_handler_config
+        )
         # A request handler might be DataSourceAware.
         vinegar.data_source.inject_data_source(request_handler, data_source)
         http_request_handlers.append(request_handler)
-    # We want to use every option except for the request_handlers as an argument
-    # to create_http_server. It is not an error if there is no request_handlers
-    # key at all.
+    # We want to use every option except for the request_handlers as an
+    # argument to create_http_server. It is not an error if there is no
+    # request_handlers key at all.
     try:
-        del http_config['request_handlers']
+        del http_config["request_handlers"]
     except KeyError:
         pass
     http_server = vinegar.http.server.create_http_server(
-        http_request_handlers, **http_config)
+        http_request_handlers, **http_config
+    )
     # Configure the TFTP server.
-    tftp_config = config.get('tftp', {})
+    tftp_config = config.get("tftp", {})
     if not isinstance(tftp_config, collections.abc.Mapping):
         raise TypeError(
-            'Expected a dictionary for the tftp key, but found an object of '
-            'type \'\'.' % type(tftp_config).__name__)
+            "Expected a dictionary for the tftp key, but found an object of "
+            "type ''." % type(tftp_config).__name__
+        )
     tftp_request_handlers = []
-    request_handler_configs = tftp_config.get('request_handlers', [])
+    request_handler_configs = tftp_config.get("request_handlers", [])
     if not isinstance(request_handler_configs, collections.abc.Sequence):
         raise TypeError(
-            'Expected a list for the tftp:request_handlers key, but found an '
-            'object of type \'\'.' % type(request_handler_configs).__name__)
+            "Expected a list for the tftp:request_handlers key, but found an "
+            "object of type ''." % type(request_handler_configs).__name__
+        )
     for request_handler_config in request_handler_configs:
-        if 'name' not in request_handler_config:
-            raise KeyError('Request handler configuration must specify a name.')
+        if "name" not in request_handler_config:
+            raise KeyError(
+                "Request handler configuration must specify a name."
+            )
         request_handler = vinegar.request_handler.get_tftp_request_handler(
-            request_handler_config['name'],
-            request_handler_config)
+            request_handler_config["name"], request_handler_config
+        )
         # A request handler might be DataSourceAware.
         vinegar.data_source.inject_data_source(request_handler, data_source)
         tftp_request_handlers.append(request_handler)
-    # We want to use every option except for the request_handlers as an argument
-    # to create_tftp_server. It is not an error if there is no request_handlers
-    # key at all.
+    # We want to use every option except for the request_handlers as an
+    # argument to create_tftp_server. It is not an error if there is no
+    # request_handlers key at all.
     try:
-        del tftp_config['request_handlers']
+        del tftp_config["request_handlers"]
     except KeyError:
         pass
     tftp_server = vinegar.tftp.server.create_tftp_server(
-        tftp_request_handlers, **tftp_config)
+        tftp_request_handlers, **tftp_config
+    )
     # We want to shut the server down when we receive a keyboard interrupt
     # (triggered by hitting Ctrl+C / SIGINT) or a SIGTERM.
     shutdown_event = threading.Event()
     signal.signal(signal.SIGTERM, lambda signum, frame: shutdown_event.set())
-    print('Press Ctrl+C to stop the server.', file=sys.stderr)
+    print("Press Ctrl+C to stop the server.", file=sys.stderr)
     try:
         # Start the servers.
         http_server.start()
@@ -322,5 +351,5 @@ def _run_server_internal(config):
         tftp_server.stop()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

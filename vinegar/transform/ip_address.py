@@ -15,8 +15,9 @@ from .ipv6_address import strip_mask as _strip_mask_ipv6
 
 # Regular expression matching an IPv4 address with an optional mask.
 #
-# This regular expression is design so that groups 1 to 4 capture the individual
-# byte of the IP address and group 5 captures the subnet mask (if present).
+# This regular expression is design so that groups 1 to 4 capture the
+# individual byte of the IP address and group 5 captures the subnet mask (if
+# present).
 _IPV4_REGEXP = re.compile(
     "([0-9]+)\\.([0-9]+)\\.([0-9]+)\\.([0-9]+)(?:/([0-9]+))?"
 )

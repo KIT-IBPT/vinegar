@@ -3,3 +3,8 @@
 # Minimum Python version to use for version dependent checks. Will default to
 # the version used to run pylint.
 py-version=3.5
+
+[FORMAT]
+
+# Maximum number of characters on a single line.
+max-line-length=79

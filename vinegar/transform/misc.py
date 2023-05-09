@@ -1,8 +1,8 @@
 """
 Miscellaneous transformations.
 
-This are transformations that do not fit into another module, but do not warrant
-a separate module either.
+This are transformations that do not fit into another module, but do not
+warrant a separate module either.
 """
 
 from typing import Any

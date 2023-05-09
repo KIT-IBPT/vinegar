@@ -4,8 +4,8 @@ Expression matcher for targeting systems. This matcher extends the basic
 
 A string can be matched against a pattern using the `match` function. If the
 same pattern is used repeatedly, a `Matcher` can be retrieved using the
-`matcher` function. However, even the `match` function implements a simple cache
-in order to avoid recompiling frequently used patterns.
+`matcher` function. However, even the `match` function implements a simple
+cache in order to avoid recompiling frequently used patterns.
 
 Pattern expressions understood by this module are combinations of the patterns
 understood by `fnmatch`. These combinations can be defined through the use of
@@ -15,8 +15,8 @@ parentheses.
 Examples:
 
 * "abc.example.com" exactly matches "abc.example.com".
-* "\\*.example.com" matches "abc.example.com" and "123.456.example.com", but not
-  "abc.example.net".
+* "\\*.example.com" matches "abc.example.com" and "123.456.example.com", but
+  not "abc.example.net".
 * "\\*.example.com or \\*.example.net" matches "abc.example.com" and
   "123.example.net", but not "def.example.org".
 * "\\*.example.com and not abc.\\*" matches "def.example.com" and
@@ -47,7 +47,8 @@ class Matcher:
         function.
         """
         self._expression = _expression_from_string_cached(
-            pattern, case_sensitive)
+            pattern, case_sensitive
+        )
         self._pattern = pattern
 
     def matches(self, name: str) -> bool:
@@ -99,8 +100,8 @@ def matcher(pattern: str, case_sensitive: bool = False) -> Matcher:
 
     This function internally keeps a cache of compiled patterns in order to
     reduce the overhead when the same pattern is used repeatedly. However,
-    calling code is still encouraged to keep a reference to the returned matcher
-    when it knows that the same pattern is going to be used repeatedly.
+    calling code is still encouraged to keep a reference to the returned
+    matcher when it knows that the same pattern is going to be used repeatedly.
 
     :param pattern:
         pattern to be compiled. Please refer to the
@@ -127,8 +128,8 @@ class _Expression(abc.ABC):
 
 class _AndExpression(_Expression):
     """
-    And expression. This is an expression that evaluates to ``True`` if both its
-    left and right expression evaluate to ``True``.
+    And expression. This is an expression that evaluates to ``True`` if both
+    its left and right expression evaluate to ``True``.
     """
 
     def __init__(self, left_expression, right_expression):
@@ -189,7 +190,7 @@ class _NotExpression(_Expression):
         self._expression = expression
 
     def matches(self, name):
-        return not(self._expression.matches(name))
+        return not (self._expression.matches(name))
 
 
 def _expect_expression(tokens, case_sensitive):
@@ -197,8 +198,8 @@ def _expect_expression(tokens, case_sensitive):
     Consume and return an expression from ``tokens``. Unlike
     `_expect_unary_expression`, this function always consumes all tokens.
 
-    This function raises an exception if the ``tokens`` do not represent a valid
-    expression.
+    This function raises an exception if the ``tokens`` do not represent a
+    valid expression.
     """
     # The expressions that we support are described by the following
     # (simplified) grammar:
@@ -221,10 +222,10 @@ def _expect_expression(tokens, case_sensitive):
     #
     # OR_EXPRESSION = EXPRESSION , "or" , EXPRESSION ;
     #
-    # This grammar describes tokens, not characters. Tokens have to be separated
-    # by whitespace, except for parentheses. This grammar does not describe the
-    # internal structure of patterns either, but it is simply assumed that
-    # everything that does not match anything else is a pattern.
+    # This grammar describes tokens, not characters. Tokens have to be
+    # separated by whitespace, except for parentheses. This grammar does not
+    # describe the internal structure of patterns either, but it is simply
+    # assumed that everything that does not match anything else is a pattern.
 
     # Every expression starts with a unary expression (that is a parentheses
     # expression, a "not" expression, or a pattern).
@@ -233,7 +234,7 @@ def _expect_expression(tokens, case_sensitive):
 
     while tokens:
         token = tokens.pop(0)
-        if token == 'and':
+        if token == "and":
             local_expression = _expect_unary_expression(tokens, case_sensitive)
             # We might have had a preceding or operator where we were not sure
             # whether we could use its second argument because it could have
@@ -241,18 +242,21 @@ def _expect_expression(tokens, case_sensitive):
             # part of an and expression, so we use it for that purpose.
             if right_expression is not None:
                 right_expression = _AndExpression(
-                    right_expression, local_expression)
+                    right_expression, local_expression
+                )
             else:
                 left_expression = _AndExpression(
-                    left_expression, local_expression)
-        elif token == 'or':
+                    left_expression, local_expression
+                )
+        elif token == "or":
             # We might have had a preceding or operator where we were not sure
             # whether we could use its second argument because it could have
             # been part of an "and" expression. Now we know that it is not and
             # can use it.
             if right_expression is not None:
                 left_expression = _OrExpression(
-                    left_expression, right_expression)
+                    left_expression, right_expression
+                )
                 right_expression = None
             # The expression that we just consumed might be part of an "and"
             # expression, so we cannot use it as a part of the "or" expression
@@ -261,10 +265,12 @@ def _expect_expression(tokens, case_sensitive):
         else:
             raise ValueError(
                 'Found token "{0}" where "and" or "or" were expected.'.format(
-                    token))
+                    token
+                )
+            )
 
-    # A right expression is only left if there was an or expression that has not
-    # been completely handled yet, so we build that or expression now.
+    # A right expression is only left if there was an or expression that has
+    # not been completely handled yet, so we build that or expression now.
     if right_expression is not None:
         left_expression = _OrExpression(left_expression, right_expression)
         right_expression = None
@@ -279,9 +285,11 @@ def _expect_unary_expression(tokens, case_sensitive):
     from the beginning of the ``tokens``.
     """
     if not tokens:
-        raise ValueError('Found empty string where an expression was expected.')
+        raise ValueError(
+            "Found empty string where an expression was expected."
+        )
     token = tokens.pop(0)
-    if token == '(':
+    if token == "(":
         closing_index = _find_closing_parenthesis(tokens)
         tokens_in_parentheses = tokens[:closing_index]
         # We cannot assign to tokens because in this case the change would not
@@ -290,13 +298,15 @@ def _expect_unary_expression(tokens, case_sensitive):
         for _ in range(0, closing_index + 1):
             tokens.pop(0)
         return _expect_expression(tokens_in_parentheses, case_sensitive)
-    elif token == 'not':
+    elif token == "not":
         expression = _expect_unary_expression(tokens, case_sensitive)
         return _NotExpression(expression)
-    elif token in ('and', 'or'):
+    elif token in ("and", "or"):
         raise ValueError(
             'Found "{0}" where "(", "not" or pattern was expected.'.format(
-                token))
+                token
+            )
+        )
     else:
         return _PatternExpression(token, case_sensitive)
 
@@ -313,17 +323,17 @@ def _expression_from_string(expression, case_sensitive):
     tokens = expression.split()
     # Parentheses differ from other tokens because they do not have to be
     # separated by whitespace, so we have to split the individual tokens until
-    # there is no parenthesis in them any longer. Of course, this does not apply
-    # to tokens that only consist of a parenthesis.
+    # there is no parenthesis in them any longer. Of course, this does not
+    # apply to tokens that only consist of a parenthesis.
     split_tokens = []
     for token in tokens:
-        partial_token = ''
+        partial_token = ""
         for character in token:
-            if character == '(' or character == ')':
+            if character == "(" or character == ")":
                 if partial_token:
                     split_tokens.append(partial_token)
                 split_tokens.append(character)
-                partial_token = ''
+                partial_token = ""
             else:
                 partial_token += character
         if partial_token:
@@ -335,8 +345,8 @@ def _expression_from_string(expression, case_sensitive):
         if not message:
             message = type(e).__name__
         raise ValueError(
-            'Cannot parse expression "{0}": {1}'
-            .format(expression, message)) from None
+            'Cannot parse expression "{0}": {1}'.format(expression, message)
+        ) from None
 
 
 @functools.lru_cache(maxsize=256, typed=True)
@@ -351,22 +361,22 @@ def _expression_from_string_cached(expression, case_sensitive):
 
 def _find_closing_parenthesis(tokens):
     """
-    Find the index of the next closing parenthesis that is not canceled out by a
-    preceding opening parenthesis. This function is mainly intended for use by
-    `_expect_unary_expression`.
+    Find the index of the next closing parenthesis that is not canceled out by
+    a preceding opening parenthesis. This function is mainly intended for use
+    by `_expect_unary_expression`.
 
     This function raises an exception if no such parenthesis can be found.
     """
     open_count = 0
     token_index = 0
     for token in tokens:
-        if token == '(':
+        if token == "(":
             open_count += 1
-        elif token == ')':
+        elif token == ")":
             open_count -= 1
         if open_count < 0:
             return token_index
         token_index += 1
     # If we make it here, there is no closing parenthesis, so the parentheses
     # are unbalanced.
-    raise ValueError('Unbalanced parentheses.')
+    raise ValueError("Unbalanced parentheses.")

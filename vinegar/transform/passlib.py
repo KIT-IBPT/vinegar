@@ -1,14 +1,14 @@
 """
 Transformations for encrypting passwords.
 
-The transformations provided by this module use the ``passlib`` library, so they
-are only available if that library is installed.
+The transformations provided by this module use the ``passlib`` library, so
+they are only available if that library is installed.
 """
 
 import passlib.hash
 
 
-def hash(plaintext: str, method: str = 'sha512_crypt', **kwargs) -> str:
+def hash(plaintext: str, method: str = "sha512_crypt", **kwargs) -> str:
     """
     Hash a password using one of the methods supported by ``passlib.hash``.
 
@@ -33,8 +33,8 @@ def hash(plaintext: str, method: str = 'sha512_crypt', **kwargs) -> str:
     :param plaintext:
         password string to be enrcypted / hashed.
     :param method:
-        hash method to be used. This must be a string that identifies one of the
-        methods that are supported passlib. For example, if ``method``
+        hash method to be used. This must be a string that identifies one of
+        the methods that are supported passlib. For example, if ``method``
         is ``sha256_crypt``, ``passlib.hash.sha256_crypt`` is going to be used.
         The default is ``sha512_crypt``.
     :param kwargs:

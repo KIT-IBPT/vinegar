@@ -6,10 +6,12 @@ import re
 
 # Regular expression matching an IPv4 address with an optional mask.
 #
-# This regular expression is design so that groups 1 to 4 capture the individual
-# byte of the IP address and group 5 captures the subnet mask (if present).
+# This regular expression is design so that groups 1 to 4 capture the
+# individual byte of the IP address and group 5 captures the subnet mask (if
+# present).
 _IPV4_REGEXP = re.compile(
-    '([0-9]+)\\.([0-9]+)\\.([0-9]+)\\.([0-9]+)(?:/([0-9]+))?')
+    "([0-9]+)\\.([0-9]+)\\.([0-9]+)\\.([0-9]+)(?:/([0-9]+))?"
+)
 
 
 def broadcast_address(value: str, raise_error_if_malformed: bool = False):
@@ -41,20 +43,24 @@ def broadcast_address(value: str, raise_error_if_malformed: bool = False):
     if mask is None:
         if raise_error_if_malformed:
             raise ValueError(
-                'Cannot calculate net address for IP address without subnet '
-                'mask: {0}'.format(value))
+                "Cannot calculate net address for IP address without subnet "
+                "mask: {0}".format(value)
+            )
         else:
             return value
     addr_as_int = (
-        (addr_bytes[0] << 24) + (addr_bytes[1] << 16) + (addr_bytes[2] << 8)
-        + addr_bytes[3])
-    mask_as_int = (2 ** (32 - mask) - 1)
+        (addr_bytes[0] << 24)
+        + (addr_bytes[1] << 16)
+        + (addr_bytes[2] << 8)
+        + addr_bytes[3]
+    )
+    mask_as_int = 2 ** (32 - mask) - 1
     addr_as_int = addr_as_int | mask_as_int
     addr_bytes[0] = (addr_as_int >> 24) & 255
     addr_bytes[1] = (addr_as_int >> 16) & 255
     addr_bytes[2] = (addr_as_int >> 8) & 255
     addr_bytes[3] = addr_as_int & 255
-    return '{0[0]}.{0[1]}.{0[2]}.{0[3]}'.format(addr_bytes)
+    return "{0[0]}.{0[1]}.{0[2]}.{0[3]}".format(addr_bytes)
 
 
 def net_address(value: str, raise_error_if_malformed: bool = False):
@@ -86,20 +92,24 @@ def net_address(value: str, raise_error_if_malformed: bool = False):
     if mask is None:
         if raise_error_if_malformed:
             raise ValueError(
-                'Cannot calculate net address for IP address without subnet '
-                'mask: {0}'.format(value))
+                "Cannot calculate net address for IP address without subnet "
+                "mask: {0}".format(value)
+            )
         else:
             return value
     addr_as_int = (
-        (addr_bytes[0] << 24) + (addr_bytes[1] << 16) + (addr_bytes[2] << 8)
-        + addr_bytes[3])
-    mask_as_int = (2 ** 32 - 1) & ~ (2 ** (32 - mask) - 1)
+        (addr_bytes[0] << 24)
+        + (addr_bytes[1] << 16)
+        + (addr_bytes[2] << 8)
+        + addr_bytes[3]
+    )
+    mask_as_int = (2**32 - 1) & ~(2 ** (32 - mask) - 1)
     addr_as_int = addr_as_int & mask_as_int
     addr_bytes[0] = (addr_as_int >> 24) & 255
     addr_bytes[1] = (addr_as_int >> 16) & 255
     addr_bytes[2] = (addr_as_int >> 8) & 255
     addr_bytes[3] = addr_as_int & 255
-    return '{0[0]}.{0[1]}.{0[2]}.{0[3]}/{1}'.format(addr_bytes, mask)
+    return "{0[0]}.{0[1]}.{0[2]}.{0[3]}/{1}".format(addr_bytes, mask)
 
 
 def normalize(value: str, raise_error_if_malformed: bool = False):
@@ -108,9 +118,9 @@ def normalize(value: str, raise_error_if_malformed: bool = False):
 
     This function takes an IPv4 address (as a ``str``) and transforms it into a
     normalized form. This means that each byte of the IP address is represented
-    without leading zeros. If a mask is specified (separated from the IP address
-    by a forward slash), it is also transformed to not include any leading
-    zeros.
+    without leading zeros. If a mask is specified (separated from the IP
+    address by a forward slash), it is also transformed to not include any
+    leading zeros.
 
     When a malformed IP address is encountered, the behavior depends on the
     ``raise_error_if_malformed`` option. If that option is set to ``True``, a
@@ -133,9 +143,9 @@ def normalize(value: str, raise_error_if_malformed: bool = False):
             raise
         else:
             return value
-    value = '{0[0]}.{0[1]}.{0[2]}.{0[3]}'.format(addr_bytes)
+    value = "{0[0]}.{0[1]}.{0[2]}.{0[3]}".format(addr_bytes)
     if mask is not None:
-        value = '{0}/{1}'.format(value, mask)
+        value = "{0}/{1}".format(value, mask)
     return value
 
 
@@ -144,8 +154,8 @@ def strip_mask(value: str, raise_error_if_malformed: bool = False):
     Strip a subnet mask from an IPv4 address (if present).
 
     For example, for the input string "192.168.0.1/24", this returns
-    "192.168.0.1". If the input IP address does not specify a subnet mask, it is
-    returned as is.
+    "192.168.0.1". If the input IP address does not specify a subnet mask, it
+    is returned as is.
 
     :param value:
         input IP address to be transformed.
@@ -165,16 +175,16 @@ def strip_mask(value: str, raise_error_if_malformed: bool = False):
             raise
         else:
             return value
-    # Now we know that the value is well-formed, so we can simply cut everything
-    # after the "/" character.
-    value, _, _ = value.partition('/')
+    # Now we know that the value is well-formed, so we can simply cut
+    # everything after the "/" character.
+    value, _, _ = value.partition("/")
     return value
 
 
 def _str_to_addr_bytes_and_mask(value):
     match = _IPV4_REGEXP.fullmatch(value)
     if match is None:
-        raise ValueError('Not a valid IPv4 address: {0}'.format(value))
+        raise ValueError("Not a valid IPv4 address: {0}".format(value))
     addr_bytes = match.group(1, 2, 3, 4)
     addr_bytes = [int(addr_byte) for addr_byte in addr_bytes]
     mask = match.group(5)
@@ -182,7 +192,7 @@ def _str_to_addr_bytes_and_mask(value):
         mask = int(mask)
     for addr_byte in addr_bytes:
         if addr_byte > 255:
-            raise ValueError('Not a valid IPv4 address: {0}'.format(value))
+            raise ValueError("Not a valid IPv4 address: {0}".format(value))
     if mask is not None and mask > 32:
-        raise ValueError('Invalid mask in IPv4 address: {0}'.format(value))
+        raise ValueError("Invalid mask in IPv4 address: {0}".format(value))
     return (addr_bytes, mask)

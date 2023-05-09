@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -28,8 +28,8 @@ Thanks to this change, insertion order of keys in dictionaries is preserved,
 even when running on a Python version where regular dicts are not
 order-preserving yet.
 
-Effectively, this library acts as a wrapper around PyYAML (module ``yaml``), but
-it can simply be used like the regular module. For example::
+Effectively, this library acts as a wrapper around PyYAML (module ``yaml``),
+but it can simply be used like the regular module. For example::
 
   import vinegar.utils.oyaml as yaml
 """
@@ -43,7 +43,8 @@ import yaml as pyyaml
 
 _items = "viewitems" if sys.version_info < (3,) else "items"
 _std_dict_is_order_preserving = sys.version_info >= (3, 7) or (
-    sys.version_info >= (3, 6) and platform.python_implementation() == "CPython"
+    sys.version_info >= (3, 6)
+    and platform.python_implementation() == "CPython"
 )
 
 
@@ -80,7 +81,8 @@ if not _std_dict_is_order_preserving:
     for loader_name in pyyaml.loader.__all__:
         Loader = getattr(pyyaml.loader, loader_name)
         pyyaml.add_constructor(
-            "tag:yaml.org,2002:map", map_constructor, Loader=Loader)
+            "tag:yaml.org,2002:map", map_constructor, Loader=Loader
+        )
 
 
 # Merge PyYAML namespace into ours.

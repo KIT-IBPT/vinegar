@@ -13,12 +13,13 @@ import collections
 import threading
 import typing
 
-KeyType = typing.TypeVar('KeyType')
-ValueType = typing.TypeVar('ValueType')
+KeyType = typing.TypeVar("KeyType")
+ValueType = typing.TypeVar("ValueType")
 
 
 class Cache(
-        typing.Generic[KeyType, ValueType], abc.ABC):  # pylint: disable=E1136
+    typing.Generic[KeyType, ValueType], abc.ABC
+):  # pylint: disable=E1136
     """
     Interface for cache implementations
 
@@ -105,10 +106,10 @@ class LRUCache(Cache[KeyType, ValueType]):
             shortly after. The default is ``True``.
         """
         if cache_size < 1:
-            raise ValueError('Cache size must be strictly positive.')
+            raise ValueError("Cache size must be strictly positive.")
         self._cache_size = cache_size
-        # We cannot use vinegar.utils.odict.OrderedDict here because we need the
-        # move_to_end method.
+        # We cannot use vinegar.utils.odict.OrderedDict here because we need
+        # the move_to_end method.
         self._data = collections.OrderedDict()
         self._mark_on_update = mark_on_update
 
@@ -173,8 +174,8 @@ class SynchronizedCache(Cache[KeyType, ValueType]):
 
     def __init__(self, backing_cache: Cache[KeyType, ValueType]):
         """
-        Creates a cache wrapped with a lock that protects all operations so that
-        the cache can safely be used from multiple threads.
+        Creates a cache wrapped with a lock that protects all operations so
+        that the cache can safely be used from multiple threads.
 
         :param backing_cache:
             Cache instance that actually implements the cache.

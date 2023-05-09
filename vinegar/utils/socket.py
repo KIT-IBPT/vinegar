@@ -12,9 +12,8 @@ _NETMASK_REGEXP = re.compile("[0-9]+")
 
 
 def _ip_address_in_subnet(
-        ip_address_bytes: bytes,
-        network_address_bytes: bytes,
-        netmask_bits: int) -> bool:
+    ip_address_bytes: bytes, network_address_bytes: bytes, netmask_bits: int
+) -> bool:
     assert len(ip_address_bytes) == len(network_address_bytes)
     assert netmask_bits <= (len(ip_address_bytes) * 8)
     # First, we compare the full bytes of the two addresses.
@@ -31,11 +30,12 @@ def _ip_address_in_subnet(
     return (ip_address_byte & byte_mask) == (network_address_byte & byte_mask)
 
 
-def _parse_ip_address(ip_address: str, allow_netmask: bool) -> typing.Tuple[
-        int, bytes, int]:
+def _parse_ip_address(
+    ip_address: str, allow_netmask: bool
+) -> typing.Tuple[int, bytes, int]:
     original_ip_address = ip_address
-    if allow_netmask and '/' in ip_address:
-        ip_address, netmask = ip_address.rsplit('/', 1)
+    if allow_netmask and "/" in ip_address:
+        ip_address, netmask = ip_address.rsplit("/", 1)
         if _NETMASK_REGEXP.fullmatch(netmask):
             netmask = int(netmask)
         else:
@@ -51,7 +51,9 @@ def _parse_ip_address(ip_address: str, allow_netmask: bool) -> typing.Tuple[
         elif netmask > 32:
             raise ValueError(
                 'Error parsing "{}": Invalid netmask.'.format(
-                    original_ip_address))
+                    original_ip_address
+                )
+            )
         return socket.AF_INET, ip_address_bytes, netmask
     except OSError:
         # If there is an error, this most likely means that we are dealing with
@@ -64,20 +66,24 @@ def _parse_ip_address(ip_address: str, allow_netmask: bool) -> typing.Tuple[
         elif netmask > 128:
             raise ValueError(
                 'Error parsing "{}": Invalid netmask.'.format(
-                    original_ip_address))
+                    original_ip_address
+                )
+            )
         return socket.AF_INET6, ip_address_bytes, netmask
     except OSError as err:
         # The address is neither a valid IPv4 nor a valid IPv6 address.
         raise ValueError(
             'Error parsing "{}": This neither is a valid IPv4 nor IPv6 '
-            'address.'.format(original_ip_address)) from err
+            "address.".format(original_ip_address)
+        ) from err
 
 
-def _parse_ip_address_split_ipv4_ipv6(ip_address: str) -> typing.Tuple[
-            typing.Optional[bytes],
-            bytes]:
+def _parse_ip_address_split_ipv4_ipv6(
+    ip_address: str,
+) -> typing.Tuple[typing.Optional[bytes], bytes]:
     ip_address_family, ip_address_bytes, _ = _parse_ip_address(
-        ip_address, False)
+        ip_address, False
+    )
     # If the IP address is an IPv4 address, we also convert it to an
     # IPv4-mapped IPv6 address in order to be able to correctly match it
     # against IPv6 candidate addresses. If it is an IPv4-mapped IPv6 address,
@@ -86,10 +92,12 @@ def _parse_ip_address_split_ipv4_ipv6(ip_address: str) -> typing.Tuple[
     if ip_address_family == socket.AF_INET:
         ip_address_bytes_ipv4 = ip_address_bytes
         ip_address_bytes_ipv6 = (
-            b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff'
-            + ip_address_bytes)
+            b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff"
+            + ip_address_bytes
+        )
     elif ip_address_bytes.startswith(
-            b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff'):
+        b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff"
+    ):
         ip_address_bytes_ipv4 = ip_address_bytes[-4:]
         ip_address_bytes_ipv6 = ip_address_bytes
     else:
@@ -99,10 +107,11 @@ def _parse_ip_address_split_ipv4_ipv6(ip_address: str) -> typing.Tuple[
 
 
 def contains_ip_address(
-        ip_address_set: typing.Collection[str],
-        ip_address: str,
-        allow_netmask: bool = True,
-        raise_error_if_malformed: bool = False) -> bool:
+    ip_address_set: typing.Collection[str],
+    ip_address: str,
+    allow_netmask: bool = True,
+    raise_error_if_malformed: bool = False,
+) -> bool:
     """
     Check whether an IP address is contained in a set of IP addresses.
 
@@ -137,8 +146,10 @@ def contains_ip_address(
     # IPv6 address that is not an IPv4-mapped IPv6 address, the IPv4 address is
     # None.
     try:
-        ip_address_bytes_ipv4, ip_address_bytes_ipv6 = (
-            _parse_ip_address_split_ipv4_ipv6(ip_address))
+        (
+            ip_address_bytes_ipv4,
+            ip_address_bytes_ipv6,
+        ) = _parse_ip_address_split_ipv4_ipv6(ip_address)
     except ValueError:
         if raise_error_if_malformed:
             raise
@@ -149,24 +160,28 @@ def contains_ip_address(
             (
                 candidate_ip_address_family,
                 candidate_ip_address_bytes,
-                candidate_ip_address_netmask) = _parse_ip_address(
-                    candidate_ip_address, allow_netmask)
+                candidate_ip_address_netmask,
+            ) = _parse_ip_address(candidate_ip_address, allow_netmask)
         except ValueError:
             if raise_error_if_malformed:
                 raise
             continue
-        if (candidate_ip_address_family == socket.AF_INET
-                and ip_address_bytes_ipv4):
+        if (
+            candidate_ip_address_family == socket.AF_INET
+            and ip_address_bytes_ipv4
+        ):
             if _ip_address_in_subnet(
-                    ip_address_bytes_ipv4,
-                    candidate_ip_address_bytes,
-                    candidate_ip_address_netmask):
+                ip_address_bytes_ipv4,
+                candidate_ip_address_bytes,
+                candidate_ip_address_netmask,
+            ):
                 return True
         elif candidate_ip_address_family == socket.AF_INET6:
             if _ip_address_in_subnet(
-                    ip_address_bytes_ipv6,
-                    candidate_ip_address_bytes,
-                    candidate_ip_address_netmask):
+                ip_address_bytes_ipv6,
+                candidate_ip_address_bytes,
+                candidate_ip_address_netmask,
+            ):
                 return True
     return False
 
@@ -198,7 +213,8 @@ def ipv6_address_unwrap(ipv6_address: str) -> str:
         # This happens when the string does not represent a valid IPv6 address.
         return ipv6_address
     if addr_bytes.startswith(
-            b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff'):
+        b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff"
+    ):
         return socket.inet_ntop(socket.AF_INET, addr_bytes[-4:])
     return ipv6_address
 
@@ -221,7 +237,7 @@ def socket_address_to_str(socket_address: typing.Tuple) -> str:
     # socket. We want to convert such addresses to pure IPv4 addresses.
     host = ipv6_address_unwrap(host)
     # If the host address is an IPv6 address, we want to wrap it in brackets.
-    if ':' in host:
-        return '[{0}]:{1}'.format(host, port)
+    if ":" in host:
+        return "[{0}]:{1}".format(host, port)
     else:
-        return '{0}:{1}'.format(host, port)
+        return "{0}:{1}".format(host, port)

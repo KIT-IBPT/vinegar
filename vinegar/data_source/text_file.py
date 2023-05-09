@@ -37,8 +37,8 @@ regular expression has to match the full line.
 
 For each line, the system ID has to be extracted and at least one associated
 piece of data has to be extract. This both works through the same mechanism: A
-configuration that refers to one of the groups defined in the regular expression
-matching the line.
+configuration that refers to one of the groups defined in the regular
+expression matching the line.
 
 The configuration for extracting the system ID is specified through the
 ``system_id`` configuration option. The configuration for extracting pieces of
@@ -59,8 +59,8 @@ Each of the configurations for extracting a piece of data is itself a ``dict``
 that has the following keys:
 
 :``source`` (mandatory):
-    The name (as a ``str``) or index (as an ``int``) of the group in the regular
-    expression that provides this piece of data.
+    The name (as a ``str``) or index (as an ``int``) of the group in the
+    regular expression that provides this piece of data.
 
 :``transform`` (optional):
     A list defining the transformations that shall be applied to the string
@@ -70,30 +70,30 @@ that has the following keys:
     regular expression is used as is.
 
 :``transform_none_value`` (optional):
-    A ``bool`` defining whether a value of ``None`` should still be transformed.
-    As most transformation functions do not support ``None`` values, the default
-    is ``False``. If setting this option to ``True`` one has to ensure that only
-    transformation functions that can handle a value of ``None`` are used. The
-    value extracted from a line can be ``None`` if the corresponding capturing
-    group in the regular expression is optional.
+    A ``bool`` defining whether a value of ``None`` should still be
+    transformed. As most transformation functions do not support ``None``
+    values, the default is ``False``. If setting this option to ``True`` one
+    has to ensure that only transformation functions that can handle a value of
+    ``None`` are used. The value extracted from a line can be ``None`` if the
+    corresponding capturing group in the regular expression is optional.
 
 :``use_none_value`` (optional):
-    A ``bool`` defining whether a value of ``None`` (possibly as a result of the
-    transformations) should still result in the corresponding key being added to
-    the data tree. Usually, there is no sense in adding a key without a value,
-    so this option has a default value of ``False``. Please note that his option
-    does not have any effects when being specified in the configuration for the
-    ``system_id``. The system ID is mandatory and thus a system ID of ``None``
-    is treated as an error. This should be avoided by ensuring that the group
-    capturing the system ID is non-optional.
+    A ``bool`` defining whether a value of ``None`` (possibly as a result of
+    the transformations) should still result in the corresponding key being
+    added to the data tree. Usually, there is no sense in adding a key without
+    a value, so this option has a default value of ``False``. Please note that
+    this option does not have any effects when being specified in the
+    configuration for the ``system_id``. The system ID is mandatory and thus a
+    system ID of ``None`` is treated as an error. This should be avoided by
+    ensuring that the group capturing the system ID is non-optional.
 
 It might be that a file contains some lines that do not match the expected
-format (as specified by ``regular_expression``), but are not lines that shall be
-ignored (as specified by ``regular_expression_ignore``) either. The
+format (as specified by ``regular_expression``), but are not lines that shall
+be ignored (as specified by ``regular_expression_ignore``) either. The
 ``mismatch_action`` option defines how to deal with those lines. By default, a
 warning is logged when such a line is encountered. This can be changed to
-raising an exception by setting ``mismatch_action`` to ``error``. Such lines can
-also be ignored completely (without logging a warning), by setting
+raising an exception by setting ``mismatch_action`` to ``error``. Such lines
+can also be ignored completely (without logging a warning), by setting
 ``mismatch_action`` to ``ignore``.
 
 If there is more than one line specifying the same system ID, the behavior is
@@ -131,9 +131,9 @@ YAML for describing the configuration):
     # The warn action is already the default, we only specify it here for
     # completeness.
     mismatch_action: warn
-    # This is the regular expression that matches the lines that we want to use.
-    # We specify the X flag first (?x) so that we can use the multi-line syntax,
-    # which makes the regular expression much more readable.
+    # This is the regular expression that matches the lines that we want to
+    # use. We specify the X flag first (?x) so that we can use the multi-line
+    # syntax, which makes the regular expression much more readable.
     regular_expression: |
         (?x)
         # We expect a CSV file with three columns that are separated by
@@ -163,8 +163,8 @@ YAML for describing the configuration):
             transform:
                 - string.to_lower
                 # Please not that we could also write this shorter as
-                # "- string.split: ." because "sep" is the first argument (after
-                # the value) and "maxsplit" defaults to -1.
+                # "- string.split: ." because "sep" is the first argument
+                # (after the value) and "maxsplit" defaults to -1.
                 - string.split:
                     sep: .
                     maxsplit: -1
@@ -253,8 +253,8 @@ Configuration options
 
 This data source has several configuration options that can be used to control
 its behavior. This section only gives an overview of the available options. For
-a more detailed discussion about the options controlling the file format, please
-refer to :ref:`data_source_text_file_file_format` and
+a more detailed discussion about the options controlling the file format,
+please refer to :ref:`data_source_text_file_file_format` and
 :ref:`data_source_text_file_config_example`.
 
 :``file`` (mandatory):
@@ -263,9 +263,9 @@ refer to :ref:`data_source_text_file_file_format` and
 :``regular_expression`` (mandatory):
     Regular expression (as a ``str``) matching the data lines in the file. This
     regular expression must match the *full* line (the pattern is matched using
-    ``fullmatch``). Consequently, there is no need to use start of string or end
-    of string anchors. The regular expression must define catching groups that
-    can then be referenced from the ``system_id`` and ``variables``
+    ``fullmatch``). Consequently, there is no need to use start of string or
+    end of string anchors. The regular expression must define catching groups
+    that can then be referenced from the ``system_id`` and ``variables``
     configuration. See :ref:`data_source_text_file_file_format` for details.
 
 :``system_id`` (mandatory):
@@ -276,10 +276,10 @@ refer to :ref:`data_source_text_file_file_format` and
 
 :``variables`` (mandatory):
     Configuration describing how the various data itmes are extracted from a
-    line. This configuration option expects a ``dict`` where each key-value pair
-    refers to one data item, using the key as the key in the data tree generated
-    for the system and the value as the configuration for that data item. See
-    :ref:`data_source_text_file_file_format` for details.
+    line. This configuration option expects a ``dict`` where each key-value
+    pair refers to one data item, using the key as the key in the data tree
+    generated for the system and the value as the configuration for that data
+    item. See :ref:`data_source_text_file_file_format` for details.
 
 :``cache_enabled`` (optional):
     If ``True`` (the default), the contents of the text file are read once and
@@ -312,9 +312,9 @@ refer to :ref:`data_source_text_file_file_format` and
 :``regular_expression_ignore`` (optional):
     Regular expression (as a ``str``) matching the lines in the file that shall
     be ignored. This regular expression must match the *full* line (the pattern
-    is matched using ``fullmatch``). Consequently, there is no need to use start
-    of string or end of string anchors. If ``None`` (the default), no lines are
-    ignored.
+    is matched using ``fullmatch``). Consequently, there is no need to use
+    start of string or end of string anchors. If ``None`` (the default), no
+    lines are ignored.
 """
 
 import logging
@@ -347,39 +347,46 @@ class TextFileSource(DataSource):
 
         :param config:
             configuration for this data source. Please refer to the
-            `module documentation <vinegar.data_source.text_file>` for a list of
-            supported options.
+            `module documentation <vinegar.data_source.text_file>` for a list
+            of supported options.
         """
-        self._cache_enabled = config.get('cache_enabled', True)
+        self._cache_enabled = config.get("cache_enabled", True)
         self._duplicate_system_id_action = config.get(
-            'duplicate_system_id_action', 'warn')
-        if self._duplicate_system_id_action not in ('error', 'ignore', 'warn'):
+            "duplicate_system_id_action", "warn"
+        )
+        if self._duplicate_system_id_action not in ("error", "ignore", "warn"):
             raise ValueError(
                 'Invalid value "{0}" for option duplicate_system_id_action. '
                 'Allowed values are "error", "ignore" and "warn".'.format(
-                    self._duplicate_system_id_action))
-        self._file = config['file']
-        self._find_first_match = config.get('find_first_match', False)
-        self._mismatch_action = config.get('mismatch_action', 'warn')
-        if self._mismatch_action not in ('error', 'ignore', 'warn'):
+                    self._duplicate_system_id_action
+                )
+            )
+        self._file = config["file"]
+        self._find_first_match = config.get("find_first_match", False)
+        self._mismatch_action = config.get("mismatch_action", "warn")
+        if self._mismatch_action not in ("error", "ignore", "warn"):
             raise ValueError(
                 'Invalid value "{0}" for option mismatch_action. Allowed '
                 'values are "error", "ignore", and "warn".'.format(
-                    self._mismatch_action))
-        self._regular_expression = re.compile(config['regular_expression'])
+                    self._mismatch_action
+                )
+            )
+        self._regular_expression = re.compile(config["regular_expression"])
         regular_expression_ignore_text = config.get(
-            'regular_expression_ignore', None)
+            "regular_expression_ignore", None
+        )
         if regular_expression_ignore_text is None:
             self._regular_expression_ignore = None
         else:
             self._regular_expression_ignore = re.compile(
-                regular_expression_ignore_text)
-        self._system_id_config = config['system_id']
+                regular_expression_ignore_text
+            )
+        self._system_id_config = config["system_id"]
         self._initialize_transform_func(self._system_id_config)
-        self._variables_config = config['variables']
+        self._variables_config = config["variables"]
         for var_config in self._variables_config.values():
             self._initialize_transform_func(var_config)
-        self._file_version = ''
+        self._file_version = ""
         self._lock = threading.Lock()
 
     def find_system(self, lookup_key: str, lookup_value: Any) -> Optional[str]:
@@ -397,14 +404,17 @@ class TextFileSource(DataSource):
                 value_hashable = False
             if value_hashable:
                 system_list = self._key_value_index.get(
-                    (lookup_key, lookup_value), None)
+                    (lookup_key, lookup_value), None
+                )
             else:
-                potential_system_list = \
-                    self._key_value_not_hashable_index.get(lookup_key)
+                potential_system_list = self._key_value_not_hashable_index.get(
+                    lookup_key
+                )
                 system_list = [
                     system_id
                     for system_id, value in potential_system_list
-                    if value == lookup_value]
+                    if value == lookup_value
+                ]
             # If there key/value combination is not in the index, there is no
             # matching system.
             if system_list is None:
@@ -419,42 +429,48 @@ class TextFileSource(DataSource):
                 return None
 
     def get_data(
-            self,
-            system_id: str,
-            preceding_data: Mapping[Any, Any],
-            preceding_data_version: str) -> Tuple[Mapping[Any, Any], str]:
+        self,
+        system_id: str,
+        preceding_data: Mapping[Any, Any],
+        preceding_data_version: str,
+    ) -> Tuple[Mapping[Any, Any], str]:
         with self._lock:
             self._update_data()
             data = self._system_data.get(system_id, {})
-            version = self._system_version.get(system_id, '')
+            version = self._system_version.get(system_id, "")
         return data, version
 
     @staticmethod
     def _initialize_transform_func(config):
-        config['_transform_func'] = get_transformation_chain(
-            config.get('transform', []))
+        config["_transform_func"] = get_transformation_chain(
+            config.get("transform", [])
+        )
 
     def _process_variable(self, config, match, optional=True):
         # The group index can be an integer number or a name.
-        group_index = config['source']
+        group_index = config["source"]
         value = match.group(group_index)
         if value is None:
-            transform_none_value = config.get('transform_none_value', False)
+            transform_none_value = config.get("transform_none_value", False)
             if not optional and not transform_none_value:
                 raise ValueError(
-                    'Regular expression group {0} has no value.'.format(
-                        group_index))
+                    "Regular expression group {0} has no value.".format(
+                        group_index
+                    )
+                )
             # Usually, we do not transform a value of None, unless it is
             # requested explicitly.
             if not transform_none_value:
                 return None
         # Now we apply the transformations.
-        transform_func = config['_transform_func']
+        transform_func = config["_transform_func"]
         value = transform_func(value)
         if value is None and not optional:
             raise ValueError(
-                'Regular expression group {0} has no value.'.format(
-                    group_index))
+                "Regular expression group {0} has no value.".format(
+                    group_index
+                )
+            )
         return value
 
     def _update_data(self):
@@ -467,7 +483,7 @@ class TextFileSource(DataSource):
                 return
         # Before reading the new data, we have to clear our internal cache of
         # the data.
-        self._file_version = ''
+        self._file_version = ""
         self._system_data = {}
         self._system_version = {}
         self._key_value_index = {}
@@ -476,96 +492,113 @@ class TextFileSource(DataSource):
         # generate a better error message in case the same system ID is used
         # more than once.
         system_line_no = {}
-        with open(self._file, newline='') as file:
+        with open(self._file, newline="") as file:
             line_no = 0
             for line in file:
                 line_no += 1
                 # We trim the trailing end of line characters (but no other
                 # whitespace characters).
-                while line.endswith('\r') or line.endswith('\n'):
+                while line.endswith("\r") or line.endswith("\n"):
                     line = line[:-1]
                 # If an ignore regular expression is configured and it matches
                 # the line, we ignore that line.
-                if (self._regular_expression_ignore is not None
-                        and self._regular_expression_ignore.fullmatch(line)
-                        is not None):
+                if (
+                    self._regular_expression_ignore is not None
+                    and self._regular_expression_ignore.fullmatch(line)
+                    is not None
+                ):
                     continue
                 match = self._regular_expression.fullmatch(line)
-                # If the line does match the regular expression, the next action
-                # depends on the configured mismatch_action.
+                # If the line does match the regular expression, the next
+                # action depends on the configured mismatch_action.
                 if match is None:
-                    if self._mismatch_action == 'error':
+                    if self._mismatch_action == "error":
                         raise ValueError(
-                            'Error while parsing file {0} line {1}: "{2}" does '
-                            'not match the specified format.'.format(
-                                self._file, line_no, line))
-                    elif self._mismatch_action == 'ignore':
+                            'Error while parsing file {0} line {1}: "{2}" '
+                            "does not match the specified format.".format(
+                                self._file, line_no, line
+                            )
+                        )
+                    elif self._mismatch_action == "ignore":
                         continue
-                    elif self._mismatch_action == 'warn':
+                    elif self._mismatch_action == "warn":
                         logger.warning(
                             'Error while parsing file %s line %d: "%s" does '
-                            'not match the specified format.',
+                            "not match the specified format.",
                             self._file,
                             line_no,
-                            line)
+                            line,
+                        )
                         continue
                     else:
                         raise RuntimeError(
-                            'Invalid mismatch action: {0}'.format(
-                                self._mismatch_action))
+                            "Invalid mismatch action: {0}".format(
+                                self._mismatch_action
+                            )
+                        )
                 # First, we process the system ID. The system ID is always
                 # needed, so it has a separate configuration.
                 system_id = self._process_variable(
-                    self._system_id_config, match, optional=False)
+                    self._system_id_config, match, optional=False
+                )
                 if system_id is None:
                     raise ValueError(
-                        'Error while parsing {0} line {1}: Line does not '
-                        'specify a system ID: {2}'.format(
-                            self._file, line_no, line))
+                        "Error while parsing {0} line {1}: Line does not "
+                        "specify a system ID: {2}".format(
+                            self._file, line_no, line
+                        )
+                    )
                 if system_id in self._system_data:
-                    if self._duplicate_system_id_action == 'error':
+                    if self._duplicate_system_id_action == "error":
                         raise ValueError(
-                            'Error while parsing file {0} line {1}: System ID '
+                            "Error while parsing file {0} line {1}: System ID "
                             '"{2}" is already specified in line {3}.'.format(
                                 self._file,
                                 line_no,
                                 system_id,
-                                system_line_no[system_id]))
-                    elif self._duplicate_system_id_action == 'ignore':
+                                system_line_no[system_id],
+                            )
+                        )
+                    elif self._duplicate_system_id_action == "ignore":
                         continue
-                    elif self._duplicate_system_id_action == 'warn':
+                    elif self._duplicate_system_id_action == "warn":
                         logger.warning(
-                            'Duplicate system ID in file %s line %d: System ID '
-                            '"%s" is already specified in line %d. Ignoring '
-                            'line %d',
+                            "Duplicate system ID in file %s line %d: System "
+                            'ID "%s" is already specified in line %d. '
+                            "Ignoring line %d",
                             self._file,
                             line_no,
                             system_id,
                             system_line_no[system_id],
-                            line_no)
+                            line_no,
+                        )
                         continue
                     else:
                         raise RuntimeError(
-                            'Invalid mismatch action: {0}'.format(
-                                self._mismatch_action))
+                            "Invalid mismatch action: {0}".format(
+                                self._mismatch_action
+                            )
+                        )
                 # Next we generate the data for the system by processing each
                 # of the specified variable definitions.
                 data = OrderedDict()
                 for key, var_config in self._variables_config.items():
                     value = self._process_variable(var_config, match)
-                    # If the variable does not specify add_none_value = True, we
-                    # do not add such a value.
-                    if (value is None
-                            and not var_config.get('use_none_value', False)):
+                    # If the variable does not specify add_none_value = True,
+                    # we do not add such a value.
+                    if value is None and not var_config.get(
+                        "use_none_value", False
+                    ):
                         continue
                     # The key can have multiple hierarchy levels that are
                     # separated by colons. In this case, we generate dicts for
                     # each but the last level in the hierarchy.
                     target_dict = data
-                    key_components = key.split(':')
+                    key_components = key.split(":")
                     for key_component in key_components[:-1]:
                         target_dict = target_dict.setdefault(
-                            key_component, OrderedDict())
+                            key_component, OrderedDict()
+                        )
                     target_dict[key_components[-1]] = value
                     # We also add the key-value pair to the index, so that the
                     # system can be found.
@@ -579,22 +612,24 @@ class TextFileSource(DataSource):
                     except TypeError:
                         value_hashable = False
                     if value_hashable:
-                        key_value_system_list = \
-                            self._key_value_index.setdefault(
-                                (key, value), [])
+                        key_value_system_list = (
+                            self._key_value_index.setdefault((key, value), [])
+                        )
                         key_value_system_list.append(system_id)
                     else:
-                        key_value_system_list = \
+                        key_value_system_list = (
                             self._key_value_not_hashable_index.setdefault(
-                                key, [])
+                                key, []
+                            )
+                        )
                         key_value_system_list.append((system_id, value))
                 self._system_data[system_id] = data
                 self._system_version[system_id] = version_for_str(line)
                 system_line_no[system_id] = line_no
         # If the cache is enabled, we remember the file version for which we
         # read the data. We do this after reading the data because if there is
-        # an error, we do not want the cache check to succeed on the next run of
-        # this function.
+        # an error, we do not want the cache check to succeed on the next run
+        # of this function.
         if self._cache_enabled:
             self._file_version = current_file_version
 

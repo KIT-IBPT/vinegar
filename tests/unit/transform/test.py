@@ -16,23 +16,24 @@ class TestTransformModule(unittest.TestCase):
         """
         Test the `apply_transformation` function.
         """
-        self.assertEqual(
-            'ABC',
-            apply_transformation('string.to_upper', 'aBc'))
+        self.assertEqual("ABC", apply_transformation("string.to_upper", "aBc"))
         # Test that multiple positional arguments are passed correctly.
         self.assertEqual(
-            'aBcdeF',
-            apply_transformation('string.add_suffix', 'aBc', 'deF'))
+            "aBcdeF", apply_transformation("string.add_suffix", "aBc", "deF")
+        )
         # Test that mixed of positional and keyword arguments are passed
         # correctly.
         self.assertEqual(
-            'aBcdeF',
-            apply_transformation('string.add_suffix', 'aBc', suffix='deF'))
+            "aBcdeF",
+            apply_transformation("string.add_suffix", "aBc", suffix="deF"),
+        )
         # Test that multiple keyword arugments are passed correctly.
         self.assertEqual(
-            'aBcdeF',
+            "aBcdeF",
             apply_transformation(
-                'string.add_suffix', value='aBc', suffix='deF'))
+                "string.add_suffix", value="aBc", suffix="deF"
+            ),
+        )
 
     def test_apply_transformation_chain(self):
         """
@@ -40,15 +41,12 @@ class TestTransformModule(unittest.TestCase):
         """
         # We test that the various ways of specifying a function and the
         # functiion configuration work.
+        chain = ["string.to_upper", {"string.add_suffix": ".def"}]
+        self.assertEqual("ABC.def", apply_transformation_chain(chain, "abc"))
+        chain = [{"string.to_upper": []}, {"string.add_suffix": [".def"]}]
+        self.assertEqual("ABC.def", apply_transformation_chain(chain, "abc"))
         chain = [
-            'string.to_upper',
-            {'string.add_suffix': '.def'}]
-        self.assertEqual('ABC.def', apply_transformation_chain(chain, 'abc'))
-        chain = [
-            {'string.to_upper': []},
-            {'string.add_suffix': ['.def']}]
-        self.assertEqual('ABC.def', apply_transformation_chain(chain, 'abc'))
-        chain = [
-            {'string.to_upper': {}},
-            {'string.add_suffix': {'suffix': '.def'}}]
-        self.assertEqual('ABC.def', apply_transformation_chain(chain, 'abc'))
+            {"string.to_upper": {}},
+            {"string.add_suffix": {"suffix": ".def"}},
+        ]
+        self.assertEqual("ABC.def", apply_transformation_chain(chain, "abc"))

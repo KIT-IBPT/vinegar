@@ -20,36 +20,34 @@ class TestIPv6AddressModule(unittest.TestCase):
         # Test that the "net_address" function can be called via
         # apply_transformation.
         self.assertEqual(
-            '2001:db8::/32',
-            apply_transformation(
-                'ipv6_address.net_address', '2001:db8::1/32'))
+            "2001:db8::/32",
+            apply_transformation("ipv6_address.net_address", "2001:db8::1/32"),
+        )
         # Test that an address is implicitly normalized
-        self.assertEqual(
-            '2001:db8::/32', net_address('2001:DB8::1/32'))
+        self.assertEqual("2001:db8::/32", net_address("2001:DB8::1/32"))
         # Test the raise_error_if_malformed option.
+        self.assertEqual("2001:db8::/32", net_address("2001:db8:0::1/32"))
         self.assertEqual(
-            '2001:db8::/32', net_address('2001:db8:0::1/32'))
+            "2001:db8::/32",
+            net_address("2001:db8:0::1/32", raise_error_if_malformed=False),
+        )
         self.assertEqual(
-            '2001:db8::/32',
-            net_address('2001:db8:0::1/32', raise_error_if_malformed=False))
+            "2001:db8::/32",
+            net_address("2001:db8:0::1/32", raise_error_if_malformed=True),
+        )
+        self.assertEqual("2001:db8:0:::1/32", net_address("2001:db8:0:::1/32"))
         self.assertEqual(
-            '2001:db8::/32',
-            net_address('2001:db8:0::1/32', raise_error_if_malformed=True))
-        self.assertEqual(
-            '2001:db8:0:::1/32', net_address('2001:db8:0:::1/32'))
-        self.assertEqual(
-            '2001:db8:0:::1/32',
-            net_address('2001:db8:0:::1/32', raise_error_if_malformed=False))
+            "2001:db8:0:::1/32",
+            net_address("2001:db8:0:::1/32", raise_error_if_malformed=False),
+        )
         with self.assertRaises(ValueError):
-            net_address('2001:db8:0:::1/32', raise_error_if_malformed=True)
+            net_address("2001:db8:0:::1/32", raise_error_if_malformed=True)
         # An address is also considered malformed if the mask is missing.
         with self.assertRaises(ValueError):
-            net_address('2001:db8::', raise_error_if_malformed=True)
+            net_address("2001:db8::", raise_error_if_malformed=True)
         # We also want to test two corner cases.
-        self.assertEqual(
-            '2001:db8::1/128', net_address('2001:db8::1/128'))
-        self.assertEqual(
-            '::/0', net_address('2001:db8::1/0'))
+        self.assertEqual("2001:db8::1/128", net_address("2001:db8::1/128"))
+        self.assertEqual("::/0", net_address("2001:db8::1/0"))
 
     def test_normalize(self):
         """
@@ -58,33 +56,29 @@ class TestIPv6AddressModule(unittest.TestCase):
         # Test that the "normalize" function can be called via
         # apply_transformation.
         self.assertEqual(
-            '2001:db8::1',
-            apply_transformation('ipv6_address.normalize', '2001:0db8::1'))
+            "2001:db8::1",
+            apply_transformation("ipv6_address.normalize", "2001:0db8::1"),
+        )
         # Test that leading zeros are removed.
-        self.assertEqual(
-            '2001:db8::1',
-            normalize('2001:0db8::0001'))
-        self.assertEqual(
-            '2001:db8::1',
-            normalize('2001:db8:0::1'))
+        self.assertEqual("2001:db8::1", normalize("2001:0db8::0001"))
+        self.assertEqual("2001:db8::1", normalize("2001:db8:0::1"))
         # Test the raise_error_if_malformed parameter.
+        self.assertEqual("2001:db8::1", normalize("2001:db8::1"))
         self.assertEqual(
-            '2001:db8::1',
-            normalize('2001:db8::1'))
+            "2001:db8::1",
+            normalize("2001:db8::1", raise_error_if_malformed=False),
+        )
         self.assertEqual(
-            '2001:db8::1',
-            normalize('2001:db8::1', raise_error_if_malformed=False))
+            "2001:db8::1",
+            normalize("2001:db8::1", raise_error_if_malformed=True),
+        )
+        self.assertEqual("not an IP address", normalize("not an IP address"))
         self.assertEqual(
-            '2001:db8::1',
-            normalize('2001:db8::1', raise_error_if_malformed=True))
-        self.assertEqual(
-            'not an IP address',
-            normalize('not an IP address'))
-        self.assertEqual(
-            'not an IP address',
-            normalize('not an IP address', raise_error_if_malformed=False))
+            "not an IP address",
+            normalize("not an IP address", raise_error_if_malformed=False),
+        )
         with self.assertRaises(ValueError):
-            normalize('not an IP address', raise_error_if_malformed=True)
+            normalize("not an IP address", raise_error_if_malformed=True)
 
     def test_strip_mask(self):
         """
@@ -93,25 +87,30 @@ class TestIPv6AddressModule(unittest.TestCase):
         # Test that the "strip_mask" function can be called via
         # apply_transformation.
         self.assertEqual(
-            '2001:db8::1',
-            apply_transformation('ipv6_address.strip_mask', '2001:db8::1/32'))
+            "2001:db8::1",
+            apply_transformation("ipv6_address.strip_mask", "2001:db8::1/32"),
+        )
         # Test that an address is not implicitly normalized
-        self.assertEqual('2001:db8:0::1', strip_mask('2001:db8:0::1/32'))
+        self.assertEqual("2001:db8:0::1", strip_mask("2001:db8:0::1/32"))
         # Test the raise_error_if_malformed option.
-        self.assertEqual('2001:db8::1', strip_mask('2001:db8::1/32'))
+        self.assertEqual("2001:db8::1", strip_mask("2001:db8::1/32"))
         self.assertEqual(
-            '2001:db8::1',
-            strip_mask('2001:db8::1/32', raise_error_if_malformed=False))
+            "2001:db8::1",
+            strip_mask("2001:db8::1/32", raise_error_if_malformed=False),
+        )
         self.assertEqual(
-            '2001:db8::1',
-            strip_mask('2001:db8::1/32', raise_error_if_malformed=True))
-        self.assertEqual('2001:db8:::1/32', strip_mask('2001:db8:::1/32'))
+            "2001:db8::1",
+            strip_mask("2001:db8::1/32", raise_error_if_malformed=True),
+        )
+        self.assertEqual("2001:db8:::1/32", strip_mask("2001:db8:::1/32"))
         self.assertEqual(
-            '2001:db8:::1/32',
-            strip_mask('2001:db8:::1/32', raise_error_if_malformed=False))
+            "2001:db8:::1/32",
+            strip_mask("2001:db8:::1/32", raise_error_if_malformed=False),
+        )
         with self.assertRaises(ValueError):
-            strip_mask('2001:db8:::1/32', raise_error_if_malformed=True)
+            strip_mask("2001:db8:::1/32", raise_error_if_malformed=True)
         # Not having a mask should not result in an error.
         self.assertEqual(
-            '2001:db8::1',
-            strip_mask('2001:db8::1', raise_error_if_malformed=True))
+            "2001:db8::1",
+            strip_mask("2001:db8::1", raise_error_if_malformed=True),
+        )

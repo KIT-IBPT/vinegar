@@ -19,8 +19,8 @@ this request handler makes changes to the state of the database, allowing
 ``GET`` requests would violate the semantics of the HTTP protocol.
 
 It is very easy to trigger a ``POST`` request from the command line. Depending
-on which tools are available on the system, either of the following two commands
-can be used::
+on which tools are available on the system, either of the following two
+commands can be used::
 
     curl -X POST http://vinegar.example.com/sqlite-prefix/system-id
     wget -O - --post-data= http://vinegar.example.com/sqlite-prefix/system-id
@@ -96,15 +96,15 @@ The ``sqlite_update`` request handler have several configuration options that
 can be used to control its behavior.
 
 :``action`` (mandatory):
-    Action to be taken when this handler is triggers. If set to ``delete_data``,
-    all data stored for the specified system is deleted. If set to
-    ``delete_value``, only the key and value specified by the ``key`` option
-    are deleted. If set to ``set_value`` the value for the key specified by the
-    ``key`` option is set to the value specified by the ``value`` option. If set
-    to ``set_json_value_from_request_body``, the value is read from the body of
-    the HTTP request and decoded as JSON. If set to
-    ``set_text_value_from_request_body``, the value is read from the body of the
-    HTTP request (it must be encoded as UTF-8) and stored as a string.
+    Action to be taken when this handler is triggers. If set to
+    ``delete_data``, all data stored for the specified system is deleted. If
+    set to ``delete_value``, only the key and value specified by the ``key``
+    option are deleted. If set to ``set_value`` the value for the key specified
+    by the ``key`` option is set to the value specified by the ``value``
+    option. If set to ``set_json_value_from_request_body``, the value is read
+    from the body of the HTTP request and decoded as JSON. If set to
+    ``set_text_value_from_request_body``, the value is read from the body of
+    the HTTP request (it must be encoded as UTF-8) and stored as a string.
 
 :``db_file`` (mandatory):
     Path to the database file that contains the SQLite database that will be
@@ -113,11 +113,11 @@ can be used to control its behavior.
 
 :``request_path`` (mandatory):
     request path for which this request handler shall be used. The specified
-    path must start with a ``/``. It will match any request that has a path that
-    starts with the configured request path and is followed by a string. For
-    example, when the ``request_path`` is set to ``/prefix`` the handler will
-    match ``/prefix/name``. In this example, ``name`` is the string that is used
-    as the system ID.
+    path must start with a ``/``. It will match any request that has a path
+    that starts with the configured request path and is followed by a string.
+    For example, when the ``request_path`` is set to ``/prefix`` the handler
+    will match ``/prefix/name``. In this example, ``name`` is the string that
+    is used as the system ID.
 
 :``client_address_key`` (optional):
     Key into the system data that points to the place in the data where the
@@ -126,11 +126,11 @@ can be used to control its behavior.
     and thus modify the data for arbitrary systems. When this is not desired,
     this option can be used to limit the allowe client (IP) addresses for each
     system. The key can point into a nested dictionary, using the colon (``:``)
-    to separate key components for the various levels. The value can be a string
-    (matching exactly one IP address) or a list or set of IP addresses (matching
-    any of the addresses in the list or set). Please refer to
-    :ref:`access_restrictions` for a more detailed discussion of how this option
-    can be used.
+    to separate key components for the various levels. The value can be a
+    string (matching exactly one IP address) or a list or set of IP addresses
+    (matching any of the addresses in the list or set). Please refer to
+    :ref:`access_restrictions` for a more detailed discussion of how this
+    option can be used.
 
 :``key`` (optional):
     Name of the key in the database that shall be deleted or updated. If the
@@ -172,40 +172,48 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
     def __init__(self, config: Mapping[Any, Any]):
         """
         Create a HTTP SQLite update request handler. Usually, instances of this
-        class are not instantiated directly, but through the `get_instance_http`
-        function.
+        class are not instantiated directly, but through the
+        `get_instance_http` function.
 
         :param config:
             configuration for this request handler. Please refer to the
-            `module documentation <vinegar.request_handler.sqlite_update>` for a
-            list of supported options.
+            `module documentation <vinegar.request_handler.sqlite_update>` for
+            a list of supported options.
         """
-        self._request_path = config['request_path']
-        if not self._request_path.startswith('/'):
+        self._request_path = config["request_path"]
+        if not self._request_path.startswith("/"):
             raise ValueError(
                 'Invalid request path "{0}": The request path must start with '
-                'a "/".'.format(self._request_path))
-        if not self._request_path.endswith('/'):
-            self._request_path += '/'
-        self._action = config['action']
+                'a "/".'.format(self._request_path)
+            )
+        if not self._request_path.endswith("/"):
+            self._request_path += "/"
+        self._action = config["action"]
         if self._action not in (
-                'delete_data', 'delete_value', 'set_value',
-                'set_json_value_from_request_body',
-                'set_text_value_from_request_body'):
+            "delete_data",
+            "delete_value",
+            "set_value",
+            "set_json_value_from_request_body",
+            "set_text_value_from_request_body",
+        ):
             raise ValueError(
                 'Invalid action "{0}". Action must be one of "delete_data", '
-                '"delete_value", "set_value".'.format(self._action))
+                '"delete_value", "set_value".'.format(self._action)
+            )
         if self._action in (
-                'delete_value', 'set_value', 'set_json_value_from_request_body',
-                'set_text_value_from_request_body'):
-            self._key = config['key']
-        if self._action == 'set_value':
-            self._value = config['value']
-        self._client_address_key = config.get('client_address_key', None)
-        self._data_store = open_data_store(config['db_file'])
+            "delete_value",
+            "set_value",
+            "set_json_value_from_request_body",
+            "set_text_value_from_request_body",
+        ):
+            self._key = config["key"]
+        if self._action == "set_value":
+            self._value = config["value"]
+        self._client_address_key = config.get("client_address_key", None)
+        self._data_store = open_data_store(config["db_file"])
 
     def can_handle(self, filename: str, context: Any) -> bool:
-        return context['matches']
+        return context["matches"]
 
     def close(self):
         """
@@ -213,8 +221,8 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
         involve the data store will fail by raising an exception after calling
         this method.
 
-        For most applications, where request handlers are long-lived, relying on
-        Python's garbage collection is fine for closing the underlying data
+        For most applications, where request handlers are long-lived, relying
+        on Python's garbage collection is fine for closing the underlying data
         store. However, if an application rapidly creates and discards request
         handler instances (e.g. for automated tests), closing the request
         handler explicitly can be beneficial because it helps to release
@@ -223,29 +231,29 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
         self._data_store.close()
 
     def handle(
-            self,
-            filename: str,
-            method: str,
-            headers: http.client.HTTPMessage,
-            body: io.BufferedIOBase,
-            client_address: Tuple,
-            context: Any) \
-            -> Tuple[
-                HTTPStatus,
-                Optional[Mapping[str, str]],
-                Optional[io.BufferedIOBase]]:
+        self,
+        filename: str,
+        method: str,
+        headers: http.client.HTTPMessage,
+        body: io.BufferedIOBase,
+        client_address: Tuple,
+        context: Any,
+    ) -> Tuple[
+        HTTPStatus, Optional[Mapping[str, str]], Optional[io.BufferedIOBase]
+    ]:
         # We only allow requests using the POST method.
-        if method != 'POST':
+        if method != "POST":
             return HTTPStatus.METHOD_NOT_ALLOWED, None, None
-        system_id = context['system_id']
+        system_id = context["system_id"]
         if self._client_address_key:
             # We get the expected client address from the system data. We wrap
             # the system data in a smart lookup dict, so that we can look for a
             # value inside a nested dict.
-            system_data, _ = self._data_source.get_data(system_id, {}, '')
+            system_data, _ = self._data_source.get_data(system_id, {}, "")
             system_data = SmartLookupDict(system_data)
             expected_client_addresses = system_data.get(
-                self._client_address_key, None)
+                self._client_address_key, None
+            )
             # The IP address part of the client address is the first element of
             # the tuple.
             actual_client_address = client_address[0]
@@ -268,62 +276,62 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
             request_allowed = False
             for expected_client_address in expected_client_addresses:
                 expected_client_address = normalize_ip_address(
-                    expected_client_address)
+                    expected_client_address
+                )
                 if actual_client_address == expected_client_address:
                     request_allowed = True
                     break
             if not request_allowed:
                 return HTTPStatus.FORBIDDEN, None, None
-        if self._action == 'delete_data':
+        if self._action == "delete_data":
             self._data_store.delete_data(system_id)
-        elif self._action == 'delete_value':
+        elif self._action == "delete_value":
             self._data_store.delete_value(system_id, self._key)
-        elif self._action == 'set_value':
+        elif self._action == "set_value":
             self._data_store.set_value(system_id, self._key, self._value)
-        elif self._action == 'set_json_value_from_request_body':
+        elif self._action == "set_json_value_from_request_body":
             try:
-                body_length = int(headers.get('Content-Length', '0'))
+                body_length = int(headers.get("Content-Length", "0"))
                 raw_bytes = body.read(body_length)
                 value = json.load(io.BytesIO(raw_bytes))
             except:
                 return HTTPStatus.BAD_REQUEST, None, None
             self._data_store.set_value(system_id, self._key, value)
-        elif self._action == 'set_text_value_from_request_body':
+        elif self._action == "set_text_value_from_request_body":
             try:
-                body_length = int(headers.get('Content-Length', '0'))
+                body_length = int(headers.get("Content-Length", "0"))
                 raw_bytes = body.read(body_length)
                 value = raw_bytes.decode()
             except:
                 return HTTPStatus.BAD_REQUEST, None, None
             self._data_store.set_value(system_id, self._key, value)
         else:
-            raise RuntimeError('Unimplemented action: {0}'.format(self._action))
-        response_headers = {'Content-Type': 'text/plain; charset=UTF-8'}
+            raise RuntimeError(
+                "Unimplemented action: {0}".format(self._action)
+            )
+        response_headers = {"Content-Type": "text/plain; charset=UTF-8"}
         # We do not send an empty reply because curl considers this an error.
-        response_body = io.BytesIO(b'success\n')
+        response_body = io.BytesIO(b"success\n")
         return HTTPStatus.OK, response_headers, response_body
 
     def prepare_context(self, filename: str) -> Any:
         # We initialize the context so that it signals a mismatch if returned
         # without changing it.
-        context = {
-            'matches': False,
-            'system_id': None
-        }
+        context = {"matches": False, "system_id": None}
         # If the original filename contains a null byte, someone is trying
         # something nasty and we do not consider the path to match. The same is
         # true if the null byte is present in URL encoded form.
-        if '\0' in filename or '%00' in filename:
+        if "\0" in filename or "%00" in filename:
             return context
         # We do not use urllib.parse.urlsplit beause that function produces
         # unexpected results if the filename is not well-formed.
-        path, _, _ = filename.partition('?')
+        path, _, _ = filename.partition("?")
         path = urllib.parse.unquote(path)
         if path.startswith(self._request_path):
-            system_id = path[len(self._request_path):]
+            system_id = path[len(self._request_path) :]
             if system_id:
-                context['matches'] = True
-                context['system_id'] = path[len(self._request_path):]
+                context["matches"] = True
+                context["system_id"] = path[len(self._request_path) :]
         return context
 
     def set_data_source(self, data_source: DataSource) -> None:
@@ -331,7 +339,8 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
 
 
 def get_instance_http(
-        config: Mapping[Any, Any]) -> HttpSQLiteUpdateRequestHandler:
+    config: Mapping[Any, Any]
+) -> HttpSQLiteUpdateRequestHandler:
     """
     Create a HTTP request handler that applies updates to an SQLite database.
 
