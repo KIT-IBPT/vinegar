@@ -36,7 +36,7 @@ from the following files in the directory tree:
 * example.yaml
 * other/example.yaml
 
-A system with the ID ``my.example.com`` oh the other hand would only receive
+A system with the ID ``my.example.com``, on the other hand, would only receive
 data from the following files:
 
 * common/file1.yaml
