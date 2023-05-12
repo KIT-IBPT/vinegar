@@ -117,7 +117,7 @@ class SmartLookupDict(dict):
         :return:
             value for ``key`` or ``default`` if ``key`` is not found.
         """
-        return _smart_setdefault(self, key, default, sep, dict)
+        return _smart_setdefault(self, key, default, sep, dict_type)
 
 
 class SmartLookupOrderedDict(OrderedDict):
@@ -149,7 +149,7 @@ class SmartLookupOrderedDict(OrderedDict):
         """
         return _smart_get(self, key, *args, **kwargs)
 
-    def setdefault(self, key, default=None, sep=":", dict_type=dict):
+    def setdefault(self, key, default=None, sep=":", dict_type=OrderedDict):
         """
         Return the value for ``key`` inserting and returning ``default`` if
         ``key`` does not exist yet.
@@ -176,7 +176,7 @@ class SmartLookupOrderedDict(OrderedDict):
         :return:
             value for ``key`` or ``default`` if ``key`` is not found.
         """
-        return _smart_setdefault(self, key, default, sep, OrderedDict)
+        return _smart_setdefault(self, key, default, sep, dict_type)
 
 
 def _smart_get(d, key, *args, **kwargs):
