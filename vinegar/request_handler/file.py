@@ -914,7 +914,7 @@ def get_instance_http(config: Mapping[Any, Any]) -> HttpFileRequestHandler:
     return HttpFileRequestHandler(config)
 
 
-def get_instance_tftp(config: Mapping[Any, Any]) -> HttpFileRequestHandler:
+def get_instance_tftp(config: Mapping[Any, Any]) -> TftpFileRequestHandler:
     """
     Create a TFTP request handler serving files.
 
