@@ -139,9 +139,9 @@ class JinjaEngine(TemplateEngine):
         modified.
         """
 
-    def get_source(self, *args, **kwargs):
-        contents, filename, _ = super().get_source(*args, **kwargs)
-        return contents, filename, lambda _: False
+        def get_source(self, *args, **kwargs):
+            contents, filename, _ = super().get_source(*args, **kwargs)
+            return contents, filename, lambda _: False
 
     class _Environment(jinja2.Environment):
         """
