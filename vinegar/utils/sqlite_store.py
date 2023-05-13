@@ -94,7 +94,6 @@ class DataStore:
         """
         with self._lock:
             self._connection.close()
-        pass
 
     def delete_data(self, system_id: str) -> None:
         """
@@ -295,9 +294,11 @@ class DataStore:
                 (system_id, key, json_value),
             )
 
-    def _check_value(self, value, parents=[]):
+    def _check_value(self, value, parents=None):
         if value is None:
             return
+        if parents is None:
+            parents = []
         if isinstance(value, (bool, float, int, str)):
             return
         # Before checking dicts and lists, we have to ensure that there is no

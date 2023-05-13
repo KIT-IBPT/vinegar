@@ -13,13 +13,11 @@ import collections
 import threading
 import typing
 
-KeyType = typing.TypeVar("KeyType")
-ValueType = typing.TypeVar("ValueType")
+KeyT = typing.TypeVar("KeyT")
+ValueT = typing.TypeVar("ValueT")
 
 
-class Cache(
-    typing.Generic[KeyType, ValueType], abc.ABC
-):  # pylint: disable=E1136
+class Cache(typing.Generic[KeyT, ValueT], abc.ABC):  # pylint: disable=E1136
     """
     Interface for cache implementations
 
@@ -45,7 +43,23 @@ class Cache(
         """
         raise NotImplementedError()
 
-    def get(self, key: KeyType, default: ValueType = None) -> ValueType:
+    @typing.overload
+    def get(self, key: KeyT) -> typing.Optional[ValueT]:
+        ...
+
+    @typing.overload
+    def get(self, key: KeyT, default: ValueT) -> ValueT:
+        ...
+
+    @typing.overload
+    def get(
+        self, key: KeyT, default: typing.Optional[ValueT]
+    ) -> typing.Optional[ValueT]:
+        ...
+
+    def get(
+        self, key: KeyT, default: typing.Optional[ValueT] = None
+    ) -> typing.Optional[ValueT]:
         """
         Return the item for the specified ``key`` or ``default`` if the key is
         not stored in this cache.
@@ -63,15 +77,15 @@ class Cache(
             return default
 
     @abc.abstractmethod
-    def __contains__(self, item: KeyType) -> bool:
+    def __contains__(self, item: KeyT) -> bool:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def __delitem__(self, key: KeyType) -> None:
+    def __delitem__(self, key: KeyT) -> None:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def __getitem__(self, key: KeyType) -> ValueType:
+    def __getitem__(self, key: KeyT) -> ValueT:
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -79,11 +93,11 @@ class Cache(
         raise NotImplementedError
 
     @abc.abstractmethod
-    def __setitem__(self, key: KeyType, value: ValueType) -> None:
+    def __setitem__(self, key: KeyT, value: ValueT) -> None:
         raise NotImplementedError
 
 
-class LRUCache(Cache[KeyType, ValueType]):
+class LRUCache(Cache[KeyT, ValueT]):
     """
     Cache using the last recently used (LRU) strategy.
 
@@ -116,15 +130,15 @@ class LRUCache(Cache[KeyType, ValueType]):
     def clear(self) -> None:
         self._data.clear()
 
-    def __contains__(self, item: KeyType) -> bool:
+    def __contains__(self, item: KeyT) -> bool:
         # We implement __contains__ because the default version uses
         # __getitem__, which changes the order of elements.
         return item in self._data
 
-    def __delitem__(self, key: KeyType) -> None:
+    def __delitem__(self, key: KeyT) -> None:
         del self._data[key]
 
-    def __getitem__(self, key: KeyType) -> ValueType:
+    def __getitem__(self, key: KeyT) -> ValueT:
         value = self._data.__getitem__(key)
         self._data.move_to_end(key)
         return value
@@ -132,15 +146,15 @@ class LRUCache(Cache[KeyType, ValueType]):
     def __len__(self) -> int:
         return len(self._data)
 
-    def __setitem__(self, key: KeyType, value: ValueType) -> None:
-        value = self._data.__setitem__(key, value)
+    def __setitem__(self, key: KeyT, value: ValueT) -> None:
+        self._data.__setitem__(key, value)
         if self._mark_on_update:
             self._data.move_to_end(key)
         if len(self._data) > self._cache_size:
             self._data.popitem(last=False)
 
 
-class NullCache(Cache[KeyType, ValueType]):
+class NullCache(Cache[KeyT, ValueT]):
     """
     Cache that actually does not cache anything.
 
@@ -151,28 +165,28 @@ class NullCache(Cache[KeyType, ValueType]):
     def clear(self) -> None:
         pass
 
-    def __contains__(self, item: KeyType) -> bool:
+    def __contains__(self, item: KeyT) -> bool:
         return False
 
-    def __delitem__(self, key: KeyType) -> None:
+    def __delitem__(self, key: KeyT) -> None:
         raise KeyError(key)
 
-    def __getitem__(self, key: KeyType) -> ValueType:
+    def __getitem__(self, key: KeyT) -> ValueT:
         raise KeyError(key)
 
     def __len__(self) -> int:
         return 0
 
-    def __setitem__(self, key: KeyType, value: ValueType) -> None:
+    def __setitem__(self, key: KeyT, value: ValueT) -> None:
         pass
 
 
-class SynchronizedCache(Cache[KeyType, ValueType]):
+class SynchronizedCache(Cache[KeyT, ValueT]):
     """
     Wrapper around a cache instance that makes it thread-safe.
     """
 
-    def __init__(self, backing_cache: Cache[KeyType, ValueType]):
+    def __init__(self, backing_cache: Cache[KeyT, ValueT]):
         """
         Creates a cache wrapped with a lock that protects all operations so
         that the cache can safely be used from multiple threads.
@@ -187,15 +201,15 @@ class SynchronizedCache(Cache[KeyType, ValueType]):
         with self._lock:
             self._backing_cache.clear()
 
-    def __contains__(self, item: KeyType) -> bool:
+    def __contains__(self, item: KeyT) -> bool:
         with self._lock:
             return item in self._backing_cache
 
-    def __delitem__(self, key: KeyType) -> None:
+    def __delitem__(self, key: KeyT) -> None:
         with self._lock:
             del self._backing_cache[key]
 
-    def __getitem__(self, key: KeyType) -> ValueType:
+    def __getitem__(self, key: KeyT) -> ValueT:
         with self._lock:
             return self._backing_cache[key]
 
@@ -203,6 +217,6 @@ class SynchronizedCache(Cache[KeyType, ValueType]):
         with self._lock:
             return len(self._backing_cache)
 
-    def __setitem__(self, key: KeyType, value: ValueType) -> None:
+    def __setitem__(self, key: KeyT, value: ValueT) -> None:
         with self._lock:
             self._backing_cache[key] = value

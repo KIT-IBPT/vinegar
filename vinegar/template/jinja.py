@@ -124,6 +124,7 @@ from vinegar.utils.odict import OrderedDict
 from vinegar.utils.version import version_for_file_path
 
 
+# pylint: disable=too-few-public-methods
 class JinjaEngine(TemplateEngine):
     """
     Template engine using the Jinja 2 library.
@@ -188,20 +189,26 @@ class JinjaEngine(TemplateEngine):
                         self._encoding
                     )
             except (FileNotFoundError, IsADirectoryError):
+                # We are not interested in the details of why the template was
+                # not found, so we do not include the original exception.
+                #
+                # pylint: disable=raise-missing-from
                 raise jinja2.TemplateNotFound(template)
 
-            if self._cache_enabled:
+            def up_to_date_with_cache():
+                current_file_version = version_for_file_path(template)
+                return current_file_version == file_version
 
-                def up_to_date():
-                    current_file_version = version_for_file_path(template)
-                    return current_file_version == file_version
+            def up_to_date_no_cache():
+                return False
 
-            else:
-
-                def up_to_date():
-                    return False
-
-            return file_contents, template, up_to_date
+            return (
+                file_contents,
+                template,
+                up_to_date_with_cache
+                if self._cache_enabled
+                else up_to_date_no_cache,
+            )
 
     class _TransformHelper:
         """
@@ -282,14 +289,14 @@ class JinjaEngine(TemplateEngine):
     ) -> str:
         try:
             template = self._environment.get_template(template_path)
-        except jinja2.TemplateNotFound as e:
-            raise FileNotFoundError() from e
-        merged_context = context.copy()
+        except jinja2.TemplateNotFound as err:
+            raise FileNotFoundError() from err
+        merged_context = dict(context)
         merged_context.update(self._base_context)
         try:
             return template.render(**merged_context)
-        except jinja2.TemplateNotFound as e:
-            raise FileNotFoundError() from e
+        except jinja2.TemplateNotFound as err:
+            raise FileNotFoundError() from err
 
     @staticmethod
     def _raise_template_error(message):
@@ -407,20 +414,19 @@ class SerializerExtension(jinja2.ext.Extension):
         self.environment.filters["json"] = self._to_json
         self.environment.filters["yaml"] = self._to_yaml
 
-    def parse(self, parser: jinja2.parser.Parser) -> jinja2.nodes.Node:
+    def parse(
+        self, parser: jinja2.parser.Parser
+    ) -> typing.Union[jinja2.nodes.Node, typing.List[jinja2.nodes.Node]]:
         tag_name = parser.stream.current.value
         if tag_name == "import_json":
             return self._parse_import(parser, "json")
-        elif tag_name == "import_yaml":
+        if tag_name == "import_yaml":
             return self._parse_import(parser, "yaml")
-        elif tag_name == "load_json":
+        if tag_name == "load_json":
             return self._parse_load(parser, "json")
-        elif tag_name == "load_yaml":
+        if tag_name == "load_yaml":
             return self._parse_load(parser, "yaml")
-        else:
-            raise RuntimeError(
-                "parse called for unexpected tag '%s'." % tag_name
-            )
+        raise RuntimeError("parse called for unexpected tag '%s'." % tag_name)
 
     @staticmethod
     def _load_json(value):
@@ -435,10 +441,10 @@ class SerializerExtension(jinja2.ext.Extension):
         # unexpected type of exception.
         try:
             return json.loads(value, object_pairs_hook=OrderedDict)
-        except Exception as e:
+        except Exception as err:
             raise jinja2.exceptions.TemplateRuntimeError(
                 "Could not decode value as JSON: %s" % value
-            ) from e
+            ) from err
 
     @staticmethod
     def _load_yaml(value):
@@ -453,12 +459,12 @@ class SerializerExtension(jinja2.ext.Extension):
         # unexpected type of exception.
         try:
             return yaml.safe_load(value)
-        except Exception as e:
+        except Exception as err:
             raise jinja2.exceptions.TemplateRuntimeError(
                 "Could not decode value as YAML: %s" % value
-            ) from e
+            ) from err
 
-    def _parse_import(self, parser, type):
+    def _parse_import(self, parser: jinja2.parser.Parser, type_name: str):
         # We do not use parser.parse_import here because it is not clear
         # whether that function is part of the stable API (the documentation
         # does not mention that method).
@@ -479,7 +485,7 @@ class SerializerExtension(jinja2.ext.Extension):
         # still have to transform the variable by deserializing the JSON or
         # YAML string. We do this by applying the appropriate filter on the
         # variable and assigning the result back to the variable.
-        filter_name = "load_" + type
+        filter_name = "load_" + type_name
         filter_node = jinja2.nodes.Filter(
             jinja2.nodes.Name(import_node.target, "load", lineno=lineno),
             filter_name,
@@ -496,7 +502,7 @@ class SerializerExtension(jinja2.ext.Extension):
         )
         return [import_node, assign_node]
 
-    def _parse_load(self, parser, type):
+    def _parse_load(self, parser, type_name):
         lineno = next(parser.stream).lineno
         parser.stream.expect("name:as")
         target = parser.parse_assign_target(name_only=True).name
@@ -520,7 +526,7 @@ class SerializerExtension(jinja2.ext.Extension):
                 body_nodes,
                 lineno=lineno,
             )
-        filter_name = "load_" + type
+        filter_name = "load_" + type_name
         filter_node = jinja2.nodes.Filter(
             jinja2.nodes.Name(target, "load", lineno=lineno),
             filter_name,

@@ -21,6 +21,7 @@ Data sources are thread safe.
 
 import abc
 import collections
+import collections.abc
 import importlib
 
 from typing import Any, Mapping, Optional, Sequence, Tuple, Union
@@ -136,6 +137,7 @@ class DataSource(abc.ABC):
         raise NotImplementedError()
 
 
+# pylint: disable=too-few-public-methods
 class DataSourceAware(abc.ABC):
     """
     Marker interface indicating that a component needs a `DataSource`.
@@ -173,7 +175,6 @@ class DataSourceAware(abc.ABC):
         :param data_source:
             data source to be injected.
         """
-        pass
 
 
 class _CompositeDataSource(DataSource):

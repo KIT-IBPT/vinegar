@@ -5,10 +5,31 @@ This are transformations that do not fit into another module, but do not
 warrant a separate module either.
 """
 
-from typing import Any
+import sys
+
+from typing import Any, TypeVar, Union
+
+if sys.version_info >= (3, 8):
+    from typing import Literal, overload
+
+ArgumentT = TypeVar("ArgumentT")
+
+if sys.version_info >= (3, 8):
+
+    @overload
+    def to_int(value: Any, raise_error_if_malformed: Literal[True]) -> int:
+        ...
+
+    @overload
+    def to_int(
+        value: ArgumentT, raise_error_if_malformed: bool
+    ) -> Union[ArgumentT, int]:
+        ...
 
 
-def to_int(value: Any, raise_error_if_malformed: bool = False) -> str:
+def to_int(
+    value: ArgumentT, raise_error_if_malformed: bool = False
+) -> Union[ArgumentT, int]:
     """
     Return integer representation of the value.
 
@@ -23,9 +44,8 @@ def to_int(value: Any, raise_error_if_malformed: bool = False) -> str:
         ``int(value)``.
     """
     try:
-        return int(value)
+        return int(value)  # type: ignore
     except ValueError:
         if raise_error_if_malformed:
             raise
-        else:
-            return value
+        return value

@@ -121,6 +121,7 @@ class _Expression(abc.ABC):
     Base class for all expression supported by our expression language.
     """
 
+    # pylint: disable=missing-function-docstring
     @abc.abstractmethod
     def matches(self, name: str) -> bool:
         raise NotImplementedError
@@ -141,8 +142,7 @@ class _AndExpression(_Expression):
         # of the right expression.
         if not self._left_expression.matches(name):
             return False
-        else:
-            return self._right_expression.matches(name)
+        return self._right_expression.matches(name)
 
 
 class _OrExpression(_Expression):
@@ -160,8 +160,7 @@ class _OrExpression(_Expression):
         # of the right expression.
         if self._left_expression.matches(name):
             return True
-        else:
-            return self._right_expression.matches(name)
+        return self._right_expression.matches(name)
 
 
 class _PatternExpression(_Expression):
@@ -190,7 +189,7 @@ class _NotExpression(_Expression):
         self._expression = expression
 
     def matches(self, name):
-        return not (self._expression.matches(name))
+        return not self._expression.matches(name)
 
 
 def _expect_expression(tokens, case_sensitive):
@@ -298,17 +297,16 @@ def _expect_unary_expression(tokens, case_sensitive):
         for _ in range(0, closing_index + 1):
             tokens.pop(0)
         return _expect_expression(tokens_in_parentheses, case_sensitive)
-    elif token == "not":
+    if token == "not":
         expression = _expect_unary_expression(tokens, case_sensitive)
         return _NotExpression(expression)
-    elif token in ("and", "or"):
+    if token in ("and", "or"):
         raise ValueError(
             'Found "{0}" where "(", "not" or pattern was expected.'.format(
                 token
             )
         )
-    else:
-        return _PatternExpression(token, case_sensitive)
+    return _PatternExpression(token, case_sensitive)
 
 
 def _expression_from_string(expression, case_sensitive):
@@ -329,7 +327,7 @@ def _expression_from_string(expression, case_sensitive):
     for token in tokens:
         partial_token = ""
         for character in token:
-            if character == "(" or character == ")":
+            if character in ("(", ")"):
                 if partial_token:
                     split_tokens.append(partial_token)
                 split_tokens.append(character)
@@ -340,10 +338,10 @@ def _expression_from_string(expression, case_sensitive):
             split_tokens.append(partial_token)
     try:
         return _expect_expression(split_tokens, case_sensitive)
-    except ValueError as e:
-        message = str(e)
+    except ValueError as err:
+        message = str(err)
         if not message:
-            message = type(e).__name__
+            message = type(err).__name__
         raise ValueError(
             'Cannot parse expression "{0}": {1}'.format(expression, message)
         ) from None

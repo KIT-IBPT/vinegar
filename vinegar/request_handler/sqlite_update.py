@@ -143,11 +143,9 @@ can be used to control its behavior.
     set to ``set_value``, this option must be specified.
 """
 
-import collections.abc
 import http.client
 import io
 import json
-import re
 import urllib.parse
 
 from http import HTTPStatus
@@ -210,6 +208,7 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
         if self._action == "set_value":
             self._value = config["value"]
         self._client_address_key = config.get("client_address_key", None)
+        self._data_source: Optional[DataSource] = None
         self._data_store = open_data_store(config["db_file"])
 
     def can_handle(self, filename: str, context: Any) -> bool:
@@ -246,6 +245,9 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
             return HTTPStatus.METHOD_NOT_ALLOWED, None, None
         system_id = context["system_id"]
         if self._client_address_key:
+            # When self._client_address_key is set, set_data_source should have
+            # been called before this method is called.
+            assert self._data_source is not None
             # We get the expected client address from the system data. We wrap
             # the system data in a smart lookup dict, so that we can look for a
             # value inside a nested dict.
@@ -294,7 +296,7 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
                 body_length = int(headers.get("Content-Length", "0"))
                 raw_bytes = body.read(body_length)
                 value = json.load(io.BytesIO(raw_bytes))
-            except:
+            except (OSError, ValueError):
                 return HTTPStatus.BAD_REQUEST, None, None
             self._data_store.set_value(system_id, self._key, value)
         elif self._action == "set_text_value_from_request_body":
@@ -302,7 +304,7 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
                 body_length = int(headers.get("Content-Length", "0"))
                 raw_bytes = body.read(body_length)
                 value = raw_bytes.decode()
-            except:
+            except (OSError, ValueError):
                 return HTTPStatus.BAD_REQUEST, None, None
             self._data_store.set_value(system_id, self._key, value)
         else:

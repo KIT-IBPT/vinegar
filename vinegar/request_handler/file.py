@@ -396,10 +396,44 @@ class FileRequestHandlerBase(DataSourceAware):
         # rather complex, so we do it in a separate method.
         self._init_request_path(config)
 
-    def can_handle(self, filename: str, context: Any) -> bool:
+    def can_handle(
+        self,
+        filename: str,  # pylint: disable=unused-argument
+        context: Any,
+    ) -> bool:
+        """
+        Tell whether the request can be handled by this request handler.
+
+        Returns ``True`` if the request can be handled and ``False`` if it
+        cannot be handled and the next request handler should be tried.
+
+        This implementation simply checks whether ``prepare_context`` detected
+        a match and returns ``True`` if and only if it did.
+
+        :param filename:
+            filename that has been requested by the client.
+        :param context:
+            context object that was returned by ``prepare_context``.
+        :return:
+            ``True`` if this request handler can handle the specified request,
+            ``False`` if the request should be deferred to the next handler.
+        """
         return context["matches"]
 
     def prepare_context(self, filename: str) -> Any:
+        """
+        Prepare a context object for use by ``can_handle`` and ``handle``. This
+        method is called for each request before calling ``can_handle``.
+
+        This method parses the filename and checks whether it matches the
+        configuration of this handler. It saves this information in the
+        returned context for later use by ``can_handle``.
+
+        :param filename:
+            filename that has been requested by the client.
+        :return:
+            context object that is passed to ``can_handle`` and ``handle``.
+        """
         # We initialize the context so that it signals a mismatch if returned
         # without changing it.
         context = {
@@ -514,7 +548,11 @@ class FileRequestHandlerBase(DataSourceAware):
     def set_data_source(self, data_source: DataSource) -> None:
         self._data_source = data_source
 
-    def _handle(self, filename: str, context: Any) -> io.BufferedIOBase:
+    def _handle(
+        self,
+        filename: str,  # pylint: disable=unused-argument
+        context: Any,
+    ) -> Tuple[Optional[io.BufferedIOBase], Optional[str]]:
         extra_path = context["extra_path"]
         # When we are operating in directory mode, we have to find out whether
         # the extra path matches a file in the root_dir.
@@ -540,13 +578,16 @@ class FileRequestHandlerBase(DataSourceAware):
                 # continue without a system ID, depending on the
                 # data_source_error_action.
                 try:
+                    assert self._data_source is not None
                     system_id = self._data_source.find_system(
                         lookup_key, lookup_value
                     )
-                except Exception:
+                # We do not know which kind of exceptions a data source might
+                # raise, so we intentionally catch all regular exceptions.
+                except Exception:  # pylint: disable=broad-exception-caught
                     if self._data_source_error_action == "error":
                         raise
-                    elif self._data_source_error_action == "warn":
+                    if self._data_source_error_action == "warn":
                         logger.warning(
                             'The data_source.find_system("%s", "%s") method '
                             "raised an exception. This is treated as a lookup "
@@ -563,14 +604,22 @@ class FileRequestHandlerBase(DataSourceAware):
             else:
                 # If there is no template engine, there is no sense in
                 # retrieving the system data because it would not be used
-                # anyway.
-                if self._template_engine is not None:
+                # anyway. We still set the variable to None in order to satisfy
+                # static code checkers that cannot detect that the variable is
+                # never used in this case.
+                if self._template_engine is None:
+                    data = None
+                else:
                     try:
+                        assert self._data_source is not None
                         data, _ = self._data_source.get_data(system_id, {}, "")
-                    except Exception:
+                    # We do not know which kind of exceptions a data source
+                    # might raise, so we intentionally catch all regular
+                    # exceptions.
+                    except Exception:  # pylint: disable=broad-exception-caught
                         if self._data_source_error_action == "error":
                             raise
-                        elif self._data_source_error_action == "warn":
+                        if self._data_source_error_action == "warn":
                             logger.warning(
                                 'The data_source.get_data("%s", ...) method '
                                 "raised an exception. Continuing without "
@@ -578,7 +627,6 @@ class FileRequestHandlerBase(DataSourceAware):
                                 system_id,
                                 exc_info=True,
                             )
-                            pass
                         data = None
         else:
             # If we have no lookup key, the system ID and data are always None.
@@ -599,16 +647,14 @@ class FileRequestHandlerBase(DataSourceAware):
                     file, template_context
                 )
                 return (io.BytesIO(render_result.encode()), file)
-            else:
-                return (open(file, mode="rb"), file)
+            return (open(file, mode="rb"), file)
         except PermissionError:
             # On Windows, we get a permission error when trying to open a
             # directory, so we want to catch such a situation and treat it
             # like a IsADirectoryError.
             if os.path.isdir(file):
                 return None, file
-            else:
-                raise
+            raise
         except (FileNotFoundError, IsADirectoryError):
             # We treat a request to a file that is actually a directory like a
             # request to a file that does not exist. This is consistent with
@@ -656,8 +702,10 @@ class FileRequestHandlerBase(DataSourceAware):
             request_path_segments = request_path.split("/")
             placeholder_index = None
             placeholder = self._lookup_value_placeholder
-            for index in range(0, len(request_path_segments)):
-                if placeholder in request_path_segments[index]:
+            for index, request_path_segment in enumerate(
+                request_path_segments
+            ):
+                if placeholder in request_path_segment:
                     if placeholder_index is None:
                         placeholder_index = index
                     else:
@@ -742,8 +790,7 @@ class FileRequestHandlerBase(DataSourceAware):
         # root_dir. We still use this check to be extra sure.
         if not fs_path.startswith(root_dir):
             return None
-        else:
-            return fs_path
+        return fs_path
 
 
 class HttpFileRequestHandler(FileRequestHandlerBase, HttpRequestHandler):
@@ -767,13 +814,15 @@ class HttpFileRequestHandler(FileRequestHandlerBase, HttpRequestHandler):
             supported options.
         """
         super().__init__(config)
-        self._content_type = config.get("content_type", None)
+        self._content_type = config.get("content_type", "")
         if not self._content_type:
             if config.get("template"):
                 self._content_type = "text/plain; charset=UTF-8"
             else:
                 self._content_type = "application/octet-stream"
-        self._content_type_map = config.get("content_type_map", None)
+        self._content_type_map = config.get("content_type_map", {})
+        # This check seems unnecessary, but it also handles the case where the
+        # config map contains an empty string as the value for the key.
         if not self._content_type_map:
             self._content_type_map = {}
         elif self._file:
@@ -801,6 +850,8 @@ class HttpFileRequestHandler(FileRequestHandlerBase, HttpRequestHandler):
             return HTTPStatus.FORBIDDEN, None, None
         if file is None:
             return HTTPStatus.NOT_FOUND, None, None
+        # When file is not None, file_path should not be None either.
+        assert file_path is not None
         # When operating in directory mode, we try to determine the content
         # type based on entries in the content_type_map. If that fails, we use
         # the value of the content_type setting. In file mode, we skip the
@@ -840,8 +891,6 @@ class TftpFileRequestHandler(FileRequestHandlerBase, TftpRequestHandler):
     `module documentation <vinegar.request_handler.file>`.
     """
 
-    pass
-
     def __init__(self, config: Mapping[Any, Any]):
         """
         Create a TFTP file request handler. Usually, instances of this class
@@ -876,7 +925,12 @@ class TftpFileRequestHandler(FileRequestHandlerBase, TftpRequestHandler):
         try:
             file, _ = self._handle(filename, context)
         except PermissionError:
-            raise TftpError(error_code=TftpErrorCode.ACCESS_VIOLATION)
+            # We do not include the original exception here because it won’t be
+            # used anyway. The exception only indicates that the error code
+            # should be send to the client.
+            raise TftpError(  # pylint: disable=raise-missing-from
+                error_code=TftpErrorCode.ACCESS_VIOLATION
+            )
         if file is None:
             raise TftpError(error_code=TftpErrorCode.FILE_NOT_FOUND)
         return file
@@ -892,8 +946,7 @@ class TftpFileRequestHandler(FileRequestHandlerBase, TftpRequestHandler):
         # a forward slash.
         if filename.startswith("/") or filename.startswith("%2f"):
             return filename
-        else:
-            return "/" + filename
+        return "/" + filename
 
 
 def get_instance_http(config: Mapping[Any, Any]) -> HttpFileRequestHandler:

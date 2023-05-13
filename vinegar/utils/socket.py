@@ -239,5 +239,4 @@ def socket_address_to_str(socket_address: typing.Tuple) -> str:
     # If the host address is an IPv6 address, we want to wrap it in brackets.
     if ":" in host:
         return "[{0}]:{1}".format(host, port)
-    else:
-        return "{0}:{1}".format(host, port)
+    return "{0}:{1}".format(host, port)

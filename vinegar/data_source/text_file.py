@@ -388,6 +388,10 @@ class TextFileSource(DataSource):
             self._initialize_transform_func(var_config)
         self._file_version = ""
         self._lock = threading.Lock()
+        self._system_data = {}
+        self._system_version = {}
+        self._key_value_index = {}
+        self._key_value_not_hashable_index = {}
 
     def find_system(self, lookup_key: str, lookup_value: Any) -> Optional[str]:
         # We need the lock to ensure that we do not access the data while
@@ -410,14 +414,17 @@ class TextFileSource(DataSource):
                 potential_system_list = self._key_value_not_hashable_index.get(
                     lookup_key
                 )
-                system_list = [
-                    system_id
-                    for system_id, value in potential_system_list
-                    if value == lookup_value
-                ]
+                if potential_system_list:
+                    system_list = [
+                        system_id
+                        for system_id, value in potential_system_list
+                        if value == lookup_value
+                    ]
+                else:
+                    system_list = None
             # If there key/value combination is not in the index, there is no
             # matching system.
-            if system_list is None:
+            if not system_list:
                 return None
             # If the combination is in the index, there is at least one system,
             # but there could be more than one. In the latter case, we only
@@ -425,8 +432,7 @@ class TextFileSource(DataSource):
             # option is set.
             if len(system_list) == 1 or self._find_first_match:
                 return system_list[0]
-            else:
-                return None
+            return None
 
     def get_data(
         self,
@@ -481,6 +487,14 @@ class TextFileSource(DataSource):
             current_file_version = version_for_file_path(self._file)
             if current_file_version == self._file_version:
                 return
+        else:
+            # current_file_version should never be used if self._cache_enabled
+            # is not set, but some linters do not detect that the branch
+            # condition here is the same as later when the variable is used. In
+            # theory, self._cache_enabled could be changed in between by some
+            # concurrently running thread, so initializing does not only
+            # satisfy the linter but actually makes the code a bit safer.
+            current_file_version = ""
         # Before reading the new data, we have to clear our internal cache of
         # the data.
         self._file_version = ""
@@ -492,7 +506,7 @@ class TextFileSource(DataSource):
         # generate a better error message in case the same system ID is used
         # more than once.
         system_line_no = {}
-        with open(self._file, newline="") as file:
+        with open(self._file, newline="", encoding="utf-8") as file:
             line_no = 0
             for line in file:
                 line_no += 1
@@ -519,9 +533,9 @@ class TextFileSource(DataSource):
                                 self._file, line_no, line
                             )
                         )
-                    elif self._mismatch_action == "ignore":
+                    if self._mismatch_action == "ignore":
                         continue
-                    elif self._mismatch_action == "warn":
+                    if self._mismatch_action == "warn":
                         logger.warning(
                             'Error while parsing file %s line %d: "%s" does '
                             "not match the specified format.",
@@ -530,12 +544,11 @@ class TextFileSource(DataSource):
                             line,
                         )
                         continue
-                    else:
-                        raise RuntimeError(
-                            "Invalid mismatch action: {0}".format(
-                                self._mismatch_action
-                            )
+                    raise RuntimeError(
+                        "Invalid mismatch action: {0}".format(
+                            self._mismatch_action
                         )
+                    )
                 # First, we process the system ID. The system ID is always
                 # needed, so it has a separate configuration.
                 system_id = self._process_variable(
@@ -559,9 +572,9 @@ class TextFileSource(DataSource):
                                 system_line_no[system_id],
                             )
                         )
-                    elif self._duplicate_system_id_action == "ignore":
+                    if self._duplicate_system_id_action == "ignore":
                         continue
-                    elif self._duplicate_system_id_action == "warn":
+                    if self._duplicate_system_id_action == "warn":
                         logger.warning(
                             "Duplicate system ID in file %s line %d: System "
                             'ID "%s" is already specified in line %d. '
@@ -573,12 +586,11 @@ class TextFileSource(DataSource):
                             line_no,
                         )
                         continue
-                    else:
-                        raise RuntimeError(
-                            "Invalid mismatch action: {0}".format(
-                                self._mismatch_action
-                            )
+                    raise RuntimeError(
+                        "Invalid mismatch action: {0}".format(
+                            self._mismatch_action
                         )
+                    )
                 # Next we generate the data for the system by processing each
                 # of the specified variable definitions.
                 data = OrderedDict()

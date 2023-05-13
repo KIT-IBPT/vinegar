@@ -130,7 +130,10 @@ class TftpRequestHandler(abc.ABC):
         """
         raise NotImplementedError()
 
-    def prepare_context(self, filename: str) -> typing.Any:
+    def prepare_context(
+        self,
+        filename: str,  # pylint: disable=unused-argument
+    ) -> typing.Any:
         """
         Prepare a context object for use by ``can_handle`` and ``handle``. This
         method is called for each request before calling ``can_handle``.
@@ -268,8 +271,10 @@ class TftpServer:
         else:
             self._max_block_size = max_block_size
         self._block_counter_wrap_value = block_counter_wrap_value
+        self._main_thread: typing.Optional[threading.Thread] = None
         self._running = False
         self._shutdown_requested = False
+        self._socket: typing.Optional[socket.socket] = None
         self._running_lock = threading.Lock()
 
     def start(self):
@@ -307,7 +312,7 @@ class TftpServer:
                     self._socket.setsockopt(
                         ipproto_ipv6, socket.IPV6_V6ONLY, 0
                     )
-                except Exception:
+                except (AttributeError, OSError):
                     logger.warning(
                         "Cannot set IPV6_V6ONLY socket option to 0, socket "
                         "might not be reachable via IPv4."
@@ -346,7 +351,12 @@ class TftpServer:
         # We cannot hold the lock while waiting for the thread to quit because
         # the thread might try to acquire the lock.
         try:
-            self._main_thread.join()
+            # If this method is called concurrently, self._main_thread might
+            # already be None.
+            try:
+                self._main_thread.join()  # type: ignore
+            except AttributeError:
+                pass
             self._main_thread = None
             logger.info("TFTP server has been shutdown.")
         finally:
@@ -397,6 +407,8 @@ class TftpServer:
         )
 
     def _process_invalid_request(self, opcode, req_addr):
+        # This method should only be called after self._socket has been set.
+        assert self._socket is not None
         logger.debug(
             "Received request from %s with opcode %s, but only READ or WRITE "
             "requests are allowed on this server port.",
@@ -410,9 +422,11 @@ class TftpServer:
         self._socket.sendto(data, req_addr)
 
     def _process_read_request(self, req_data, req_addr):
+        # This method should only be called after self._socket has been set.
+        assert self._socket is not None
         try:
             (filename, transfer_mode, options) = decode_read_request(req_data)
-        except Exception:
+        except ValueError:
             # If we cannot decode the read request, this is an error, but in
             # the client, not the server, so we log it with a level of INFO.
             logger.info(
@@ -485,7 +499,7 @@ class TftpServer:
         (opcode_num,) = struct.unpack_from("!H", req_data)
         try:
             opcode = Opcode(opcode_num)
-        except Exception:
+        except ValueError:
             logger.debug(
                 "Invalid request from %s: Opcode %s is not recognized.",
                 socket_address_to_str(req_addr),
@@ -495,11 +509,13 @@ class TftpServer:
         if opcode == Opcode.READ_REQUEST:
             self._process_read_request(req_data, req_addr)
         elif opcode == Opcode.WRITE_REQUEST:
-            self._process_write_request(req_data, req_addr)
+            self._process_write_request(req_addr)
         else:
             self._process_invalid_request(opcode, req_addr)
 
-    def _process_write_request(self, req_data, req_addr):
+    def _process_write_request(self, req_addr):
+        # This method should only be called after self._socket has been set.
+        assert self._socket is not None
         logger.error(
             "Received write request from %s, but this server only supports "
             "read requests",
@@ -512,6 +528,8 @@ class TftpServer:
         self._socket.sendto(data, req_addr)
 
     def _run(self):
+        # This method should only be called after self._socket has been set.
+        assert self._socket is not None
         try:
             while True:
                 with self._running_lock:
@@ -526,7 +544,7 @@ class TftpServer:
                     # A timeout is not an error, it just means that we should
                     # check the _shutdown_requested flag again.
                     pass
-                except Exception:
+                except Exception:  # pylint: disable=broad-exception-caught
                     # We do not want a problem with a request to stop the whole
                     # server, so we log the problem and continue.
                     logger.exception("Request processing failed.")
@@ -549,23 +567,23 @@ class _TftpReadRequest:
         counter reached its limit, but wrapping was disabled.
         """
 
-        pass
-
     class _ClientError(Exception):
         """
         Exception signaling that an error message was received from the client.
         """
-
-        pass
 
     class _InvalidPacket(Exception):
         """
         Exception signaling an invalid packet was received from the client.
         """
 
-        pass
+    class _Reader(abc.ABC):
+        # pylint: disable=missing-function-docstring
+        @abc.abstractmethod
+        def read(self, size: int) -> bytes:
+            raise NotImplementedError()
 
-    class _NetasciiReader:
+    class _NetasciiReader(_Reader):
         """
         Reader utility that wraps a binary file-like object and converts to
         netascii (converting single instances of carriage return (CR) and line
@@ -580,66 +598,60 @@ class _TftpReadRequest:
             self._data = b""
             self._last_byte_was_cr = False
 
-        def read(self, size):
+        # pylint: disable=missing-function-docstring
+        def read(self, size: int) -> bytes:
             while size > len(self._data):
                 new_data = self._file.read(size - len(self._data))
                 # If new_data is empty, we have reached end-of-file.
                 if not new_data:
                     break
-                else:
-                    start_index = 0
-                    index = 0
-                    # If the last byte that we read was a CR we have to check
-                    # whether the next byte is an LF. If so, we skip it,
-                    # because we already inserted that LF when we read the CR.
-                    if self._last_byte_was_cr:
-                        start_index += 1
-                        index += 1
-                        self._last_byte_was_cr = False
-                    while index < len(new_data):
-                        if new_data[index] == self.CR:
-                            if index + 1 == len(new_data):
-                                # If we find a CR but it is the last byte, we
-                                # cannot know whether it is going to be
-                                # followed by an LF, so we have to remember
-                                # that we saw a CR so that we can skip the LF
-                                # if we read it later.
-                                self._last_byte_was_cr = True
-                                self._data += (
-                                    new_data[start_index:index] + b"\r\n"
-                                )
-                                index += 1
-                                start_index = index
-                            elif new_data[index + 1] == self.LF:
-                                # If the CR is followed by an LF, everything is
-                                # fine and we can continue.
-                                index += 2
-                            else:
-                                # If the CR is not followed by an LF, we have
-                                # to insert one.
-                                self._data += (
-                                    new_data[start_index:index] + b"\r\n"
-                                )
-                                index += 1
-                                start_index = index
-                        elif new_data[index] == self.LF:
-                            # We already handled the case that an LF is
-                            # preceded by a CR, so we know that we have to
-                            # insert a CR.
+                start_index = 0
+                index = 0
+                # If the last byte that we read was a CR we have to check
+                # whether the next byte is an LF. If so, we skip it, because we
+                # already inserted that LF when we read the CR.
+                if self._last_byte_was_cr:
+                    start_index += 1
+                    index += 1
+                    self._last_byte_was_cr = False
+                while index < len(new_data):
+                    if new_data[index] == self.CR:
+                        if index + 1 == len(new_data):
+                            # If we find a CR but it is the last byte, we
+                            # cannot know whether it is going to be followed by
+                            # an LF, so we have to remember that we saw a CR so
+                            # that we can skip the LF if we read it later.
+                            self._last_byte_was_cr = True
                             self._data += new_data[start_index:index] + b"\r\n"
                             index += 1
                             start_index = index
+                        elif new_data[index + 1] == self.LF:
+                            # If the CR is followed by an LF, everything is
+                            # fine and we can continue.
+                            index += 2
                         else:
-                            # For every regular byte, we simply continue with
-                            # the next one.
+                            # If the CR is not followed by an LF, we have to
+                            # insert one.
+                            self._data += new_data[start_index:index] + b"\r\n"
                             index += 1
-                    # Finally, we have to append the remaining new data.
-                    self._data += new_data[start_index:index]
+                            start_index = index
+                    elif new_data[index] == self.LF:
+                        # We already handled the case that an LF is preceded by
+                        # a CR, so we know that we have to insert a CR.
+                        self._data += new_data[start_index:index] + b"\r\n"
+                        index += 1
+                        start_index = index
+                    else:
+                        # For every regular byte, we simply continue with the
+                        # next one.
+                        index += 1
+                # Finally, we have to append the remaining new data.
+                self._data += new_data[start_index:index]
             data = self._data[0:size]
             self._data = self._data[size:]
             return data
 
-    class _OctetReader:
+    class _OctetReader(_Reader):
         """
         Reader utility that wraps a binary file-like object and returns the
         bytes as-is.
@@ -649,14 +661,14 @@ class _TftpReadRequest:
             self._file = file
             self._data = b""
 
-        def read(self, size):
+        # pylint: disable=missing-function-docstring
+        def read(self, size: int) -> bytes:
             while size > len(self._data):
                 new_data = self._file.read(size - len(self._data))
                 # If new_data is empty, we have reached end-of-file.
                 if not new_data:
                     break
-                else:
-                    self._data += new_data
+                self._data += new_data
             data = self._data[0:size]
             self._data = self._data[size:]
             return data
@@ -665,8 +677,6 @@ class _TftpReadRequest:
         """
         Exception signaling that the transfer has been aborted by the client.
         """
-
-        pass
 
     def __init__(
         self,
@@ -710,10 +720,7 @@ class _TftpReadRequest:
             options[OPTION_BLOCK_SIZE]
         ):
             requested_block_size = int(options[OPTION_BLOCK_SIZE])
-            if (
-                requested_block_size >= MIN_BLOCK_SIZE
-                and requested_block_size <= max_block_size
-            ):
+            if max_block_size >= requested_block_size >= MIN_BLOCK_SIZE:
                 supported_options[OPTION_BLOCK_SIZE] = str(
                     requested_block_size
                 )
@@ -726,10 +733,7 @@ class _TftpReadRequest:
             options[OPTION_TIMEOUT]
         ):
             requested_timeout = int(options[OPTION_TIMEOUT])
-            if (
-                requested_timeout >= MIN_TIMEOUT
-                and requested_timeout <= max_timeout
-            ):
+            if max_timeout >= requested_timeout >= MIN_TIMEOUT:
                 supported_options[OPTION_TIMEOUT] = str(requested_timeout)
                 self._timeout = requested_timeout
         # When the client specifies the transfer size option, it has to send a
@@ -740,6 +744,10 @@ class _TftpReadRequest:
         ):
             supported_options[OPTION_TRANSFER_SIZE] = None
         self._options = supported_options
+        self._file: typing.Optional[io.BufferedIOBase] = None
+        self._file_reader: typing.Optional[_TftpReadRequest._Reader] = None
+        self._socket: typing.Optional[socket.socket] = None
+        self._time_limit = 0.0
         # After we have setup everything, we can start the processing thread.
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
@@ -748,12 +756,13 @@ class _TftpReadRequest:
         if block_number == MAX_BLOCK_NUMBER:
             if self._block_counter_wrap_value is None:
                 raise _TftpReadRequest._BlockCounterOverflow()
-            else:
-                return self._block_counter_wrap_value
-        else:
-            return block_number + 1
+            return self._block_counter_wrap_value
+        return block_number + 1
 
     def _process_request(self):
+        # self._socket is initialized in _run, so it should always be set when
+        # this method is called.
+        assert self._socket is not None
         try:
             if self._options:
                 self._send_options_ack()
@@ -784,7 +793,7 @@ class _TftpReadRequest:
                     "File is too large to complete the transfer.",
                 )
             )
-        except _TftpReadRequest._ClientError as e:
+        except _TftpReadRequest._ClientError as err:
             # If the client sent an error message, we log it and abort this
             # connection.
             logger.info(
@@ -792,10 +801,10 @@ class _TftpReadRequest:
                 "aborted due to a client error: %s",
                 self._filename,
                 socket_address_to_str(self._client_address),
-                e.args[0],
+                err.args[0],
             )
-        except _TftpReadRequest._InvalidPacket as e:
-            message = e.args[0]
+        except _TftpReadRequest._InvalidPacket as err:
+            message = err.args[0]
             # If we received an invalid packet, we log this, send an error to
             # the client, and abort this connection.
             logger.info(
@@ -817,7 +826,7 @@ class _TftpReadRequest:
                 self._filename,
                 socket_address_to_str(self._client_address),
             )
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             # Otherwise, there must be some kind of internal error, so we log
             # the exception and send an error code to the client.
             logger.exception(
@@ -836,6 +845,8 @@ class _TftpReadRequest:
             self._send(data)
 
     def _process_transfer_size_option(self):
+        # self._file should always be set before this method is called.
+        assert self._file is not None
         # If the client did not specify the transfer size option, we do not
         # have to do anything.
         if OPTION_TRANSFER_SIZE not in self._options:
@@ -862,9 +873,11 @@ class _TftpReadRequest:
                 self._options[OPTION_TRANSFER_SIZE] = str(
                     len(self._file.getbuffer()) - self._file.tell()
                 )
-            except Exception:
+            except ValueError:
                 # We ignore any exception that might happen here: We can still
-                # transfer the file, we just cannot tell its size.
+                # transfer the file, we just cannot tell its size. However,
+                # this should be very rare. The only case where BytesIO raises
+                # an exception is when it has already been closed.
                 del self._options[OPTION_TRANSFER_SIZE]
         else:
             # For any other file, we check whether we can get the backing file
@@ -877,12 +890,15 @@ class _TftpReadRequest:
             try:
                 file_stat = os.fstat(self._file.fileno())
                 self._options[OPTION_TRANSFER_SIZE] = str(file_stat.st_size)
-            except Exception:
+            except OSError:
                 # We ignore any exception that might happen here: We can still
                 # transfer the file, we just cannot tell its size.
                 del self._options[OPTION_TRANSFER_SIZE]
 
     def _receive(self):
+        # self._socket is initialized in _run, so it should always be set when
+        # this method is called.
+        assert self._socket is not None
         self._set_socket_timeout()
         (data, from_addr) = self._socket.recvfrom(MAX_REQUEST_PACKET_SIZE)
         # The TFTP specification demands that we send an error packet to each
@@ -916,8 +932,12 @@ class _TftpReadRequest:
         try:
             opcode = Opcode(opcode_num)
         except ValueError:
+            # We do not include the original exception here because it will not
+            # contain any other useful information.
+            #
+            # pylint: disable=raise-missing-from
             raise _TftpReadRequest._InvalidPacket(
-                "Received packet with invalid opcode %s.", opcode_num
+                "Received packet with invalid opcode {}.".format(opcode_num)
             )
         if opcode == Opcode.ACK:
             try:
@@ -929,6 +949,10 @@ class _TftpReadRequest:
                 )
                 return block_number
             except ValueError:
+                # We do not include the original exception here because it will
+                # not contain any other useful information.
+                #
+                # pylint: disable=raise-missing-from
                 raise _TftpReadRequest._InvalidPacket(
                     "Received malformed ACK packet."
                 )
@@ -942,16 +966,19 @@ class _TftpReadRequest:
                         error_code.value, error_message
                     )
                 )
-            elif error_code is not None:
+            if error_code is not None:
                 raise _TftpReadRequest._ClientError(
                     "Error code {0}.".format(error_code.value)
                 )
-            elif error_message:
+            if error_message:
                 raise _TftpReadRequest._ClientError(
                     "Error code unknown: {0}".format(error_message)
                 )
-            else:
-                raise _TftpReadRequest._ClientError("Unknown error.")
+            raise _TftpReadRequest._ClientError("Unknown error.")
+        raise _TftpReadRequest._InvalidPacket(
+            "Received packet with opcode {} when ACK or ERROR was "
+            "expected.".format(opcode.name)
+        )
 
     def _reset_timeout(self):
         self._time_limit = time.monotonic() + self._timeout
@@ -961,7 +988,7 @@ class _TftpReadRequest:
             self._socket = socket.socket(
                 family=socket.AF_INET6, type=socket.SOCK_DGRAM
             )
-        except Exception:
+        except OSError:
             logger.exception(
                 'Error creating socket for read request for file "%s" from '
                 "client %s.",
@@ -987,13 +1014,13 @@ class _TftpReadRequest:
             # warning for the main socket.
             try:
                 self._socket.setsockopt(ipproto_ipv6, socket.IPV6_V6ONLY, 0)
-            except Exception:
+            except (AttributeError, OSError):
                 pass
             try:
                 self._file = self._handler_function(
                     self._filename, self._client_address, self._handler_context
                 )
-            except TftpError as e:
+            except TftpError as err:
                 # A TftpError is not necessarily a "real" error, so we only log
                 # it with a level of info.
                 logger.info(
@@ -1002,15 +1029,18 @@ class _TftpReadRequest:
                     'message "%s".',
                     self._filename,
                     socket_address_to_str(self._client_address),
-                    e.error_code,
-                    e.message,
+                    err.error_code,
+                    err.message,
                 )
-                data = error_packet(e.error_code, e.message)
+                data = error_packet(err.error_code, err.message)
                 # When sending the error, we want to use a fresh timeout value.
                 self._socket.settimeout(self._timeout)
                 self._send(data)
                 return
-            except Exception:
+            except Exception:  # pylint: disable=broad-exception-caught
+                # We catch all regular exceptions here. If we did not, the
+                # thread would be killed without properly signaling the problem
+                # to the client and logging the exception.
                 logger.exception(
                     'Request handler for read request for file "%s" from '
                     "client %s raised an exception.",
@@ -1044,9 +1074,13 @@ class _TftpReadRequest:
                 self._process_request()
 
     def _send(self, data):
+        # self._socket should have been set before this method was called.
+        assert self._socket is not None
         self._socket.sendto(data, self._client_address)
 
     def _send_data(self):
+        # self._file_reader should have been set before this method was called.
+        assert self._file_reader is not None
         block_number = 0
         data = self._file_reader.read(self._block_size)
         while len(data) == self._block_size:
@@ -1110,6 +1144,8 @@ class _TftpReadRequest:
                     raise
 
     def _set_socket_timeout(self):
+        # self._socket should have been set before this method was called.
+        assert self._socket is not None
         now = time.monotonic()
         time_remaining = self._time_limit - now
         if time_remaining > 0.0:

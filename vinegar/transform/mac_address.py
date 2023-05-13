@@ -49,7 +49,7 @@ def normalize(
     target_case: str = "upper",
     delimiter: str = ":",
     raise_error_if_malformed: bool = False,
-):
+) -> str:
     """
     Normalize a MAC address.
 
@@ -102,8 +102,7 @@ def normalize(
     if match is None:
         if raise_error_if_malformed:
             raise ValueError("Not a valid MAC address: {0}".format(value))
-        else:
-            return value
+        return value
     # The parts of the string that represent the address bytes are in groups
     # 1, 3, 5, 7, 9, and 11 of the expression.
     addr_bytes = match.group(1, 3, 5, 7, 9, 11)

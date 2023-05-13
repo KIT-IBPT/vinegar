@@ -98,7 +98,6 @@ import argparse
 import collections.abc
 import logging
 import logging.config
-import os.path
 import signal
 import sys
 import threading
@@ -142,7 +141,7 @@ def main():
 
 
 def read_server_config(
-    config_file: str = None,
+    config_file: typing.Optional[str] = None,
 ) -> typing.Mapping[str, typing.Any]:
     """
     Read the server configuration.
@@ -164,8 +163,8 @@ def read_server_config(
             config_file = "C:\\Vinegar\\conf\\vinegar-server.yaml"
         else:
             config_file = "/etc/vinegar/vinegar-server.yaml"
-    with open(config_file, mode="r", encoding="utf-8") as f:
-        config = yaml.safe_load(f)
+    with open(config_file, mode="r", encoding="utf-8") as config_file_handle:
+        config = yaml.safe_load(config_file_handle)
     if config is None:
         config = {}
     return config
@@ -299,14 +298,14 @@ def _run_server_internal(config):
     if not isinstance(tftp_config, collections.abc.Mapping):
         raise TypeError(
             "Expected a dictionary for the tftp key, but found an object of "
-            "type ''." % type(tftp_config).__name__
+            "type '%s'." % type(tftp_config).__name__
         )
     tftp_request_handlers = []
     request_handler_configs = tftp_config.get("request_handlers", [])
     if not isinstance(request_handler_configs, collections.abc.Sequence):
         raise TypeError(
             "Expected a list for the tftp:request_handlers key, but found an "
-            "object of type ''." % type(request_handler_configs).__name__
+            "object of type '%s'." % type(request_handler_configs).__name__
         )
     for request_handler_config in request_handler_configs:
         if "name" not in request_handler_config:

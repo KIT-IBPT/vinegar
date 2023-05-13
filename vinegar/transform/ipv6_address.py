@@ -3,9 +3,10 @@ Transformations for IPv6 addresses.
 """
 
 import socket
+import typing
 
 
-def net_address(value: str, raise_error_if_malformed: bool = False):
+def net_address(value: str, raise_error_if_malformed: bool = False) -> str:
     """
     Calculate the network address for an IPv6 address and subnet mask.
 
@@ -29,16 +30,14 @@ def net_address(value: str, raise_error_if_malformed: bool = False):
     except ValueError:
         if raise_error_if_malformed:
             raise
-        else:
-            return value
+        return value
     if mask is None:
         if raise_error_if_malformed:
             raise ValueError(
                 "Cannot calculate net address for IP address without subnet "
                 "mask: {0}".format(value)
             )
-        else:
-            return value
+        return value
     offset = 0
     addr_as_int = 0
     for addr_byte in reversed(addr_bytes):
@@ -48,13 +47,13 @@ def net_address(value: str, raise_error_if_malformed: bool = False):
     addr_as_int = addr_as_int & mask_as_int
     addr_bytes = bytearray(len(addr_bytes))
     offset = 120
-    for i in range(0, len(addr_bytes)):
+    for i, _ in enumerate(addr_bytes):
         addr_bytes[i] = (addr_as_int >> offset) & 255
         offset -= 8
     return "%s/%d" % (socket.inet_ntop(socket.AF_INET6, addr_bytes), mask)
 
 
-def normalize(value: str, raise_error_if_malformed: bool = False):
+def normalize(value: str, raise_error_if_malformed: bool = False) -> str:
     """
     Normalize an IPv6 address.
 
@@ -91,15 +90,14 @@ def normalize(value: str, raise_error_if_malformed: bool = False):
     except ValueError:
         if raise_error_if_malformed:
             raise
-        else:
-            return value
+        return value
     value = socket.inet_ntop(socket.AF_INET6, addr_bytes)
     if mask is not None:
         value = "{0}/{1}".format(value, mask)
     return value
 
 
-def strip_mask(value: str, raise_error_if_malformed: bool = False):
+def strip_mask(value: str, raise_error_if_malformed: bool = False) -> str:
     """
     Strip a subnet mask from an IPv6 address (if present).
 
@@ -123,15 +121,16 @@ def strip_mask(value: str, raise_error_if_malformed: bool = False):
     except ValueError:
         if raise_error_if_malformed:
             raise
-        else:
-            return value
+        return value
     # Now we know that the value is well-formed, so we can simply cut
     # everything after the "/" character.
     value, _, _ = value.partition("/")
     return value
 
 
-def _str_to_addr_bytes_and_mask(value):
+def _str_to_addr_bytes_and_mask(
+    value: str,
+) -> typing.Tuple[bytes, typing.Optional[int]]:
     if "/" in value:
         (addr, mask) = value.split("/", 1)
     else:
@@ -147,5 +146,10 @@ def _str_to_addr_bytes_and_mask(value):
             if mask < 0 or mask > 128:
                 raise ValueError()
         except ValueError:
+            # We are not interested in the original exception because the
+            # exception that we raise here contains all the necessary
+            # information.
+            #
+            # pylint: disable=raise-missing-from
             raise ValueError("Invalid mask in IPv6 address: {0}".format(value))
     return addr_bytes, mask

@@ -23,4 +23,4 @@ import sys
 if sys.version_info >= (3, 7):
     OrderedDict = dict
 else:
-    from collections import OrderedDict
+    from collections import OrderedDict  # pylint: disable=unused-import

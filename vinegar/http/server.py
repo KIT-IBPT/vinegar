@@ -20,6 +20,191 @@ from vinegar.utils.socket import ipv6_address_unwrap, socket_address_to_str
 logger = logging.getLogger(__name__)
 
 
+class _DelegatingRequestHandler(http.server.BaseHTTPRequestHandler):
+    """
+    Request handler passed to the internal ``HTTPServer``. This request handler
+    gets the list of actual request handlers from the ``server`` object and
+    delegates to the first handler that can handle the request.
+
+    If there is no handler that can handle the request, HTTP status code 404
+    (not found) is sent to the client.
+
+    This request handler overrides the `log_request` and `log_error` methods to
+    direct messages to the module logger. It does not override`log_message`
+    because that method is not used directly by the base class.
+    """
+
+    def __init__(
+        self,
+        request: socket.socket,
+        client_address: typing.Tuple[typing.Union[str, bytes, bytearray], int],
+        # Probably because it is defined later, Pylance complains that
+        # _ThreadingHttpServer is undefined.
+        server: "_ThreadingHttpServer",  # type: ignore
+    ):
+        super().__init__(request, client_address, server)
+        self.server: _ThreadingHTTPServer = server
+
+    def address_string(self):
+        # We override this method so that we can unwrap an IPv4 address wrapped
+        # in an IPv6 address
+        return ipv6_address_unwrap(self.client_address[0])
+
+    # For compatibility, we have to use the method signature from the base
+    # class, so we have to disable the warnings that go along with this
+    # signature.
+    #
+    # pylint: disable=redefined-builtin,unused-argument
+    def log_error(self, format, *args):
+        # We do not use log_error directly and the base class does not use it
+        # for anything that we want logged, so we simply do nothing here.
+        pass
+
+    def log_request(self, code="-", size="-"):
+        if isinstance(code, http.HTTPStatus):
+            code = code.value
+        logger.info(
+            'Processed HTTP request "%s" from %s with status code %s.',
+            self.requestline,
+            self.address_string(),
+            str(code),
+        )
+
+    def _delegate_request(self):
+        response_started = False
+        try:
+            # No sane HTTP client will ever send a request path that does not
+            # start with a slash or contains a null byte. We do not check that
+            # the request path does not contain a null byte after decoding,
+            # this is the job of the handler that does the decoding.
+            if (not self.path.startswith("/")) or ("\0" in self.path):
+                response_started = True
+                self.send_error(http.HTTPStatus.BAD_REQUEST)
+                return
+            for handler in self.server.real_request_handlers:
+                context = handler.prepare_context(self.path)
+                if handler.can_handle(self.path, context):
+                    try:
+                        (status, headers, body) = handler.handle(
+                            self.path,
+                            self.command,
+                            # Due to the base class not having property type
+                            # hints, the types cannot be guessed correctly, so
+                            # we have to ignore them in order to avoid
+                            # warnings.
+                            self.headers,  # type: ignore
+                            self.rfile,  # type: ignore
+                            self.client_address,
+                            context,
+                        )
+                    # We really want to catch almost all exceptions here. If we
+                    # did not, the server thread would simply crash, and the
+                    # error would not be communicated to the client and
+                    # wouldn’t be logged properly either.
+                    except Exception:  # pylint: disable=broad-exception-caught
+                        logger.exception(
+                            'Request handler for %s request for file "%s" '
+                            "from client %s raised an exception.",
+                            self.command,
+                            self.path,
+                            socket_address_to_str(self.client_address),
+                        )
+                        response_started = True
+                        self.send_error(http.HTTPStatus.INTERNAL_SERVER_ERROR)
+                        return
+                    # If status is an error code and there is neither a body
+                    # nor are there headers, we use send_error instead of
+                    # send_response.
+                    response_started = True
+                    if (
+                        (status.value >= 400)
+                        and (not headers)
+                        and (body is None)
+                    ):
+                        self.send_error(status)
+                        return
+                    self.send_response(status)
+                    if headers is not None:
+                        for header_name, header_value in headers.items():
+                            self.send_header(header_name, header_value)
+                        self.end_headers()
+                    if body is not None:
+                        shutil.copyfileobj(body, self.wfile)
+                    return
+            self.send_error(http.HTTPStatus.NOT_FOUND)
+        # We really want to catch almost all exceptions here. If we did not,
+        # the server thread would simply crash, and the error would not be
+        # communicated to the client and wouldn’t be logged properly either.
+        except Exception:  # pylint: disable=broad-exception-caught
+            # We do not want a problem with a request to bubble up into the
+            # calling code, so we log the problem and continue.
+            logger.exception("Request processing failed.")
+            if not response_started:
+                self.send_error(http.HTTPStatus.INTERNAL_SERVER_ERROR)
+            return
+
+    # For each support HTTP method, the handle_one_request() method expects a
+    # corresponding do_... method.
+    do_GET = _delegate_request
+    do_HEAD = _delegate_request
+    do_POST = _delegate_request
+    do_PUT = _delegate_request
+    do_DELETE = _delegate_request
+
+
+# We have to define _ThreadingHTTPServer first because we reference it in
+# _DelegatingRequestHandler.
+class _ThreadingHTTPServer(
+    socketserver.ThreadingMixIn, http.server.HTTPServer
+):
+    """
+    Subclass of ``http.server.HTTPServer`` that uses the
+    ``socketserver.ThreadingMixIn``. This means that this server spawns a new
+    daemon thread for each request.
+
+    This server also sets the address family to ``socket.AF_INET6`` so that
+    IPv6 connections are supported and overrides the `server_bind` method to
+    set the ``IPPROTO_IPV6`` ``IPV6_V6ONLY`` socket option to 0.
+    """
+
+    def __init__(
+        self,
+        server_address: typing.Tuple[typing.Union[str, bytes, bytearray], int],
+        request_handler_class: typing.Callable[
+            [typing.Any, typing.Any, typing.Self],
+            socketserver.BaseRequestHandler,
+        ],
+        bind_and_activate: bool = True,
+    ) -> None:
+        super().__init__(
+            server_address, request_handler_class, bind_and_activate
+        )
+        self.address_family = socket.AF_INET6
+        self.daemon_threads = True
+        self.real_request_handlers: typing.List[HttpRequestHandler] = []
+
+    def server_bind(self):
+        # socket.IPPROTO_IPV6 is not available when running on Windows and
+        # using Python < 3.8, so we fall back to a fixed value if it is not
+        # available.
+        try:
+            ipproto_ipv6 = socket.IPPROTO_IPV6
+        except AttributeError:
+            ipproto_ipv6 = 41
+        # socket.IPV6_V6ONLY, on the other hand, should be available on
+        # Windows, at least for the Python versions we care about (>= 3.5). If
+        # it is not available or if the call to setsockopt fails, we log a
+        # warning, but continue.
+        try:
+            self.socket.setsockopt(ipproto_ipv6, socket.IPV6_V6ONLY, 0)
+        except (AttributeError, OSError):
+            logger.warning(
+                "Cannot set IPV6_V6ONLY socket option to 0, socket might not "
+                "be reachable via IPv4."
+            )
+        super().server_bind()
+
+
 class HttpRequestHandler(abc.ABC):
     """
     Interface for a request handler. A request handler should be derived from
@@ -114,7 +299,10 @@ class HttpRequestHandler(abc.ABC):
         """
         raise NotImplementedError()
 
-    def prepare_context(self, filename: str) -> typing.Any:
+    def prepare_context(
+        self,
+        filename: str,  # pylint: disable=unused-argument
+    ) -> typing.Any:
         """
         Prepare a context object for use by ``can_handle`` and ``handle``. This
         method is called for each request before calling ``can_handle``.
@@ -151,152 +339,6 @@ class HttpServer:
     request and sends the requested data to the client.
     """
 
-    class _DelegatingRequestHandler(http.server.BaseHTTPRequestHandler):
-        """
-        Request handler passed to the internal ``HTTPServer``. This request
-        handler gets the list of actual request handlers from the ``server``
-        object and delegates to the first handler that can handle the request.
-
-        If there is no handler that can handle the request, HTTP status code
-        404 (not found) is sent to the client.
-
-        This request handler overrides the `log_request` and `log_error`
-        methods to direct messages to the module logger. It does not override
-        `log_message` because that method is not used directly by the base
-        class.
-        """
-
-        def address_string(self):
-            # We override this method so that we can unwrap an IPv4 address
-            # wrapped in an IPv6 address
-            return ipv6_address_unwrap(self.client_address[0])
-
-        def log_error(self, format, *args):
-            # We do not use log_error directly and the base class does not use
-            # it for anything that we want logged, so we simply do nothing
-            # here.
-            pass
-
-        def log_request(self, code="-", size="-"):
-            if isinstance(code, http.HTTPStatus):
-                code = code.value
-            logger.info(
-                'Processed HTTP request "%s" from %s with status code %s.',
-                self.requestline,
-                self.address_string(),
-                str(code),
-            )
-
-        def _delegate_request(self):
-            try:
-                response_started = False
-                # No sane HTTP client will ever send a request path that does
-                # not start with a slash or contains a null byte. We do not
-                # check that the request path does not contain a null byte
-                # after decoding, this is the job of the handler that does the
-                # decoding.
-                if (not self.path.startswith("/")) or ("\0" in self.path):
-                    response_started = True
-                    self.send_error(http.HTTPStatus.BAD_REQUEST)
-                    return
-                for handler in self.server.real_request_handlers:
-                    context = handler.prepare_context(self.path)
-                    if handler.can_handle(self.path, context):
-                        try:
-                            (status, headers, body) = handler.handle(
-                                self.path,
-                                self.command,
-                                self.headers,
-                                self.rfile,
-                                self.client_address,
-                                context,
-                            )
-                        except Exception:
-                            logger.exception(
-                                'Request handler for %s request for file "%s" '
-                                "from client %s raised an exception.",
-                                self.command,
-                                self.path,
-                                socket_address_to_str(self.client_address),
-                            )
-                            response_started = True
-                            self.send_error(
-                                http.HTTPStatus.INTERNAL_SERVER_ERROR
-                            )
-                            return
-                        # If status is an error code and there is neither a
-                        # body nor are there headers, we use send_error instead
-                        # of send_response.
-                        response_started = True
-                        if (
-                            (status.value >= 400)
-                            and (not headers)
-                            and (body is None)
-                        ):
-                            self.send_error(status)
-                            return
-                        self.send_response(status)
-                        if headers is not None:
-                            for header_name, header_value in headers.items():
-                                self.send_header(header_name, header_value)
-                            self.end_headers()
-                        if body is not None:
-                            shutil.copyfileobj(body, self.wfile)
-                        return
-                self.send_error(http.HTTPStatus.NOT_FOUND)
-            except Exception:
-                # We do not want a problem with a request to bubble up into the
-                # calling code, so we log the problem and continue.
-                logger.exception("Request processing failed.")
-                if not response_started:
-                    self.send_error(http.HTTPStatus.INTERNAL_SERVER_ERROR)
-                return
-
-        # For each support HTTP method, the handle_one_request() method expects
-        # a corresponding do_... method.
-        do_GET = _delegate_request
-        do_HEAD = _delegate_request
-        do_POST = _delegate_request
-        do_PUT = _delegate_request
-        do_DELETE = _delegate_request
-
-    class _ThreadingHTTPServer(
-        socketserver.ThreadingMixIn, http.server.HTTPServer
-    ):
-        """
-        Subclass of ``http.server.HTTPServer`` that uses the
-        ``socketserver.ThreadingMixIn``. This means that this server spawns a
-        new daemon thread for each request.
-
-        This server also sets the address family to ``socket.AF_INET6`` so that
-        IPv6 connections are supported and overrides the `server_bind` method
-        to set the ``IPPROTO_IPV6`` ``IPV6_V6ONLY`` socket option to 0.
-        """
-
-        address_family = socket.AF_INET6
-        daemon_threads = True
-
-        def server_bind(self):
-            # socket.IPPROTO_IPV6 is not available when running on Windows and
-            # using Python < 3.8, so we fall back to a fixed value if it is not
-            # available.
-            try:
-                ipproto_ipv6 = socket.IPPROTO_IPV6
-            except AttributeError:
-                ipproto_ipv6 = 41
-            # socket.IPV6_V6ONLY, on the other hand, should be available on
-            # Windows, at least for the Python versions we care about (>= 3.5).
-            # If it is not available or if the call to setsockopt fails, we log
-            # a warning, but continue.
-            try:
-                self.socket.setsockopt(ipproto_ipv6, socket.IPV6_V6ONLY, 0)
-            except Exception:
-                logger.warning(
-                    "Cannot set IPV6_V6ONLY socket option to 0, socket might "
-                    "not be reachable via IPv4."
-                )
-            super().server_bind()
-
     def __init__(
         self,
         request_handlers: typing.List[HttpRequestHandler],
@@ -332,8 +374,10 @@ class HttpServer:
         self._request_handlers = request_handlers
         self._bind_address = bind_address
         self._bind_port = bind_port
+        self._main_thread: typing.Optional[threading.Thread] = None
         self._running = False
         self._running_lock = threading.Lock()
+        self._server: typing.Optional[_ThreadingHTTPServer] = None
 
     def start(self):
         """
@@ -345,9 +389,9 @@ class HttpServer:
             if self._running:
                 return
 
-            self._server = self._ThreadingHTTPServer(
+            self._server = _ThreadingHTTPServer(
                 (self._bind_address, self._bind_port),
-                self._DelegatingRequestHandler,
+                _DelegatingRequestHandler,
             )
             logger.info(
                 "HTTP server is listening on %s.",
@@ -367,12 +411,14 @@ class HttpServer:
         with self._running_lock:
             if not self._running:
                 return
-            self._server.shutdown()
+            if self._server is not None:
+                self._server.shutdown()
             logger.info("HTTP server has been shutdown.")
             self._running = False
 
     def _run(self):
-        self._server.serve_forever(0.1)
+        if self._server is not None:
+            self._server.serve_forever(0.1)
 
 
 def create_http_server(

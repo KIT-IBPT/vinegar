@@ -174,11 +174,11 @@ import copy
 import os.path
 import pathlib
 
+from typing import Any, Mapping, Optional, Tuple
+
 import vinegar.template
 import vinegar.utils.cache
 import vinegar.utils.system_matcher
-
-from typing import Any, Mapping, Optional, Tuple
 
 from vinegar.data_source import DataSource, merge_data_trees
 from vinegar.utils import oyaml as yaml
@@ -186,7 +186,6 @@ from vinegar.utils.odict import OrderedDict
 from vinegar.utils.smart_dict import SmartLookupOrderedDict
 from vinegar.utils.version import (
     aggregate_version,
-    version_for_file_path,
     version_for_str,
 )
 
@@ -282,6 +281,7 @@ class YamlTargetSource(DataSource):
 _CachedData = collections.namedtuple("_CachedData", ("data", "version"))
 
 
+# pylint: disable=too-few-public-methods
 class _DataCompiler:
     """
     Compiles data for a system.
@@ -308,6 +308,11 @@ class _DataCompiler:
         self._template_engine = template_engine
         self._top_file = top_file
 
+    # We create some attributes here instead of in __init__. This is okay
+    # because this is the only public method of this class, so all other
+    # methods can still be sure that these attributes exist.
+    #
+    # pylint: disable=attribute-defined-outside-init
     def compile_data(self, system_id, preceding_data, old_cache):
         """
         Compiles the data for the specified system ID and preceding data.
@@ -416,22 +421,28 @@ class _DataCompiler:
             else:
                 cache_valid = False
                 file_data = yaml.safe_load(file_yaml)
-        except Exception as e:
+        except Exception as err:
             raise RuntimeError(
                 "Error processing data file {0}.".format(file_name)
-            ) from e
+            ) from err
         # If the data from the cache is valid, we can simply use it. Otherwise,
         # we have to process the file content.
         if cache_valid:
             # cached_file.data is a tuple of three items: The data preceding
             # the include block, the list stored inside the include block, and
             # the data following the include block.
-            preceding_data, include_files, following_data = cached_file.data
+            (
+                preceding_data,
+                include_files,
+                following_data,
+            ) = cached_file.data  # type: ignore
             # We might have gotten the data from the old cache, so we have to
             # copy it to the new cache.
             self._new_cache[cache_key] = cached_file
         else:
-            if not isinstance(file_data, collections.abc.Mapping):
+            if not isinstance(
+                file_data, collections.abc.Mapping  # type: ignore
+            ):
                 raise TypeError(
                     "File {0} does not contain a dictionary as its top "
                     "structure.".format(file_name)
@@ -481,7 +492,10 @@ class _DataCompiler:
                 preceding_data[key] = value
             else:
                 following_data[key] = value
-        return preceding_data, include_files, following_data
+        # Some linters may think that include_files could be uninitialized
+        # here. However, we checked earlier that file_data contains the
+        # "include" key, so the loop must have set include_files.
+        return preceding_data, include_files, following_data  # type: ignore
 
     def _process_data_files(self, parent_files, file_list):
         if not isinstance(file_list, collections.abc.Sequence):
@@ -557,8 +571,8 @@ class _DataCompiler:
                 self._new_cache["top"] = cached_top
                 return cached_top.data
             top_data = yaml.safe_load(top_yaml)
-        except Exception as e:
-            raise RuntimeError("Error processing top file.") from e
+        except Exception as err:
+            raise RuntimeError("Error processing top file.") from err
         if top_data is None:
             # If the top data is empty, this is most likely an error, however
             # when using Jinja in the top file, it could be that it is by
@@ -567,12 +581,11 @@ class _DataCompiler:
             if self._allow_empty_top:
                 self._new_cache["top"] = _CachedData(None, top_version)
                 return None
-            else:
-                raise TypeError(
-                    "Top file is empty. This is most likely an error. If not, "
-                    "set the allow_empty_top configuration option to True, to "
-                    "disable this exception."
-                )
+            raise TypeError(
+                "Top file is empty. This is most likely an error. If not, set "
+                "the allow_empty_top configuration option to True, to disable "
+                "this exception."
+            )
         if not isinstance(top_data, collections.abc.Mapping):
             raise TypeError(
                 "Top file does not contain a dictionary as its top structure."
@@ -588,7 +601,6 @@ class _DataCompiler:
                 )
             if self._expression_matches(target_expression):
                 data_files += file_list
-            pass
         self._new_cache["top"] = _CachedData(data_files, top_version)
         return data_files
 

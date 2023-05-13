@@ -36,23 +36,24 @@ but it can simply be used like the regular module. For example::
 
 import platform
 import sys
-from vinegar.utils.odict import OrderedDict
 
 import yaml as pyyaml
 
+from vinegar.utils.odict import OrderedDict
 
-_items = "viewitems" if sys.version_info < (3,) else "items"
-_std_dict_is_order_preserving = sys.version_info >= (3, 7) or (
+
+_ITEMS = "viewitems" if sys.version_info < (3,) else "items"
+_STD_DICT_IS_ORDER_PRESERVING = sys.version_info >= (3, 7) or (
     sys.version_info >= (3, 6)
     and platform.python_implementation() == "CPython"
 )
 
 
-def map_representer(dumper, data):
-    return dumper.represent_dict(getattr(data, _items)())
+def _map_representer(dumper, data):
+    return dumper.represent_dict(getattr(data, _ITEMS)())
 
 
-def map_constructor(loader, node):
+def _map_constructor(loader, node):
     loader.flatten_mapping(node)
     pairs = loader.construct_pairs(node)
     try:
@@ -65,28 +66,31 @@ def map_constructor(loader, node):
 if pyyaml.safe_dump is pyyaml.dump:
     # PyYAML v4.x
     SafeDumper = pyyaml.dumper.Dumper
-    DangerDumper = pyyaml.dumper.DangerDumper
+    # pylint: disable=no-member
+    DangerDumper = pyyaml.dumper.DangerDumper  # type: ignore
 else:
     SafeDumper = pyyaml.dumper.SafeDumper
     DangerDumper = pyyaml.dumper.Dumper
 
-pyyaml.add_representer(dict, map_representer, Dumper=SafeDumper)
-pyyaml.add_representer(OrderedDict, map_representer, Dumper=SafeDumper)
-pyyaml.add_representer(dict, map_representer, Dumper=DangerDumper)
-pyyaml.add_representer(OrderedDict, map_representer, Dumper=DangerDumper)
+pyyaml.add_representer(dict, _map_representer, Dumper=SafeDumper)
+pyyaml.add_representer(OrderedDict, _map_representer, Dumper=SafeDumper)
+pyyaml.add_representer(dict, _map_representer, Dumper=DangerDumper)
+pyyaml.add_representer(OrderedDict, _map_representer, Dumper=DangerDumper)
 
 
-Loader = None
-if not _std_dict_is_order_preserving:
-    for loader_name in pyyaml.loader.__all__:
+Loader = None  # pylint: disable=invalid-name
+if not _STD_DICT_IS_ORDER_PRESERVING:
+    for loader_name in pyyaml.loader.__all__:  # type: ignore
         Loader = getattr(pyyaml.loader, loader_name)
         pyyaml.add_constructor(
-            "tag:yaml.org,2002:map", map_constructor, Loader=Loader
+            "tag:yaml.org,2002:map", _map_constructor, Loader=Loader
         )
 
 
 # Merge PyYAML namespace into ours.
 # This allows users a drop-in replacement:
 #   import oyaml as yaml
-del map_constructor, map_representer, SafeDumper, DangerDumper, Loader
-from yaml import *  # noqa
+del _map_constructor, _map_representer, SafeDumper, DangerDumper, Loader
+# pylint: disable=unused-wildcard-import,wildcard-import,wrong-import-order
+# pylint: disable=wrong-import-position
+from yaml import *  # noqa  # type: ignore

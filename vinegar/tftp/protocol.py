@@ -142,7 +142,10 @@ class Opcode(enum.IntEnum):
             ``Opcode`` represented by the two bytes at the specified
             ``offset``.
         """
-        (opcode_num,) = struct.unpack_from("!H", data, offset)
+        try:
+            (opcode_num,) = struct.unpack_from("!H", data, offset)
+        except struct.error as err:
+            raise ValueError(str(err)) from err
         return Opcode(opcode_num)
 
     def to_bytes(self) -> bytes:
@@ -189,12 +192,11 @@ class TransferMode(enum.IntEnum):
         mode_lower = mode.lower()
         if mode_lower == "netascii":
             return TransferMode.NETASCII
-        elif mode_lower == "octet":
+        if mode_lower == "octet":
             return TransferMode.OCTET
-        elif mode_lower == "mail":
+        if mode_lower == "mail":
             return TransferMode.MAIL
-        else:
-            raise ValueError("Unsupported transfer mode: {0}".format(mode))
+        raise ValueError("Unsupported transfer mode: {0}".format(mode))
 
     def to_str(self) -> str:
         """
@@ -202,12 +204,11 @@ class TransferMode(enum.IntEnum):
         """
         if self == TransferMode.NETASCII:
             return "netascii"
-        elif self == TransferMode.OCTET:
+        if self == TransferMode.OCTET:
             return "octet"
-        elif self == TransferMode.MAIL:
+        if self == TransferMode.MAIL:
             return "mail"
-        else:
-            raise ValueError("Unhandled transfer mode: {0}".format(self))
+        raise ValueError("Unhandled transfer mode: {0}".format(self))
 
 
 def data_packet(block_number: int, data: bytes) -> bytes:
@@ -244,7 +245,7 @@ def decode_ack(data: bytes) -> int:
     return block_number
 
 
-def decode_error(data: bytes) -> typing.Tuple[ErrorCode, str]:
+def decode_error(data: bytes) -> typing.Tuple[typing.Optional[ErrorCode], str]:
     """
     Decode a packet that represents an error message. This function does not
     raise an exception of the data does not represent a valid error message.
@@ -269,8 +270,7 @@ def decode_error(data: bytes) -> typing.Tuple[ErrorCode, str]:
     data_parts = data[4:].split(b"\0")
     if data_parts:
         return (error_code, data_parts[0].decode("ascii", "ignore"))
-    else:
-        return (error_code, "")
+    return (error_code, "")
 
 
 def decode_read_request(

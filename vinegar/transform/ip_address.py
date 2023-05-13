@@ -23,7 +23,7 @@ _IPV4_REGEXP = re.compile(
 )
 
 
-def net_address(value: str, raise_error_if_malformed: bool = False):
+def net_address(value: str, raise_error_if_malformed: bool = False) -> str:
     """
     Calculate the network address for an IPv4 or IPv6 address and subnet mask.
 
@@ -51,7 +51,7 @@ def net_address(value: str, raise_error_if_malformed: bool = False):
     return _net_address_ipv6(value, raise_error_if_malformed)
 
 
-def normalize(value: str, raise_error_if_malformed: bool = False):
+def normalize(value: str, raise_error_if_malformed: bool = False) -> str:
     """
     Normalize an IPv4 or IPv6 address.
 
@@ -91,7 +91,7 @@ def normalize(value: str, raise_error_if_malformed: bool = False):
     return _normalize_ipv6(value, raise_error_if_malformed)
 
 
-def strip_mask(value: str, raise_error_if_malformed: bool = False):
+def strip_mask(value: str, raise_error_if_malformed: bool = False) -> str:
     """
     Strip a subnet mask from an IPv4 or IPv6 address (if present).
 

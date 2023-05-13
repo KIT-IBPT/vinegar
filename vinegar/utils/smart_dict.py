@@ -62,6 +62,10 @@ from vinegar.utils.odict import OrderedDict
 
 
 class SmartLookupDict(dict):
+    """
+    Dict that allows easy lookup and setting of nested values.
+    """
+
     def get(self, key, *args, **kwargs):
         """
         Return the value for ``key``.
@@ -121,6 +125,10 @@ class SmartLookupDict(dict):
 
 
 class SmartLookupOrderedDict(OrderedDict):
+    """
+    Ordered dict that allows easy lookup and setting of nested values.
+    """
+
     def get(self, key, *args, **kwargs):
         """
         Return the value for ``key``.
@@ -179,7 +187,7 @@ class SmartLookupOrderedDict(OrderedDict):
         return _smart_setdefault(self, key, default, sep, dict_type)
 
 
-def _smart_get(d, key, *args, **kwargs):
+def _smart_get(the_dict, key, *args, **kwargs):
     """
     Actual implementation of ``get`` shared by ``SmartLookupDict`` and
     ``SmartLookupOrderedDict``.
@@ -220,19 +228,18 @@ def _smart_get(d, key, *args, **kwargs):
                 "test() got an unexpected keyword argument '%s'" % kwarg_key
             )
     keys = key.split(sep)
-    nested_value = d
+    nested_value = the_dict
     try:
         for key_part in keys:
             nested_value = nested_value[key_part]
     except KeyError:
         if have_default:
-            return default
-        else:
-            raise KeyError(key) from None
+            return default  # type: ignore
+        raise KeyError(key) from None
     return nested_value
 
 
-def _smart_setdefault(d, key, default, sep, dict_type):
+def _smart_setdefault(the_dict, key, default, sep, dict_type):
     """
     Actual implementation of ``setdefault`` shared by ``SmartLookupDict`` and
     ``SmartLookupOrderedDict``.
@@ -240,7 +247,7 @@ def _smart_setdefault(d, key, default, sep, dict_type):
     keys = key.split(sep)
     last_key = keys[-1]
     keys = keys[:-1]
-    nested_value = d
+    nested_value = the_dict
     for key_part in keys:
         try:
             nested_value = nested_value[key_part]

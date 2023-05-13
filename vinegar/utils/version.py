@@ -73,7 +73,7 @@ def version_for_file_path(
             )
         )
         return _hash_str(file_info)
-    except Exception:
+    except OSError:
         # If we cannot stat the file, we calculate the version based on the
         # file path only. We also encode the exception type, so that a file
         # that cannot be found has a different version string than a file that

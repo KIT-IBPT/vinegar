@@ -3,6 +3,7 @@ Transformations for IPv4 addresses.
 """
 
 import re
+import typing
 
 # Regular expression matching an IPv4 address with an optional mask.
 #
@@ -14,7 +15,9 @@ _IPV4_REGEXP = re.compile(
 )
 
 
-def broadcast_address(value: str, raise_error_if_malformed: bool = False):
+def broadcast_address(
+    value: str, raise_error_if_malformed: bool = False
+) -> str:
     """
     Calculate the broadcast address for an IPv4 address and subnet mask.
 
@@ -38,16 +41,14 @@ def broadcast_address(value: str, raise_error_if_malformed: bool = False):
     except ValueError:
         if raise_error_if_malformed:
             raise
-        else:
-            return value
+        return value
     if mask is None:
         if raise_error_if_malformed:
             raise ValueError(
                 "Cannot calculate net address for IP address without subnet "
                 "mask: {0}".format(value)
             )
-        else:
-            return value
+        return value
     addr_as_int = (
         (addr_bytes[0] << 24)
         + (addr_bytes[1] << 16)
@@ -63,7 +64,7 @@ def broadcast_address(value: str, raise_error_if_malformed: bool = False):
     return "{0[0]}.{0[1]}.{0[2]}.{0[3]}".format(addr_bytes)
 
 
-def net_address(value: str, raise_error_if_malformed: bool = False):
+def net_address(value: str, raise_error_if_malformed: bool = False) -> str:
     """
     Calculate the network address for an IPv4 address and subnet mask.
 
@@ -87,16 +88,14 @@ def net_address(value: str, raise_error_if_malformed: bool = False):
     except ValueError:
         if raise_error_if_malformed:
             raise
-        else:
-            return value
+        return value
     if mask is None:
         if raise_error_if_malformed:
             raise ValueError(
                 "Cannot calculate net address for IP address without subnet "
                 "mask: {0}".format(value)
             )
-        else:
-            return value
+        return value
     addr_as_int = (
         (addr_bytes[0] << 24)
         + (addr_bytes[1] << 16)
@@ -112,7 +111,7 @@ def net_address(value: str, raise_error_if_malformed: bool = False):
     return "{0[0]}.{0[1]}.{0[2]}.{0[3]}/{1}".format(addr_bytes, mask)
 
 
-def normalize(value: str, raise_error_if_malformed: bool = False):
+def normalize(value: str, raise_error_if_malformed: bool = False) -> str:
     """
     Normalize an IPv4 address.
 
@@ -141,15 +140,14 @@ def normalize(value: str, raise_error_if_malformed: bool = False):
     except ValueError:
         if raise_error_if_malformed:
             raise
-        else:
-            return value
+        return value
     value = "{0[0]}.{0[1]}.{0[2]}.{0[3]}".format(addr_bytes)
     if mask is not None:
         value = "{0}/{1}".format(value, mask)
     return value
 
 
-def strip_mask(value: str, raise_error_if_malformed: bool = False):
+def strip_mask(value: str, raise_error_if_malformed: bool = False) -> str:
     """
     Strip a subnet mask from an IPv4 address (if present).
 
@@ -173,15 +171,16 @@ def strip_mask(value: str, raise_error_if_malformed: bool = False):
     except ValueError:
         if raise_error_if_malformed:
             raise
-        else:
-            return value
+        return value
     # Now we know that the value is well-formed, so we can simply cut
     # everything after the "/" character.
     value, _, _ = value.partition("/")
     return value
 
 
-def _str_to_addr_bytes_and_mask(value):
+def _str_to_addr_bytes_and_mask(
+    value: str,
+) -> typing.Tuple[typing.List[int], typing.Optional[int]]:
     match = _IPV4_REGEXP.fullmatch(value)
     if match is None:
         raise ValueError("Not a valid IPv4 address: {0}".format(value))

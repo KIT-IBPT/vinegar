@@ -141,8 +141,7 @@ class SQLiteSource(DataSource):
         systems = self._data_store.find_systems(lookup_key, lookup_value)
         if len(systems) == 1:
             return systems[0]
-        else:
-            return None
+        return None
 
     def get_data(
         self,

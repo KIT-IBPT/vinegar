@@ -22,6 +22,7 @@ import importlib
 from typing import Any, Mapping
 
 
+# pylint: disable=too-few-public-methods
 class TemplateEngine(abc.ABC):
     """
     Renderer for template files.

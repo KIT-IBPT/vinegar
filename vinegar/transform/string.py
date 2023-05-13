@@ -2,7 +2,7 @@
 String transformations.
 """
 
-from typing import Any
+from typing import Any, List, Optional
 
 
 def add_prefix(value: str, prefix: str) -> str:
@@ -33,7 +33,9 @@ def add_suffix(value: str, suffix: str) -> str:
     return value + suffix
 
 
-def split(value: str, sep: str = None, maxsplit: int = -1) -> str:
+def split(
+    value: str, sep: Optional[str] = None, maxsplit: int = -1
+) -> List[str]:
     """
     Splits a string into a list of strings using the specified separator.
 
