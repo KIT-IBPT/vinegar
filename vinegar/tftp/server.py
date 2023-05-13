@@ -552,6 +552,7 @@ class TftpServer:
             self._socket.close()
 
 
+# pylint: disable=too-few-public-methods
 class _TftpReadRequest:
     """
     Represents the connection associated with a read request. This object wraps
