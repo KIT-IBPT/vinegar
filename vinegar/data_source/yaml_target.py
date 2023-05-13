@@ -152,7 +152,7 @@ specified. All other options have default values.
     details about the effects of this option.
 
 :``merge_sets``:
-    If ``True`` (thedefault), sets are merged when merging data from different
+    If ``True`` (the default), sets are merged when merging data from different
     data files. If ``False``, sets are not merged, but replaced. Please refer
     to the documentation for `~vinegar.data_source.merge_data_trees` for
     details about the effects of this option.
