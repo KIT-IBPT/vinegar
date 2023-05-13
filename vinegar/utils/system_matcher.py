@@ -25,10 +25,14 @@ Examples:
   "def.example.com" and "def.example.net", but not "abc.example.com".
 """
 
-import abc
 import fnmatch
 import functools
 import re
+import typing
+
+
+# Type alias for a function representing an expression that can be evaluated.
+_Expression = typing.Callable[[str], bool]
 
 
 class Matcher:
@@ -57,7 +61,7 @@ class Matcher:
 
         :param name: name to be matched against the pattern.
         """
-        return self._expression.matches(name)
+        return self._expression(name)
 
     def __str__(self):
         return self._pattern
@@ -88,7 +92,7 @@ def match(name: str, pattern: str, case_sensitive: bool = False) -> bool:
         ``True`` if the ``pattern`` matches the ``name``, ``False`` otherwise.
     """
     expression = _expression_from_string_cached(pattern, case_sensitive)
-    return expression.matches(name)
+    return expression(name)
 
 
 def matcher(pattern: str, case_sensitive: bool = False) -> Matcher:
@@ -116,83 +120,76 @@ def matcher(pattern: str, case_sensitive: bool = False) -> Matcher:
     return Matcher(pattern, case_sensitive)
 
 
-class _Expression(abc.ABC):
+def _and_expression(
+    left_expression: _Expression, right_expression: _Expression
+) -> _Expression:
     """
-    Base class for all expression supported by our expression language.
-    """
-
-    # pylint: disable=missing-function-docstring
-    @abc.abstractmethod
-    def matches(self, name: str) -> bool:
-        raise NotImplementedError
-
-
-class _AndExpression(_Expression):
-    """
-    And expression. This is an expression that evaluates to ``True`` if both
-    its left and right expression evaluate to ``True``.
+    Return an ``and`` expression. This is an expression that evaluates to
+    ``True`` if both its left and right expression evaluate to ``True``.
     """
 
-    def __init__(self, left_expression, right_expression):
-        self._left_expression = left_expression
-        self._right_expression = right_expression
-
-    def matches(self, name):
+    def evaluate(name: str) -> bool:
         # If the left expression evaluates to False, we can skip the evaluation
         # of the right expression.
-        if not self._left_expression.matches(name):
+        if not left_expression(name):
             return False
-        return self._right_expression.matches(name)
+        return right_expression(name)
+
+    return evaluate
 
 
-class _OrExpression(_Expression):
+def _not_expression(expression: _Expression) -> _Expression:
     """
-    Or expression. This is an expression that evaluates to ``True`` if either
-    its left or its right expression evaluates to ``True``.
+    Return a ``not`` expression. This is an expression that negates its
+    sub-expression.
     """
 
-    def __init__(self, left_expression, right_expression):
-        self._left_expression = left_expression
-        self._right_expression = right_expression
+    def evaluate(name: str) -> bool:
+        return not expression(name)
 
-    def matches(self, name):
+    return evaluate
+
+
+def _or_expression(
+    left_expression: _Expression, right_expression: _Expression
+) -> _Expression:
+    """
+    Return an ``or`` expression. This is an expression that evaluates to
+    ``True`` if either its left or its right expression evaluate to ``True``.
+    """
+
+    def evaluate(name):
         # If the left expression evaluates to True, we can skip the evaluation
         # of the right expression.
-        if self._left_expression.matches(name):
+        if left_expression(name):
             return True
-        return self._right_expression.matches(name)
+        return right_expression(name)
+
+    return evaluate
 
 
-class _PatternExpression(_Expression):
+def _pattern_expression(pattern: str, case_sensitive: bool) -> _Expression:
     """
-    Pattern expression. This is an expression that checks whether the specified
-    name matches a pattern using `fnmatch.fnmatch` or `fnmatch.fnmatchcase`.
-    """
-
-    def __init__(self, pattern, case_sensitive):
-        if case_sensitive:
-            flags = 0
-        else:
-            flags = re.IGNORECASE
-        self._regexp = re.compile(fnmatch.translate(pattern), flags)
-
-    def matches(self, name):
-        return self._regexp.fullmatch(name) is not None
-
-
-class _NotExpression(_Expression):
-    """
-    Not expression. This is an expression that negates its sub-expression.
+    Return a pattern expression. This is an expression that checks whether the
+    specified name matches a pattern using `fnmatch.fnmatch` or
+    `fnmatch.fnmatchcase`.
     """
 
-    def __init__(self, expression):
-        self._expression = expression
+    if case_sensitive:
+        flags = 0
+    else:
+        flags = re.IGNORECASE
+    regexp = re.compile(fnmatch.translate(pattern), flags)
 
-    def matches(self, name):
-        return not self._expression.matches(name)
+    def evaluate(name: str) -> bool:
+        return regexp.fullmatch(name) is not None
+
+    return evaluate
 
 
-def _expect_expression(tokens, case_sensitive):
+def _expect_expression(
+    tokens: typing.List[str], case_sensitive: bool
+) -> _Expression:
     """
     Consume and return an expression from ``tokens``. Unlike
     `_expect_unary_expression`, this function always consumes all tokens.
@@ -240,11 +237,11 @@ def _expect_expression(tokens, case_sensitive):
             # been part of an "and" expression. Now we know that it actually is
             # part of an and expression, so we use it for that purpose.
             if right_expression is not None:
-                right_expression = _AndExpression(
+                right_expression = _and_expression(
                     right_expression, local_expression
                 )
             else:
-                left_expression = _AndExpression(
+                left_expression = _and_expression(
                     left_expression, local_expression
                 )
         elif token == "or":
@@ -253,7 +250,7 @@ def _expect_expression(tokens, case_sensitive):
             # been part of an "and" expression. Now we know that it is not and
             # can use it.
             if right_expression is not None:
-                left_expression = _OrExpression(
+                left_expression = _or_expression(
                     left_expression, right_expression
                 )
                 right_expression = None
@@ -271,12 +268,14 @@ def _expect_expression(tokens, case_sensitive):
     # A right expression is only left if there was an or expression that has
     # not been completely handled yet, so we build that or expression now.
     if right_expression is not None:
-        left_expression = _OrExpression(left_expression, right_expression)
+        left_expression = _or_expression(left_expression, right_expression)
         right_expression = None
     return left_expression
 
 
-def _expect_unary_expression(tokens, case_sensitive):
+def _expect_unary_expression(
+    tokens: typing.List[str], case_sensitive: bool
+) -> _Expression:
     """
     Consume and return a unary expression from ``tokens``.
 
@@ -299,17 +298,19 @@ def _expect_unary_expression(tokens, case_sensitive):
         return _expect_expression(tokens_in_parentheses, case_sensitive)
     if token == "not":
         expression = _expect_unary_expression(tokens, case_sensitive)
-        return _NotExpression(expression)
+        return _not_expression(expression)
     if token in ("and", "or"):
         raise ValueError(
             'Found "{0}" where "(", "not" or pattern was expected.'.format(
                 token
             )
         )
-    return _PatternExpression(token, case_sensitive)
+    return _pattern_expression(token, case_sensitive)
 
 
-def _expression_from_string(expression, case_sensitive):
+def _expression_from_string(
+    expression: str, case_sensitive: bool
+) -> _Expression:
     """
     Return the `_Expression` represented by the specified string.
 
@@ -348,7 +349,9 @@ def _expression_from_string(expression, case_sensitive):
 
 
 @functools.lru_cache(maxsize=256, typed=True)
-def _expression_from_string_cached(expression, case_sensitive):
+def _expression_from_string_cached(
+    expression: str, case_sensitive: bool
+) -> _Expression:
     """
     Call `_expression_from_string` but cache the result.
 
@@ -357,7 +360,7 @@ def _expression_from_string_cached(expression, case_sensitive):
     return _expression_from_string(expression, case_sensitive)
 
 
-def _find_closing_parenthesis(tokens):
+def _find_closing_parenthesis(tokens: typing.List[str]) -> int:
     """
     Find the index of the next closing parenthesis that is not canceled out by
     a preceding opening parenthesis. This function is mainly intended for use

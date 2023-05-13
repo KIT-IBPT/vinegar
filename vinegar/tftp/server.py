@@ -577,102 +577,6 @@ class _TftpReadRequest:
         Exception signaling an invalid packet was received from the client.
         """
 
-    class _Reader(abc.ABC):
-        # pylint: disable=missing-function-docstring
-        @abc.abstractmethod
-        def read(self, size: int) -> bytes:
-            raise NotImplementedError()
-
-    class _NetasciiReader(_Reader):
-        """
-        Reader utility that wraps a binary file-like object and converts to
-        netascii (converting single instances of carriage return (CR) and line
-        feed (LF) to CR LF sequences).
-        """
-
-        CR = 13
-        LF = 10
-
-        def __init__(self, file):
-            self._file = file
-            self._data = b""
-            self._last_byte_was_cr = False
-
-        # pylint: disable=missing-function-docstring
-        def read(self, size: int) -> bytes:
-            while size > len(self._data):
-                new_data = self._file.read(size - len(self._data))
-                # If new_data is empty, we have reached end-of-file.
-                if not new_data:
-                    break
-                start_index = 0
-                index = 0
-                # If the last byte that we read was a CR we have to check
-                # whether the next byte is an LF. If so, we skip it, because we
-                # already inserted that LF when we read the CR.
-                if self._last_byte_was_cr:
-                    start_index += 1
-                    index += 1
-                    self._last_byte_was_cr = False
-                while index < len(new_data):
-                    if new_data[index] == self.CR:
-                        if index + 1 == len(new_data):
-                            # If we find a CR but it is the last byte, we
-                            # cannot know whether it is going to be followed by
-                            # an LF, so we have to remember that we saw a CR so
-                            # that we can skip the LF if we read it later.
-                            self._last_byte_was_cr = True
-                            self._data += new_data[start_index:index] + b"\r\n"
-                            index += 1
-                            start_index = index
-                        elif new_data[index + 1] == self.LF:
-                            # If the CR is followed by an LF, everything is
-                            # fine and we can continue.
-                            index += 2
-                        else:
-                            # If the CR is not followed by an LF, we have to
-                            # insert one.
-                            self._data += new_data[start_index:index] + b"\r\n"
-                            index += 1
-                            start_index = index
-                    elif new_data[index] == self.LF:
-                        # We already handled the case that an LF is preceded by
-                        # a CR, so we know that we have to insert a CR.
-                        self._data += new_data[start_index:index] + b"\r\n"
-                        index += 1
-                        start_index = index
-                    else:
-                        # For every regular byte, we simply continue with the
-                        # next one.
-                        index += 1
-                # Finally, we have to append the remaining new data.
-                self._data += new_data[start_index:index]
-            data = self._data[0:size]
-            self._data = self._data[size:]
-            return data
-
-    class _OctetReader(_Reader):
-        """
-        Reader utility that wraps a binary file-like object and returns the
-        bytes as-is.
-        """
-
-        def __init__(self, file):
-            self._file = file
-            self._data = b""
-
-        # pylint: disable=missing-function-docstring
-        def read(self, size: int) -> bytes:
-            while size > len(self._data):
-                new_data = self._file.read(size - len(self._data))
-                # If new_data is empty, we have reached end-of-file.
-                if not new_data:
-                    break
-                self._data += new_data
-            data = self._data[0:size]
-            self._data = self._data[size:]
-            return data
-
     class _TransferAborted(Exception):
         """
         Exception signaling that the transfer has been aborted by the client.
@@ -745,7 +649,9 @@ class _TftpReadRequest:
             supported_options[OPTION_TRANSFER_SIZE] = None
         self._options = supported_options
         self._file: typing.Optional[io.BufferedIOBase] = None
-        self._file_reader: typing.Optional[_TftpReadRequest._Reader] = None
+        self._read_from_file: typing.Optional[
+            typing.Callable[[int], bytes]
+        ] = None
         self._socket: typing.Optional[socket.socket] = None
         self._time_limit = 0.0
         # After we have setup everything, we can start the processing thread.
@@ -1064,13 +970,11 @@ class _TftpReadRequest:
                 # in order to determine its size.
                 self._process_transfer_size_option()
                 if self._netascii_mode:
-                    self._file_reader = _TftpReadRequest._NetasciiReader(
+                    self._read_from_file = _netascii_reader_function(
                         self._file
                     )
                 else:
-                    self._file_reader = _TftpReadRequest._OctetReader(
-                        self._file
-                    )
+                    self._read_from_file = _octet_reader_function(self._file)
                 self._process_request()
 
     def _send(self, data):
@@ -1079,14 +983,15 @@ class _TftpReadRequest:
         self._socket.sendto(data, self._client_address)
 
     def _send_data(self):
-        # self._file_reader should have been set before this method was called.
-        assert self._file_reader is not None
+        # self._read_from_file should have been set before this method was
+        # called.
+        assert self._read_from_file is not None
         block_number = 0
-        data = self._file_reader.read(self._block_size)
+        data = self._read_from_file(self._block_size)
         while len(data) == self._block_size:
             block_number = self._calc_next_block_number(block_number)
             self._send_data_block(block_number, data)
-            data = self._file_reader.read(self._block_size)
+            data = self._read_from_file(self._block_size)
         # Finally, we have to send the last block. If the last block is empty,
         # we still have to send it in order to signal end-of-file.
         block_number = self._calc_next_block_number(block_number)
@@ -1160,6 +1065,104 @@ class _TftpReadRequest:
 # We use this regular expression to verify that an option that must be a
 # positive integer has been specified correctly.
 _REGEXP_POSITIVE_INT = re.compile("[1-9][0-9]*")
+
+# ASCII character code of a carriage return.
+_CR = 13
+
+# ASCII character code of a line feed.
+_LF = 10
+
+
+def _netascii_reader_function(
+    file: typing.BinaryIO,
+) -> typing.Callable[[int], bytes]:
+    """
+    Returns a function that reads from a binary file-like object and converts
+    to netascii (converting single instances of carriage return (CR) and line
+    feed (LF) to CR LF sequences).
+    """
+    data = b""
+    last_byte_was_cr = False
+
+    def read(size: int) -> bytes:
+        nonlocal data, last_byte_was_cr, file
+        while size > len(data):
+            new_data = file.read(size - len(data))
+            # If new_data is empty, we have reached end-of-file.
+            if not new_data:
+                break
+            start_index = 0
+            index = 0
+            # If the last byte that we read was a CR we have to check
+            # whether the next byte is an LF. If so, we skip it, because we
+            # already inserted that LF when we read the CR.
+            if last_byte_was_cr:
+                start_index += 1
+                index += 1
+                last_byte_was_cr = False
+            while index < len(new_data):
+                if new_data[index] == _CR:
+                    if index + 1 == len(new_data):
+                        # If we find a CR but it is the last byte, we
+                        # cannot know whether it is going to be followed by
+                        # an LF, so we have to remember that we saw a CR so
+                        # that we can skip the LF if we read it later.
+                        last_byte_was_cr = True
+                        data += new_data[start_index:index] + b"\r\n"
+                        index += 1
+                        start_index = index
+                    elif new_data[index + 1] == _LF:
+                        # If the CR is followed by an LF, everything is
+                        # fine and we can continue.
+                        index += 2
+                    else:
+                        # If the CR is not followed by an LF, we have to
+                        # insert one.
+                        data += new_data[start_index:index] + b"\r\n"
+                        index += 1
+                        start_index = index
+                elif new_data[index] == _LF:
+                    # We already handled the case that an LF is preceded by
+                    # a CR, so we know that we have to insert a CR.
+                    data += new_data[start_index:index] + b"\r\n"
+                    index += 1
+                    start_index = index
+                else:
+                    # For every regular byte, we simply continue with the
+                    # next one.
+                    index += 1
+            # Finally, we have to append the remaining new data.
+            data += new_data[start_index:index]
+        return_data = data[0:size]
+        data = data[size:]
+        return return_data
+
+    return read
+
+
+def _octet_reader_function(
+    file: typing.BinaryIO,
+) -> typing.Callable[[int], bytes]:
+    """
+    Returns a function that reads from a file-like object and returns the bytes
+    as-is.
+    """
+
+    data = b""
+
+    def read(size: int) -> bytes:
+        nonlocal data, file
+        while size > len(data):
+            new_data = file.read(size - len(data))
+            # If new_data is empty, we have reached end-of-file.
+            if not new_data:
+                break
+            data += new_data
+        return_data = data[0:size]
+        data = data[size:]
+        return return_data
+
+    return read
 
 
 def create_tftp_server(
