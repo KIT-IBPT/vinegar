@@ -184,9 +184,10 @@ class _CompositeDataSource(DataSource):
     This data source is used by `get_composite_data_source`.
     """
 
-    def __init__(self, data_sources, merge_lists):
+    def __init__(self, data_sources, merge_lists, merge_sets):
         self._data_sources = data_sources
         self._merge_lists = merge_lists
+        self._merge_sets = merge_sets
 
     def find_system(self, lookup_key: str, lookup_value: str) -> Optional[str]:
         # We iterate over the data sources until we find one that returns a
@@ -210,7 +211,9 @@ class _CompositeDataSource(DataSource):
             new_data, new_data_version = data_source.get_data(
                 system_id, preceding_data, preceding_data_version
             )
-            preceding_data = merge_data_trees(preceding_data, new_data)
+            preceding_data = merge_data_trees(
+                preceding_data, new_data, self._merge_lists, self._merge_sets
+            )
             preceding_data_version = aggregate_version(
                 [preceding_data_version, new_data_version]
             )
@@ -248,6 +251,10 @@ def get_composite_data_source(
         defines whether lists are merged when merging data or whether a list in
         one dictionary replaces the list in the other dictionary. Please refer
         to the documentation for `merge_data_trees` for details.
+    :param merge_sets:
+        defines whether sets are merged when merging data or whether a set in
+        one dictionary replaces the set in the other dictionary. Please refer
+        to the documentation for `merge_data_trees` for details.
     :return:
         composite data source that chains the specified data sources together.
     """
@@ -257,7 +264,7 @@ def get_composite_data_source(
             data_source_objs.append(source)
         else:
             data_source_objs.append(get_data_source(source[0], source[1]))
-    return _CompositeDataSource(data_source_objs, merge_lists)
+    return _CompositeDataSource(data_source_objs, merge_lists, merge_sets)
 
 
 def get_data_source(name: str, config: Mapping[Any, Any]) -> DataSource:
