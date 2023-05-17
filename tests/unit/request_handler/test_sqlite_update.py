@@ -194,6 +194,24 @@ class TestHttpSQLiteRequestHandler(unittest.TestCase):
                 client_address=("::ffff:192.168.0.1", 12345),
             )
             self.assertEqual({}, data_store.get_data(system_id))
+            # Specifying a subnet should work as well.
+            data_store.set_value(system_id, "key1", "value1")
+            system_data["net"] = {"ip_addr": "192.168.0.0/24"}
+            self._call_handle(
+                handler,
+                "/test/" + system_id,
+                expect_status=HTTPStatus.FORBIDDEN,
+            )
+            self.assertEqual(
+                {"key1": "value1"}, data_store.get_data(system_id)
+            )
+            self._call_handle(
+                handler,
+                "/test/" + system_id,
+                expect_status=HTTPStatus.OK,
+                client_address=("192.168.0.42", 12345),
+            )
+            self.assertEqual({}, data_store.get_data(system_id))
             # Now we repeat the test, but this time we have a list of allowed
             # addresses.
             data_store.set_value(system_id, "key1", "value1")
@@ -238,6 +256,141 @@ class TestHttpSQLiteRequestHandler(unittest.TestCase):
                 "/test/" + system_id,
                 expect_status=HTTPStatus.OK,
                 client_address=("::1", 12345),
+            )
+            self.assertEqual({}, data_store.get_data(system_id))
+
+    def test_config_client_address_key_and_list(self):
+        """
+        Test combination ``client_address_key`` and ``client_address_list``.
+        """
+        # We do not set the db_file option because it is set by
+        # _data_store_and_handler. We use the delete_data action for our tests.
+        config = {"action": "delete_data", "request_path": "/test"}
+        # Here, we test the case where both client_address_key and
+        # client_address_list are specified. The cases were only one or neither
+        # of them is specified is already handled by other tests.
+        config["client_address_key"] = "net:ip_addr"
+        config["client_address_list"] = ["10.0.0.1"]
+        # We need a mock data source. That data souce only has to implement
+        # get_data, because find_system is not used by the handler.
+        system_data = {}
+        data_source = unittest.mock.Mock()
+        data_source.find_system.side_effect = AssertionError(
+            "find_system should not have been called."
+        )
+        data_source.get_data.return_value = (system_data, "")
+        with self._data_store_and_handler(config, data_source) as (
+            data_store,
+            handler,
+        ):
+            system_id = "system"
+            data_store.set_value(system_id, "key1", "value1")
+            # The system data returned by get_data does not contain a client
+            # address, only the address from client_address_list should work.
+            self._call_handle(
+                handler,
+                "/test/" + system_id,
+                expect_status=HTTPStatus.FORBIDDEN,
+                client_address=("192.168.0.1", 12345),
+            )
+            self.assertEqual(
+                {"key1": "value1"}, data_store.get_data(system_id)
+            )
+            self._call_handle(
+                handler,
+                "/test/" + system_id,
+                client_address=("10.0.0.1", 12345),
+            )
+            self.assertEqual({}, data_store.get_data(system_id))
+            # If the data source provides an address, this address should work
+            # as well.
+            data_store.set_value(system_id, "key1", "value1")
+            system_data["net"] = {"ip_addr": "192.168.0.1"}
+            self._call_handle(
+                handler,
+                "/test/" + system_id,
+                expect_status=HTTPStatus.FORBIDDEN,
+                client_address=("192.168.0.2", 12345),
+            )
+            self.assertEqual(
+                {"key1": "value1"}, data_store.get_data(system_id)
+            )
+            self._call_handle(
+                handler,
+                "/test/" + system_id,
+                client_address=("192.168.0.1", 12345),
+            )
+            self.assertEqual({}, data_store.get_data(system_id))
+            data_store.set_value(system_id, "key1", "value1")
+            system_data["net"] = {"ip_addr": "192.168.0.0/24"}
+            self._call_handle(
+                handler,
+                "/test/" + system_id,
+                expect_status=HTTPStatus.FORBIDDEN,
+                client_address=("10.0.0.2", 12345),
+            )
+            self.assertEqual(
+                {"key1": "value1"}, data_store.get_data(system_id)
+            )
+            self._call_handle(
+                handler,
+                "/test/" + system_id,
+                client_address=("10.0.0.1", 12345),
+            )
+            self.assertEqual({}, data_store.get_data(system_id))
+
+    def test_config_client_address_list(self):
+        """
+        Test the ``client_address_list`` configuration option.
+        """
+        # We do not set the db_file option because it is set by
+        # _data_store_and_handler. We use the delete_data action for our tests.
+        config = {"action": "delete_data", "request_path": "/test"}
+        # We do not test that the client address is not checked when
+        # the client_address option is not set. This case is already covered by
+        # other tests.
+        config["client_address_list"] = ["192.168.0.0/24", "10.12.34.56"]
+        with self._data_store_and_handler(config) as (
+            data_store,
+            handler,
+        ):
+            system_id = "system"
+            data_store.set_value(system_id, "key1", "value1")
+            self.assertEqual(
+                {"key1": "value1"}, data_store.get_data(system_id)
+            )
+            # We just do a few basic tests here. Most of the codepath is
+            # identical to the one used for the client_address_key option, and
+            # we already have more details tests for that option.
+            self._call_handle(
+                handler,
+                "/test/" + system_id,
+                expect_status=HTTPStatus.FORBIDDEN,
+                client_address=("10.12.34.57", 12345),
+            )
+            self.assertEqual(
+                {"key1": "value1"}, data_store.get_data(system_id)
+            )
+            self._call_handle(
+                handler,
+                "/test/" + system_id,
+                client_address=("10.12.34.56", 12345),
+            )
+            self.assertEqual({}, data_store.get_data(system_id))
+            data_store.set_value(system_id, "key1", "value1")
+            self._call_handle(
+                handler,
+                "/test/" + system_id,
+                expect_status=HTTPStatus.FORBIDDEN,
+                client_address=("192.168.1.1", 12345),
+            )
+            self.assertEqual(
+                {"key1": "value1"}, data_store.get_data(system_id)
+            )
+            self._call_handle(
+                handler,
+                "/test/" + system_id,
+                client_address=("192.168.0.1", 12345),
             )
             self.assertEqual({}, data_store.get_data(system_id))
 

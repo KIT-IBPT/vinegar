@@ -82,6 +82,30 @@ data
 
 the request would be allowed if it came from 192.0.2.1 or 2001:db8::1.
 
+In addition to single IP addresses, IP subnets using CIDR notation are allowed
+as well. For example,
+
+.. code-block:: yaml
+
+    net:
+        ip_addr:
+            - 192.0.2.0/24
+            - 2001:db8::/64
+
+will allow access for all clients from the IP subnets 192.0.2.0/24 and
+2001:db8::/64.
+
+As an alternative to the ``client_address_key`` option, the
+``client_address_list`` option may be specified. This option takes a list of IP
+addresses or IP subnets and allows requests from clients that match one of
+these entries. This can be useful in order to allow full access from certain
+administrative clients.
+
+When both ``client_address_key`` and ``client_address_list`` are specified,
+they are combined, meaning that a request is allowed when it either matches one
+of the entries from ``client_address_list`` or the entries from the data tree
+for the ``client_address_key``.
+
 When the ``client_address_key`` option is used, this request handler needs a
 data source in order to get information about the system. This request handler
 implements the ``DataSourceAware`` interface, so when it is used inside a
@@ -127,10 +151,15 @@ can be used to control its behavior.
     this option can be used to limit the allowe client (IP) addresses for each
     system. The key can point into a nested dictionary, using the colon (``:``)
     to separate key components for the various levels. The value can be a
-    string (matching exactly one IP address) or a list or set of IP addresses
-    (matching any of the addresses in the list or set). Please refer to
-    :ref:`access_restrictions` for a more detailed discussion of how this
-    option can be used.
+    string (matching exactly one IP address or IP subnet) or a list or set of
+    IP addresses or IP subnets (matching any of the addresses or subnets in the
+    list or set). Please refer to :ref:`access_restrictions` for a more
+    detailed discussion of how this option can be used.
+
+:``client_address_list`` (optional):
+    List of IP addresses or IP subnets from which requests are allowed. Please
+    refer to :ref:`access_restrictions` for a more detailed discussion of how
+    this option can be used.
 
 :``key`` (optional):
     Name of the key in the database that shall be deleted or updated. If the
@@ -153,8 +182,8 @@ from typing import Any, Mapping, Optional, Tuple
 
 from vinegar.data_source import DataSource, DataSourceAware
 from vinegar.request_handler import HttpRequestHandler
-from vinegar.transform.ip_address import normalize as normalize_ip_address
 from vinegar.utils.smart_dict import SmartLookupDict
+from vinegar.utils.socket import contains_ip_address
 from vinegar.utils.sqlite_store import open_data_store
 
 
@@ -208,6 +237,13 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
         if self._action == "set_value":
             self._value = config["value"]
         self._client_address_key = config.get("client_address_key", None)
+        client_address_list = config.get("client_address_list", None)
+        # If the client_address_list option is specified, we convert the value
+        # into a set, because this is what we are going to need later.
+        if client_address_list:
+            self._client_address_set = set(client_address_list)
+        else:
+            self._client_address_set = None
         self._data_source: Optional[DataSource] = None
         self._data_store = open_data_store(config["db_file"])
 
@@ -244,6 +280,9 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
         if method != "POST":
             return HTTPStatus.METHOD_NOT_ALLOWED, None, None
         system_id = context["system_id"]
+        # If the client_address_key or client_address_list options have been
+        # specified, we have to check access restrictions.
+        expected_client_addresses = None
         if self._client_address_key:
             # When self._client_address_key is set, set_data_source should have
             # been called before this method is called.
@@ -256,35 +295,35 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
             expected_client_addresses = system_data.get(
                 self._client_address_key, None
             )
-            # The IP address part of the client address is the first element of
-            # the tuple.
-            actual_client_address = client_address[0]
-            # We use an IPv6 socket, so the IP address might actually be an
-            # IPv4 address that is encoded as an IPv6 address. We detect such a
-            # situation and use IPv4 address in that case. We also normalize
-            # the IP address, so that the comparison that we do later will not
-            # fail just because the IP address is formatted in an unusual way.
-            actual_client_address = normalize_ip_address(actual_client_address)
-            # If the actual client address does not match the expected
-            # client address, we do not allow the request. The expected client
-            # address can be a container (e.g. list, set) of allowed addresses
-            # or it can be a single string. The expected client addresses may
-            # also not be defined at all, in which case we simply use an empty
-            # list.
+            # The expected client addresses can be a container (e.g. list, set)
+            # of allowed addresses or they can be a single string. The expected
+            # client addresses may also not be defined at all, in which case we
+            # simply use an empty list.
             if isinstance(expected_client_addresses, str):
                 expected_client_addresses = [expected_client_addresses]
             elif not expected_client_addresses:
                 expected_client_addresses = []
-            request_allowed = False
-            for expected_client_address in expected_client_addresses:
-                expected_client_address = normalize_ip_address(
-                    expected_client_address
+        if self._client_address_set:
+            # If we already have a set of expected client addresses, we have to
+            # use the union of bot hsets. Otherwise, we can simply use the set
+            # as-is.
+            if expected_client_addresses is None:
+                expected_client_addresses = self._client_address_set
+            else:
+                expected_client_addresses = self._client_address_set.union(
+                    expected_client_addresses
                 )
-                if actual_client_address == expected_client_address:
-                    request_allowed = True
-                    break
-            if not request_allowed:
+        if expected_client_addresses is not None:
+            # The IP address part of the client address is the first element of
+            # the tuple.
+            actual_client_address = client_address[0]
+            # If the client address is not in the set of allowed addresses,
+            # the request is not allowed.
+            if not contains_ip_address(
+                expected_client_addresses, actual_client_address
+            ):
                 return HTTPStatus.FORBIDDEN, None, None
+        # If we have made it here, the request is allowed.
         if self._action == "delete_data":
             self._data_store.delete_data(system_id)
         elif self._action == "delete_value":
