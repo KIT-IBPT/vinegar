@@ -34,7 +34,7 @@ passed like this::
     wget -O - --post-data=myvalue \
         http://vinegar.example.com/sqlite-prefix/system-id
 
-.. _access_restrictions:
+.. _request_handler_sqlite_update_access_restrictions:
 
 Access restrictions
 -------------------
@@ -153,13 +153,14 @@ can be used to control its behavior.
     to separate key components for the various levels. The value can be a
     string (matching exactly one IP address or IP subnet) or a list or set of
     IP addresses or IP subnets (matching any of the addresses or subnets in the
-    list or set). Please refer to :ref:`access_restrictions` for a more
+    list or set). Please refer to
+    :ref:`request_handler_sqlite_update_access_restrictions` for a more
     detailed discussion of how this option can be used.
 
 :``client_address_list`` (optional):
     List of IP addresses or IP subnets from which requests are allowed. Please
-    refer to :ref:`access_restrictions` for a more detailed discussion of how
-    this option can be used.
+    refer to :ref:`request_handler_sqlite_update_access_restrictions` for a
+    more detailed discussion of how this option can be used.
 
 :``key`` (optional):
     Name of the key in the database that shall be deleted or updated. If the

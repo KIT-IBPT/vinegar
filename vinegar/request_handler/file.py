@@ -136,6 +136,86 @@ are available. The same applies if ``find_system`` raises an exception and
 ``lookup_no_result_action`` is set to ``continue`` and
 ``data_source_error_action`` is set to ``ignore`` or ``warn``.
 
+.. _request_handler_file_access_restrictions:
+
+Access restrictions
+-------------------
+
+By default, this request handler will allow any client to retrieve files
+rendered for any system. This might not be desirable if the files contain
+confidential information (e.g. password), in particular when the network in
+which the Vinegar server is running cannot be deemed secure.
+
+Therefore, it is possible to limit access to the data for each system to
+specific clients. This is achieved through the ``client_address_key``
+configuration option. This option specifies a key into the system data. The key
+can consist of multiple components separated by colons (``:``) to point into
+a nested dictionary.
+
+For example, suppose that ``client_address_key`` is set to ``net:ip_addr``. If
+the handler gets a request for the system ID ``myid``, it will ask the data
+source for the system data for this system by calling
+``data_source.get_data('myid', {}, '')``.
+
+If the system data returned for this system does not contain a value for the
+specified key, the request is denied with HTTP status code 403 (forbidden).
+
+For this example, let us assume that the data source returns the following data
+for the system ``myid`` (expressed as YAML):
+
+.. code-block:: yaml
+
+    net:
+        ip_addr: 192.0.2.1
+
+In this case, the request handler will only allow the request, if it comes from
+the IP address 192.0.2.1. In all other cases, it will reject the request.
+
+Instead of a single IP address, the system data may also contain a list or set
+of IP addresses. For example, if ``get_data`` returned the following system
+data
+
+.. code-block:: yaml
+
+    net:
+        ip_addr:
+            - 192.0.2.1
+            - 2001:db8::1
+
+the request would be allowed if it came from 192.0.2.1 or 2001:db8::1.
+
+In addition to single IP addresses, IP subnets using CIDR notation are allowed
+as well. For example,
+
+.. code-block:: yaml
+
+    net:
+        ip_addr:
+            - 192.0.2.0/24
+            - 2001:db8::/64
+
+will allow access for all clients from the IP subnets 192.0.2.0/24 and
+2001:db8::/64.
+
+As an alternative to the ``client_address_key`` option, the
+``client_address_list`` option may be specified. This option takes a list of IP
+addresses or IP subnets and allows requests from clients that match one of
+these entries. This can be useful in order to allow full access from certain
+administrative clients.
+
+When both ``client_address_key`` and ``client_address_list`` are specified,
+they are combined, meaning that a request is allowed when it either matches one
+of the entries from ``client_address_list`` or the entries from the data tree
+for the ``client_address_key``.
+
+When the ``client_address_key`` option is used, the ``lookup_key`` option must
+be set as well and this request handler needs a data source in order to get
+information about the system. This request handler implements the
+``DataSourceAware`` interface, so when it is used inside a container, that
+container will typically take care of setting the data source. If instantiated
+directly, the data source has to be set explicitly by calling the handler’s
+``set_data_source`` method.
+
 .. _request_handler_file_config_example:
 
 Configuration example
@@ -221,6 +301,26 @@ The common options are:
     ``request_path``. The parts of the request path after that prefix are
     interpreted as the path of the file to be served, relative to the
     ``root_dir``.
+
+:``client_address_key`` (optional):
+    Key into the system data that points to the place in the data where the
+    allowed client address or addresses are stored. If this option is not set
+    (the default), each client can access this handler for arbitrary system IDs
+    and thus potentially retrieve data associated with these systems. When this
+    is not desired, this option can be used to limit the allowe client (IP)
+    addresses for each system. The key can point into a nested dictionary,
+    using the colon (``:``) to separate key components for the various levels.
+    The value can be a string (matching exactly one IP address or IP subnet) or
+    a list or set of IP addresses or IP subnets (matching any of the addresses
+    or subnets in the list or set). If this option is set, ``lookup_key`` must
+    be set as well. Please refer to
+    :ref:`request_handler_file_access_restrictions` for a more detailed
+    discussion of how this option can be used.
+
+:``client_address_list`` (optional):
+    List of IP addresses or IP subnets from which requests are allowed. Please
+    refer to :ref:`request_handler_file_access_restrictions` for a more
+    detailed discussion of how this option can be used.
 
 :``data_source_error_action`` (optional):
     Action to be taken if the data source's ``find_system`` or ``get_data``
@@ -318,6 +418,7 @@ from vinegar.tftp.protocol import ErrorCode as TftpErrorCode
 from vinegar.tftp.server import TftpError, TftpRequestHandler
 from vinegar.transform import get_transformation_chain
 from vinegar.utils.smart_dict import SmartLookupOrderedDict
+from vinegar.utils.socket import contains_ip_address
 
 # Logger used by this module.
 logger = logging.getLogger(__name__)
@@ -345,6 +446,14 @@ class FileRequestHandlerBase(DataSourceAware):
             `module documentation <vinegar.request_handler.file>` for a list of
             supported options.
         """
+        self._client_address_key = config.get("client_address_key", None)
+        client_address_list = config.get("client_address_list", None)
+        # If the client_address_list option is specified, we convert the value
+        # into a set, because this is what we are going to need later.
+        if client_address_list:
+            self._client_address_set = set(client_address_list)
+        else:
+            self._client_address_set = None
         # The data source is injected later by calling set_data_source.
         self._data_source = None
         self._data_source_error_action = config.get(
@@ -395,6 +504,13 @@ class FileRequestHandlerBase(DataSourceAware):
         # Initializing the variables that are related to the request path is
         # rather complex, so we do it in a separate method.
         self._init_request_path(config)
+        # If client_address_key option is specified, a lookup_key must be
+        # specified as well.
+        if self._client_address_key and not self._lookup_key:
+            raise ValueError(
+                "If the client_address_key option is set, lookup_key must be "
+                "set as well."
+            )
 
     def can_handle(
         self,
@@ -552,18 +668,8 @@ class FileRequestHandlerBase(DataSourceAware):
         self,
         filename: str,  # pylint: disable=unused-argument
         context: Any,
+        client_address: Optional[Tuple] = None,
     ) -> Tuple[Optional[io.BufferedIOBase], Optional[str]]:
-        extra_path = context["extra_path"]
-        # When we are operating in directory mode, we have to find out whether
-        # the extra path matches a file in the root_dir.
-        if self._root_dir:
-            file = self._translate_path(self._root_dir, extra_path)
-        else:
-            file = self._file
-        # If the file could not be resolved, we treat it like it does not
-        # exist.
-        if file is None:
-            return (None, None)
         # We might have to do a lookup.
         if self._extract_lookup_value:
             lookup_key = self._lookup_key
@@ -598,16 +704,14 @@ class FileRequestHandlerBase(DataSourceAware):
                         )
                     system_id = None
             if system_id is None:
-                if self._lookup_no_result_action == "not_found":
-                    return (None, None)
                 data = None
             else:
-                # If there is no template engine, there is no sense in
-                # retrieving the system data because it would not be used
-                # anyway. We still set the variable to None in order to satisfy
-                # static code checkers that cannot detect that the variable is
-                # never used in this case.
-                if self._template_engine is None:
+                # If there is no template engine and the client_address_key
+                # option is not used, there is no sense in retrieving the
+                # system data because it would not be used anyway.
+                if (
+                    not self._client_address_key
+                ) and self._template_engine is None:
                     data = None
                 else:
                     try:
@@ -632,6 +736,89 @@ class FileRequestHandlerBase(DataSourceAware):
             # If we have no lookup key, the system ID and data are always None.
             system_id = None
             data = None
+        # If we have system data, we wrap it in a smart-lookup ordered dict,
+        # because there are several places where we expect to be able to do
+        # lookups for nested keys.
+        if data is not None:
+            data = SmartLookupOrderedDict(data)
+        # If the client_address_key or client_address_list options have been
+        # specified, we have to check access restrictions.
+        expected_client_addresses = None
+        if self._client_address_key:
+            # When self._client_address_key is set, set_data_source should have
+            # been called before this method is called.
+            assert self._data_source is not None
+            # We get the expected client address from the system data. We wrap
+            # the system data in a smart lookup dict, so that we can look for a
+            # value inside a nested dict. If we do not have a system ID, we
+            # cannot do a lookup, so we treat this like an empty list of client
+            # addresses.
+            if system_id is None or data is None:
+                expected_client_addresses = []
+            else:
+                expected_client_addresses = data.get(
+                    self._client_address_key, None
+                )
+            # The expected client addresses can be a container (e.g. list, set)
+            # of allowed addresses or they can be a single string. The expected
+            # client addresses may also not be defined at all, in which case we
+            # simply use an empty list.
+            if isinstance(expected_client_addresses, str):
+                expected_client_addresses = [expected_client_addresses]
+            elif not expected_client_addresses:
+                expected_client_addresses = []
+        if self._client_address_set:
+            # If we already have a set of expected client addresses, we have to
+            # use the union of bot hsets. Otherwise, we can simply use the set
+            # as-is.
+            if expected_client_addresses is None:
+                expected_client_addresses = self._client_address_set
+            else:
+                expected_client_addresses = self._client_address_set.union(
+                    expected_client_addresses
+                )
+        if expected_client_addresses is not None:
+            # The IP address part of the client address is the first element of
+            # the tuple. If we do not have a client address, we cannot perform
+            # the access check. This is fine, because the client_address should
+            # only be None if third-party code calls this method, and this code
+            # should not expect any of the client_address related configuration
+            # options.
+            assert client_address is not None
+            actual_client_address = client_address[0]
+            # If the client address is not in the set of allowed addresses,
+            # the request is not allowed.
+            if not contains_ip_address(
+                expected_client_addresses, actual_client_address
+            ):
+                # Raising a permission error ensures that the calling code
+                # sends the correct status code to the client.
+                raise PermissionError()
+        # If we are expected to make a lookup, but this lookup was not
+        # successful (we do not have a system ID) and the
+        # lookup_no_result_action is “not found”, we treat this like if the
+        # requested file was not found. It would be easier to handle this
+        # earlier, in the lookup logic, but then an unauthorized clients might
+        # get information about whether a lookup was successful (by seeing a
+        # permission error instead of a not found error), so we always do the
+        # permission check first.
+        if (
+            self._extract_lookup_value
+            and self._lookup_no_result_action == "not_found"
+            and system_id is None
+        ):
+            return (None, None)
+        extra_path = context["extra_path"]
+        # When we are operating in directory mode, we have to find out whether
+        # the extra path matches a file in the root_dir.
+        if self._root_dir:
+            file = self._translate_path(self._root_dir, extra_path)
+        else:
+            file = self._file
+        # If the file could not be resolved, we treat it like it does not
+        # exist.
+        if file is None:
+            return (None, None)
         try:
             if self._template_engine is not None:
                 # Please note that we do not cache the result of the rendering
@@ -642,7 +829,7 @@ class FileRequestHandlerBase(DataSourceAware):
                 if system_id is not None:
                     template_context["id"] = system_id
                 if data is not None:
-                    template_context["data"] = SmartLookupOrderedDict(data)
+                    template_context["data"] = data
                 render_result = self._template_engine.render(
                     file, template_context
                 )
@@ -845,7 +1032,9 @@ class HttpFileRequestHandler(FileRequestHandlerBase, HttpRequestHandler):
         if method not in ("GET", "HEAD"):
             return HTTPStatus.METHOD_NOT_ALLOWED, None, None
         try:
-            file, file_path = self._handle(filename, context)
+            file, file_path = self._handle(
+                filename, context, client_address=client_address
+            )
         except PermissionError:
             return HTTPStatus.FORBIDDEN, None, None
         if file is None:
@@ -923,7 +1112,9 @@ class TftpFileRequestHandler(FileRequestHandlerBase, TftpRequestHandler):
     ) -> io.BufferedIOBase:
         filename = self._rewrite_filename_if_needed(filename)
         try:
-            file, _ = self._handle(filename, context)
+            file, _ = self._handle(
+                filename, context, client_address=client_address
+            )
         except PermissionError:
             # We do not include the original exception here because it won’t be
             # used anyway. The exception only indicates that the error code

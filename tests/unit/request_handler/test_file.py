@@ -8,6 +8,7 @@ import io
 import pathlib
 import shutil
 import unittest
+import unittest.mock
 
 from http import HTTPStatus
 from http.client import HTTPMessage
@@ -35,6 +36,7 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
         self,
         handler,
         filename,
+        client_address=("127.0.0.1", 12345),
         expect_can_handle=True,
         expect_status=None,
         expect_headers=None,
@@ -59,6 +61,312 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
         `TftpFileRequestHandler`.
         """
         raise NotImplementedError()
+
+    def test_config_client_address_key(self):
+        """
+        Test the ``client_address_key`` configuration option.
+        """
+        with TemporaryDirectory() as tmpdir:
+            # We do not test that the client address is not checked when
+            # the client_address_key option is not set. This case is already
+            # covered by other tests.
+            config = {
+                "client_address_key": "net:ip_addr",
+                "lookup_key": ":system_id:",
+                "request_path": "/test/...",
+                "root_dir": tmpdir,
+            }
+            # We need a mock data source. That data source only has to
+            # implement get_data, because find_system is not used by most of
+            # our tests (lookup_key is set to :system_id:).
+            system_data = {}
+            data_source = unittest.mock.Mock()
+            data_source.find_system.side_effect = AssertionError(
+                "find_system should not have been called."
+            )
+            data_source.get_data.return_value = (system_data, "")
+            # We create a single file that can be served by the handler.
+            _write_file(
+                pathlib.Path(tmpdir) / "test.txt",
+                "dummy",
+            )
+            handler = self.get_request_handler(config, data_source)
+            # The system data returned by get_data does not contain a client
+            # address, so we expect the request to be rejected. The status code
+            # should be FORBIDDEN, regardless of whether the requested file
+            # exists or not.
+            self.call_handle(
+                handler,
+                "/test/system_id/",
+                expect_status=HTTPStatus.FORBIDDEN,
+            )
+            self.call_handle(
+                handler,
+                "/test/system_id/test.txt",
+                expect_status=HTTPStatus.FORBIDDEN,
+            )
+            self.call_handle(
+                handler,
+                "/test/system_id/no_such_file.txt",
+                expect_status=HTTPStatus.FORBIDDEN,
+            )
+            # We set the client address, but not to an address that matches.
+            # (call_handle uses an address of 127.0.0.1 by default).
+            system_data["net"] = {"ip_addr": "192.168.0.1"}
+            self.call_handle(
+                handler,
+                "/test/system_id/test.txt",
+                expect_status=HTTPStatus.FORBIDDEN,
+            )
+            self.call_handle(
+                handler,
+                "/test/system_id/no_such_file.txt",
+                expect_status=HTTPStatus.FORBIDDEN,
+            )
+            # If we make a request with a client address of 192.168.0.1, there
+            # should be a match. We use an IPv4 address that is encoded inside
+            # an IPv6 address to test that such an address is decoded
+            # correctly.
+            self.call_handle(
+                handler,
+                "/test/system_id/test.txt",
+                client_address=("::ffff:192.168.0.1", 12345),
+                expect_status=HTTPStatus.OK,
+            )
+            # Specifying a subnet should work as well.
+            system_data["net"] = {"ip_addr": "192.168.0.0/24"}
+            self.call_handle(
+                handler,
+                "/test/system_id/test.txt",
+                expect_status=HTTPStatus.FORBIDDEN,
+            )
+            self.call_handle(
+                handler,
+                "/test/system_id/test.txt",
+                client_address=("192.168.0.42", 12345),
+                expect_status=HTTPStatus.OK,
+            )
+            # Now we repeat the test, but this time we have a list of allowed
+            # addresses.
+            system_data["net"]["ip_addr"] = ["192.168.0.1", "192.168.0.2"]
+            self.call_handle(
+                handler,
+                "/test/system_id/test.txt",
+                expect_status=HTTPStatus.FORBIDDEN,
+                client_address=("::ffff:192.168.0.3", 12345),
+            )
+            self.call_handle(
+                handler,
+                "/test/system_id/test.txt",
+                client_address=("::ffff:192.168.0.1", 12345),
+                expect_status=HTTPStatus.OK,
+            )
+            self.call_handle(
+                handler,
+                "/test/system_id/test.txt",
+                client_address=("::ffff:192.168.0.2", 12345),
+                expect_status=HTTPStatus.OK,
+            )
+            # It should also work with a set of allowed addresses and IPv6
+            # addresses.
+            system_data["net"]["ip_addr"] = {"127.0.0.1", "::1"}
+            self.call_handle(
+                handler,
+                "/test/system_id/test.txt",
+                client_address=("192.168.0.3", 12345),
+                expect_status=HTTPStatus.FORBIDDEN,
+            )
+            self.call_handle(
+                handler,
+                "/test/system_id/test.txt",
+                client_address=("::1", 12345),
+                expect_status=HTTPStatus.OK,
+            )
+            self.call_handle(
+                handler,
+                "/test/system_id/no_such_file.txt",
+                client_address=("::1", 12345),
+                expect_status=HTTPStatus.NOT_FOUND,
+            )
+            # Check that this works when lookup_key is not :system_id:
+            config["lookup_key"] = "some_key"
+            handler = self.get_request_handler(config, data_source)
+            data_source.find_system.side_effect = None
+            data_source.find_system.return_value = "system_id"
+            self.call_handle(
+                handler,
+                "/test/system_id/test.txt",
+                client_address=("192.168.0.3", 12345),
+                expect_status=HTTPStatus.FORBIDDEN,
+            )
+            self.call_handle(
+                handler,
+                "/test/system_id/no_such_file.txt",
+                client_address=("192.168.0.3", 12345),
+                expect_status=HTTPStatus.FORBIDDEN,
+            )
+            self.call_handle(
+                handler,
+                "/test/system_id/test.txt",
+                client_address=("::1", 12345),
+                expect_status=HTTPStatus.OK,
+            )
+            self.call_handle(
+                handler,
+                "/test/system_id/no_such_file.txt",
+                client_address=("::1", 12345),
+                expect_status=HTTPStatus.NOT_FOUND,
+            )
+            # If the system is not found, this should result in FORBIDDEN
+            # status, not a NOT_FOUND status.
+            data_source.find_system.return_value = None
+            self.call_handle(
+                handler,
+                "/test/system_id/test.txt",
+                client_address=("::1", 12345),
+                expect_status=HTTPStatus.FORBIDDEN,
+            )
+            self.call_handle(
+                handler,
+                "/test/system_id/no_such_file.txt",
+                client_address=("::1", 12345),
+                expect_status=HTTPStatus.FORBIDDEN,
+            )
+            # Check that a ValueError is raised when lookup_key is not set.
+            del config["lookup_key"]
+            with self.assertRaises(ValueError):
+                self.get_request_handler(config, data_source)
+
+    def test_config_client_address_key_and_list(self):
+        """
+        Test combination ``client_address_key`` and ``client_address_list``.
+        """
+        with TemporaryDirectory() as tmpdir:
+            # Here, we test the case where both client_address_key and
+            # client_address_list are specified. The cases were only one or
+            # neither one of them is specified is already handled by other
+            # tests.
+            config = {
+                "client_address_key": "net:ip_addr",
+                "client_address_list": ["10.0.0.1"],
+                "lookup_key": ":system_id:",
+                "request_path": "/test/...",
+                "root_dir": tmpdir,
+            }
+            # We need a mock data source. That data source only has to
+            # implement get_data, because find_system is not used by our tests
+            # (lookup_key is set to :system_id:).
+            system_data = {}
+            data_source = unittest.mock.Mock()
+            data_source.find_system.side_effect = AssertionError(
+                "find_system should not have been called."
+            )
+            data_source.get_data.return_value = (system_data, "")
+            # We create a single file that can be served by the handler.
+            _write_file(
+                pathlib.Path(tmpdir) / "test.txt",
+                "dummy",
+            )
+            handler = self.get_request_handler(config, data_source)
+            # The system data returned by get_data does not contain a client
+            # address, only the address from client_address_list should work.
+            self.call_handle(
+                handler,
+                "/test/system_id/test.txt",
+                client_address=("192.168.0.1", 12345),
+                expect_status=HTTPStatus.FORBIDDEN,
+            )
+            self.call_handle(
+                handler,
+                "/test/system_id/test.txt",
+                client_address=("10.0.0.1", 12345),
+                expect_status=HTTPStatus.OK,
+            )
+            # If the data source provides an address, this address should work
+            # as well.
+            system_data["net"] = {"ip_addr": "192.168.0.1"}
+            self.call_handle(
+                handler,
+                "/test/system_id/test.txt",
+                client_address=("192.168.0.2", 12345),
+                expect_status=HTTPStatus.FORBIDDEN,
+            )
+            self.call_handle(
+                handler,
+                "/test/system_id/test.txt",
+                client_address=("192.168.0.1", 12345),
+                expect_status=HTTPStatus.OK,
+            )
+            system_data["net"] = {"ip_addr": "192.168.0.0/24"}
+            self.call_handle(
+                handler,
+                "/test/system_id/test.txt",
+                client_address=("10.0.0.2", 12345),
+                expect_status=HTTPStatus.FORBIDDEN,
+            )
+            self.call_handle(
+                handler,
+                "/test/system_id/test.txt",
+                client_address=("10.0.0.1", 12345),
+                expect_status=HTTPStatus.OK,
+            )
+
+    def test_config_client_address_list(self):
+        """
+        Test the ``client_address_list`` configuration option.
+        """
+        with TemporaryDirectory() as tmpdir:
+            # We do not test that the client address is not checked when
+            # the client_address_list option is not set. This case is already
+            # covered by other tests.
+            config = {
+                "client_address_list": ["192.168.0.0/24", "10.12.34.56"],
+                "lookup_key": ":system_id:",
+                "request_path": "/test/...",
+                "root_dir": tmpdir,
+            }
+            # We need a mock data source. That data source only has to
+            # implement get_data, because find_system is not used by our tests
+            # (lookup_key is set to :system_id:).
+            system_data = {}
+            data_source = unittest.mock.Mock()
+            data_source.find_system.side_effect = AssertionError(
+                "find_system should not have been called."
+            )
+            data_source.get_data.return_value = (system_data, "")
+            # We create a single file that can be served by the handler.
+            _write_file(
+                pathlib.Path(tmpdir) / "test.txt",
+                "dummy",
+            )
+            handler = self.get_request_handler(config, data_source)
+            # We just do a few basic tests here. Most of the codepath is
+            # identical to the one used for the client_address_key option, and
+            # we already have more details tests for that option.
+            self.call_handle(
+                handler,
+                "/test/system_id/test.txt",
+                client_address=("10.12.34.57", 12345),
+                expect_status=HTTPStatus.FORBIDDEN,
+            )
+            self.call_handle(
+                handler,
+                "/test/system_id/test.txt",
+                client_address=("10.12.34.56", 12345),
+                expect_status=HTTPStatus.OK,
+            )
+            self.call_handle(
+                handler,
+                "/test/system_id/test.txt",
+                client_address=("192.168.1.1", 12345),
+                expect_status=HTTPStatus.FORBIDDEN,
+            )
+            self.call_handle(
+                handler,
+                "/test/system_id/test.txt",
+                client_address=("192.168.0.1", 12345),
+                expect_status=HTTPStatus.OK,
+            )
 
     def test_config_file(self):
         """
@@ -1258,6 +1566,7 @@ class TestHttpFileRequestHandler(TestFileRequestHandlerBase):
         self,
         handler,
         filename,
+        client_address=("127.0.0.1", 12345),
         expect_can_handle=True,
         expect_status=None,
         expect_headers=None,
@@ -1268,7 +1577,12 @@ class TestHttpFileRequestHandler(TestFileRequestHandlerBase):
         self.assertEqual(expect_can_handle, can_handle)
         if can_handle:
             status, headers, file = handler.handle(
-                filename, method, None, None, None, context
+                filename,
+                method,
+                None,
+                None,
+                client_address,
+                context,
             )
             try:
                 if expect_status is not None:
@@ -1516,6 +1830,7 @@ class TestTftpFileRequestHandler(TestFileRequestHandlerBase):
         self,
         handler,
         filename,
+        client_address=("127.0.0.1", 12345),
         expect_can_handle=True,
         expect_status=None,
         expect_headers=None,
@@ -1529,7 +1844,7 @@ class TestTftpFileRequestHandler(TestFileRequestHandlerBase):
             forbidden = False
             not_found = False
             try:
-                file = handler.handle(filename, None, context)
+                file = handler.handle(filename, client_address, context)
             except TftpError as e:
                 file = None
                 ok = False
