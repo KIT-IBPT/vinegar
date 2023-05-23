@@ -24,7 +24,7 @@ When rendering a template, the component calling the template engine typically
 passed context objects that can be used from the template code. The template
 objects that are available depend on the component that is calling the template
 engine and might even depend on the runtime situation. However, there typically
-are two context objects.
+are three context objects.
 
 The ``id`` context object is of type ``str`` and provides the system ID of the
 system for which the template is rendered. In the context of the
@@ -35,12 +35,17 @@ means that the ``id`` context object might not be available if the request path
 did not specify a system. Please refer to the documentation for the
 `~vinegar.request_handler.file` request handler for details.
 
-The other context object is the ``data`` object. It is a ``dict`` containing all
-the data relating to the system as provided by the :ref:`data sources
+The ``data`` context object is of type ``dict`` and contains all the data
+relating to the system as provided by the :ref:`data sources
 <concepts_data_sources>`. In case of the `~vinegar.data_source.yaml_target` data
 source this is only the data provided by the data sources *preceding* the
 `~vinegar.data_source.yaml_target` source because other data is obviously not
 available yet when rendering the files for that data source.
+
+The ``request_info`` context object is of type ``dict`` and contains information
+about the request for which the template is rendered. Please refer to the
+documentation of the `~vinegar.request_handler.file` request handler in order to
+learn more about the items available in this ``dict``.
 
 Configuration
 -------------

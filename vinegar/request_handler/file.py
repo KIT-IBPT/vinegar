@@ -117,11 +117,21 @@ the name of one of the template engines supported by
 `~vinegar.template.get_template_engine`. One good choice might be the ``jinja``
 template engine.
 
+A context object with the name ``request_info`` is passed to the template
+engine. This object is a ``dict``, which at the moment contains a single key,
+``client_address``. The value for this key is the tuple that was passed to the
+``handle`` method of the request handler. Please note that this might be
+``None``, if ``None`` was passed to this method. However, Vinegar’s HTTP and
+TFTP server implementation always provide a proper tuple, so unless the
+``handle`` method is called from third-party code, ``None`` should never
+appear. The first item of the tuple typically is the IP address of the client
+and the second item typically is the client-side port number.
+
 If the ``lookup_key`` configuration option is also set, the request handler
-provides two context objects to the template engine: The ``id`` object contains
-the system ID (as a ``str``) and the ``data`` object contains the data that has
-been returned from the data source's `~DataSource.get_data` method. The
-``data`` object is passed as a
+additionally provides two context objects to the template engine: The ``id``
+object contains the system ID (as a ``str``). The ``data`` object contains the
+data that has been returned from the data source's `~DataSource.get_data`
+method. The ``data`` object is passed as a
 `~vinegar.utils.smart_dict.SmartLookupOrderedDict` to make it easier to get
 nested values.
 
@@ -409,7 +419,7 @@ import os.path
 import urllib.parse
 
 from http import HTTPStatus
-from typing import Any, Mapping, Optional, Tuple
+from typing import Any, Dict, Mapping, Optional, Tuple
 
 from vinegar.data_source import DataSource, DataSourceAware
 from vinegar.http.server import HttpRequestHandler
@@ -825,7 +835,9 @@ class FileRequestHandlerBase(DataSourceAware):
                 # process. It is unlikely that the same file is repeatedly
                 # requested for the same system, so caching would probably not
                 # bring much benefit.
-                template_context = {}
+                template_context: Dict[str, Any] = {
+                    "request_info": {"client_address": client_address}
+                }
                 if system_id is not None:
                     template_context["id"] = system_id
                 if data is not None:

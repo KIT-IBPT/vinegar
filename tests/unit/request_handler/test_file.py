@@ -11,11 +11,10 @@ import unittest
 import unittest.mock
 
 from http import HTTPStatus
-from http.client import HTTPMessage
 from tempfile import TemporaryDirectory
 
 from vinegar.data_source import DataSource
-from vinegar.request_handler.file import (
+from vinegar.request_handler.file import (  # pylint: disable=unused-import
     HttpFileRequestHandler,
     TftpFileRequestHandler,
     get_instance_http,
@@ -1218,9 +1217,12 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
             file_path = temp_path / "test.txt"
             # We want to see that the system ID and the system data are
             # available to the template.
-            _write_file(
-                file_path, '{{ id }}:{{ data.get("nested:key:value") }}'
+            template_content = (
+                '{{ request_info["client_address"][0] }}:'
+                '{{ request_info["client_address"][1] }}:'
+                '{{ id }}:{{ data.get("nested:key:value") }}'
             )
+            _write_file(file_path, template_content)
             # We set lookup_key to ":system_id:" so that we do not have to mock
             # find_system.
             config = {
@@ -1242,12 +1244,11 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
             # By default, no template engine is configured, so the file content
             # should be returned verbatim.
             file_content = self.call_handle(
-                handler, "/test/test_id", expect_status=HTTPStatus.OK
+                handler,
+                "/test/test_id",
+                expect_status=HTTPStatus.OK,
             )
-            self.assertEqual(
-                '{{ id }}:{{ data.get("nested:key:value") }}',
-                file_content.decode(),
-            )
+            self.assertEqual(template_content, file_content.decode())
             # If we use the template engine, the template should be rendered
             # with the data.
             config["template"] = "jinja"
@@ -1255,7 +1256,20 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
             file_content = self.call_handle(
                 handler, "/test/test_id", expect_status=HTTPStatus.OK
             )
-            self.assertEqual("test_id:abc", file_content.decode())
+            self.assertEqual(
+                "127.0.0.1:12345:test_id:abc", file_content.decode()
+            )
+            # We try again with different request paramaters, in order to
+            # ensure that they are passed correctly.
+            file_content = self.call_handle(
+                handler,
+                "/test/some_id",
+                client_address=("192.168.0.1", 10042),
+                expect_status=HTTPStatus.OK,
+            )
+            self.assertEqual(
+                "192.168.0.1:10042:some_id:abc", file_content.decode()
+            )
 
     def test_config_template_config(self):
         """
