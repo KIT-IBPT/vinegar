@@ -1,5 +1,5 @@
 Vinegar
-Copyright 2019 Karlsruhe Institute of Technology.
+Copyright 2019-2023 Karlsruhe Institute of Technology.
 
 Vinegar was initially developed by aquenos GmbH on behalf of KIT's Institute of
 Beam Physics and Technology.
