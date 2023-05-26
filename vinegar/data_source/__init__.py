@@ -279,7 +279,7 @@ def get_data_source(name: str, config: Mapping[Any, Any]) -> DataSource:
     :return:
         newly created data source.
     """
-    module_name = name if "." in name else "{0}.{1}".format(__name__, name)
+    module_name = name if "." in name else f"{__name__}.{name}"
     data_source_module = importlib.import_module(module_name)
     return data_source_module.get_instance(config)
 
@@ -395,7 +395,7 @@ def _merge_data_trees(tree1, tree2, merge_lists, merge_sets, parent_key):
             if parent_key is None:
                 absolute_key = key
             else:
-                absolute_key = "{0}:{1}".format(parent_key, key)
+                absolute_key = f"{parent_key}:{key}"
             if val_is_mapping and oval_is_mapping:
                 merged[key] = _merge_data_trees(
                     value,
@@ -415,17 +415,17 @@ def _merge_data_trees(tree1, tree2, merge_lists, merge_sets, parent_key):
             elif val_is_mapping or oval_is_mapping:
                 raise TypeError(
                     "Cannot merge mapping type with non-mapping type while "
-                    "trying to merge value for key {0}.".format(absolute_key)
+                    f"trying to merge value for key {absolute_key}."
                 )
             elif merge_sets and (val_is_set or oval_is_set):
                 raise TypeError(
                     "Cannot merge set type with non-set type while "
-                    "trying to merge value for key {0}.".format(absolute_key)
+                    f"trying to merge value for key {absolute_key}."
                 )
             elif merge_lists and (val_is_seq or oval_is_seq):
                 raise TypeError(
                     "Cannot merge sequence type with non-sequence type while "
-                    "trying to merge value for key {0}.".format(absolute_key)
+                    f"trying to merge value for key {absolute_key}."
                 )
             else:
                 merged[key] = override_value

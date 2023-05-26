@@ -306,10 +306,8 @@ class DataStore:
             for key, dict_val in value.items():
                 if not isinstance(key, str):
                     raise TypeError(
-                        "Object of type {0} is not strictly JSON serializable "
-                        "when used as the key of a dict.".format(
-                            type(key).__name__
-                        )
+                        f"Object of type {type(key).__name__} is not strictly "
+                        "JSON serializable when used as the key of a dict."
                     )
                 self._check_value(dict_val, parents + [value])
             return
@@ -318,9 +316,8 @@ class DataStore:
                 self._check_value(list_val, parents + [value])
             return
         raise TypeError(
-            "Object of type {0} is not strictly JSON serializable.".format(
-                type(value).__name__
-            )
+            f"Object of type {type(value).__name__} is not strictly JSON "
+            "serializable."
         )
 
     def _create_tables(self):

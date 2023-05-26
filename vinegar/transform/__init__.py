@@ -178,9 +178,8 @@ def get_transformation_chain(chain: TransformationChain) -> Callable:
             config = None
         if not isinstance(name, str):
             raise ValueError(
-                "Transformation name is a {0} not a str: {1}".format(
-                    type(name).__name__, name
-                )
+                f"Transformation name is a {type(name).__name__} not a str: "
+                f"{name}"
             )
         args = []
         kwargs = {}
@@ -230,20 +229,14 @@ def get_transformation_function(name: str) -> Callable:
     # If there are less than two components, this is considered an error.
     module_name, _, function_name = name.rpartition(".")
     if not module_name:
-        raise ValueError(
-            "Missing module name in transformation name: {0}".format(name)
-        )
+        raise ValueError(f"Missing module name in transformation name: {name}")
     if "." in module_name:
-        raise ValueError(
-            "Module name must not contain a dot: {0}".format(module_name)
-        )
-    module_name = "{0}.{1}".format(__name__, module_name)
+        raise ValueError(f"Module name must not contain a dot: {module_name}")
+    module_name = f"{__name__}.{module_name}"
     transform_module = importlib.import_module(module_name)
     transform_function = getattr(transform_module, function_name)
     if not isinstance(transform_function, collections.abc.Callable):
         raise TypeError(
-            "'{0}' object is not callable".format(
-                type(transform_function).__name__
-            )
+            f"'{type(transform_function).__name__}' object is not callable"
         )
     return transform_function

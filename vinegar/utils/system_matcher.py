@@ -260,9 +260,7 @@ def _expect_expression(
             right_expression = _expect_unary_expression(tokens, case_sensitive)
         else:
             raise ValueError(
-                'Found token "{0}" where "and" or "or" were expected.'.format(
-                    token
-                )
+                f'Found token "{token}" where "and" or "or" were expected.'
             )
 
     # A right expression is only left if there was an or expression that has
@@ -301,9 +299,7 @@ def _expect_unary_expression(
         return _not_expression(expression)
     if token in ("and", "or"):
         raise ValueError(
-            'Found "{0}" where "(", "not" or pattern was expected.'.format(
-                token
-            )
+            f'Found "{token}" where "(", "not" or pattern was expected.'
         )
     return _pattern_expression(token, case_sensitive)
 
@@ -344,7 +340,7 @@ def _expression_from_string(
         if not message:
             message = type(err).__name__
         raise ValueError(
-            'Cannot parse expression "{0}": {1}'.format(expression, message)
+            f'Cannot parse expression "{expression}": {message}'
         ) from None
 
 

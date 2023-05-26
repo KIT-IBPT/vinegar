@@ -424,7 +424,7 @@ class SerializerExtension(jinja2.ext.Extension):
             return self._parse_load(parser, "json")
         if tag_name == "load_yaml":
             return self._parse_load(parser, "yaml")
-        raise RuntimeError("parse called for unexpected tag '%s'." % tag_name)
+        raise RuntimeError(f"parse called for unexpected tag '{tag_name}'.")
 
     @staticmethod
     def _load_json(value):
@@ -441,7 +441,7 @@ class SerializerExtension(jinja2.ext.Extension):
             return json.loads(value)
         except Exception as err:
             raise jinja2.exceptions.TemplateRuntimeError(
-                "Could not decode value as JSON: %s" % value
+                f"Could not decode value as JSON: {value}"
             ) from err
 
     @staticmethod
@@ -459,7 +459,7 @@ class SerializerExtension(jinja2.ext.Extension):
             return yaml.safe_load(value)
         except Exception as err:
             raise jinja2.exceptions.TemplateRuntimeError(
-                "Could not decode value as YAML: %s" % value
+                f"Could not decode value as YAML: {value}"
             ) from err
 
     def _parse_import(self, parser: jinja2.parser.Parser, type_name: str):

@@ -86,7 +86,7 @@ class SmartLookupDict(dict):
         sep = ":"
         if len(args) > 2:
             raise TypeError(
-                "get expected at most 3 arguments, got %d" % (len(args) + 1)
+                f"get expected at most 3 arguments, got {len(args) + 1}"
             )
         if len(args) >= 1:
             if "default" in kwargs:
@@ -115,8 +115,7 @@ class SmartLookupDict(dict):
         for kwarg_key in kwargs:
             if kwarg_key not in ("default", "sep"):
                 raise TypeError(
-                    "test() got an unexpected keyword argument '%s'"
-                    % kwarg_key
+                    f"test() got an unexpected keyword argument '{kwarg_key}'"
                 )
         keys = key.split(sep)
         nested_value = self

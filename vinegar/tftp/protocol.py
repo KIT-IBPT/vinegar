@@ -196,7 +196,7 @@ class TransferMode(enum.IntEnum):
             return TransferMode.OCTET
         if mode_lower == "mail":
             return TransferMode.MAIL
-        raise ValueError("Unsupported transfer mode: {0}".format(mode))
+        raise ValueError(f"Unsupported transfer mode: {mode}")
 
     def to_str(self) -> str:
         """
@@ -208,7 +208,7 @@ class TransferMode(enum.IntEnum):
             return "octet"
         if self == TransferMode.MAIL:
             return "mail"
-        raise ValueError("Unhandled transfer mode: {0}".format(self))
+        raise ValueError(f"Unhandled transfer mode: {self}")
 
 
 def data_packet(block_number: int, data: bytes) -> bytes:

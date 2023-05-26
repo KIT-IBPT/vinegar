@@ -50,9 +50,7 @@ def _parse_ip_address(
             netmask = 32
         elif netmask > 32:
             raise ValueError(
-                'Error parsing "{}": Invalid netmask.'.format(
-                    original_ip_address
-                )
+                f'Error parsing "{original_ip_address}": Invalid netmask.'
             )
         return socket.AF_INET, ip_address_bytes, netmask
     except OSError:
@@ -65,16 +63,14 @@ def _parse_ip_address(
             netmask = 128
         elif netmask > 128:
             raise ValueError(
-                'Error parsing "{}": Invalid netmask.'.format(
-                    original_ip_address
-                )
+                f'Error parsing "{original_ip_address}": Invalid netmask.'
             )
         return socket.AF_INET6, ip_address_bytes, netmask
     except OSError as err:
         # The address is neither a valid IPv4 nor a valid IPv6 address.
         raise ValueError(
-            'Error parsing "{}": This neither is a valid IPv4 nor IPv6 '
-            "address.".format(original_ip_address)
+            f'Error parsing "{original_ip_address}": This neither is a valid '
+            "IPv4 nor IPv6 address."
         ) from err
 
 
@@ -238,5 +234,5 @@ def socket_address_to_str(socket_address: typing.Tuple) -> str:
     host = ipv6_address_unwrap(host)
     # If the host address is an IPv6 address, we want to wrap it in brackets.
     if ":" in host:
-        return "[{0}]:{1}".format(host, port)
-    return "{0}:{1}".format(host, port)
+        return f"[{host}]:{port}"
+    return f"{host}:{port}"

@@ -211,8 +211,8 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
         self._request_path = config["request_path"]
         if not self._request_path.startswith("/"):
             raise ValueError(
-                'Invalid request path "{0}": The request path must start with '
-                'a "/".'.format(self._request_path)
+                f'Invalid request path "{self._request_path}": The request '
+                'path must start with a "/".'
             )
         if not self._request_path.endswith("/"):
             self._request_path += "/"
@@ -225,8 +225,8 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
             "set_text_value_from_request_body",
         ):
             raise ValueError(
-                'Invalid action "{0}". Action must be one of "delete_data", '
-                '"delete_value", "set_value".'.format(self._action)
+                f'Invalid action "{self._action}". Action must be one of '
+                '"delete_data", "delete_value", "set_value".'
             )
         if self._action in (
             "delete_value",
@@ -348,9 +348,7 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
                 return HTTPStatus.BAD_REQUEST, None, None
             self._data_store.set_value(system_id, self._key, value)
         else:
-            raise RuntimeError(
-                "Unimplemented action: {0}".format(self._action)
-            )
+            raise RuntimeError(f"Unimplemented action: {self._action}")
         response_headers = {"Content-Type": "text/plain; charset=UTF-8"}
         # We do not send an empty reply because curl considers this an error.
         response_body = io.BytesIO(b"success\n")

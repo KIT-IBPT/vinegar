@@ -46,7 +46,7 @@ def broadcast_address(
         if raise_error_if_malformed:
             raise ValueError(
                 "Cannot calculate net address for IP address without subnet "
-                "mask: {0}".format(value)
+                f"mask: {value}"
             )
         return value
     addr_as_int = (
@@ -61,7 +61,7 @@ def broadcast_address(
     addr_bytes[1] = (addr_as_int >> 16) & 255
     addr_bytes[2] = (addr_as_int >> 8) & 255
     addr_bytes[3] = addr_as_int & 255
-    return "{0[0]}.{0[1]}.{0[2]}.{0[3]}".format(addr_bytes)
+    return f"{addr_bytes[0]}.{addr_bytes[1]}.{addr_bytes[2]}.{addr_bytes[3]}"
 
 
 def net_address(value: str, raise_error_if_malformed: bool = False) -> str:
@@ -93,7 +93,7 @@ def net_address(value: str, raise_error_if_malformed: bool = False) -> str:
         if raise_error_if_malformed:
             raise ValueError(
                 "Cannot calculate net address for IP address without subnet "
-                "mask: {0}".format(value)
+                f"mask: {value}"
             )
         return value
     addr_as_int = (
@@ -108,7 +108,10 @@ def net_address(value: str, raise_error_if_malformed: bool = False) -> str:
     addr_bytes[1] = (addr_as_int >> 16) & 255
     addr_bytes[2] = (addr_as_int >> 8) & 255
     addr_bytes[3] = addr_as_int & 255
-    return "{0[0]}.{0[1]}.{0[2]}.{0[3]}/{1}".format(addr_bytes, mask)
+    return (
+        f"{addr_bytes[0]}.{addr_bytes[1]}.{addr_bytes[2]}.{addr_bytes[3]}/"
+        f"{mask}"
+    )
 
 
 def normalize(value: str, raise_error_if_malformed: bool = False) -> str:
@@ -141,9 +144,9 @@ def normalize(value: str, raise_error_if_malformed: bool = False) -> str:
         if raise_error_if_malformed:
             raise
         return value
-    value = "{0[0]}.{0[1]}.{0[2]}.{0[3]}".format(addr_bytes)
+    value = f"{addr_bytes[0]}.{addr_bytes[1]}.{addr_bytes[2]}.{addr_bytes[3]}"
     if mask is not None:
-        value = "{0}/{1}".format(value, mask)
+        value = f"{value}/{mask}"
     return value
 
 
@@ -183,7 +186,7 @@ def _str_to_addr_bytes_and_mask(
 ) -> typing.Tuple[typing.List[int], typing.Optional[int]]:
     match = _IPV4_REGEXP.fullmatch(value)
     if match is None:
-        raise ValueError("Not a valid IPv4 address: {0}".format(value))
+        raise ValueError(f"Not a valid IPv4 address: {value}")
     addr_bytes = match.group(1, 2, 3, 4)
     addr_bytes = [int(addr_byte) for addr_byte in addr_bytes]
     mask = match.group(5)
@@ -191,7 +194,7 @@ def _str_to_addr_bytes_and_mask(
         mask = int(mask)
     for addr_byte in addr_bytes:
         if addr_byte > 255:
-            raise ValueError("Not a valid IPv4 address: {0}".format(value))
+            raise ValueError(f"Not a valid IPv4 address: {value}")
     if mask is not None and mask > 32:
-        raise ValueError("Invalid mask in IPv4 address: {0}".format(value))
+        raise ValueError(f"Invalid mask in IPv4 address: {value}")
     return (addr_bytes, mask)

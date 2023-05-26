@@ -594,9 +594,7 @@ class _TftpReadRequest:
         elif transfer_mode == TransferMode.OCTET:
             self._netascii_mode = False
         else:
-            raise ValueError(
-                "Unsupported transfer mode: {0}".format(transfer_mode)
-            )
+            raise ValueError(f"Unsupported transfer mode: {transfer_mode}")
         self._client_address = client_address
         self._handler_function = handler_function
         self._handler_context = handler_context
@@ -835,7 +833,7 @@ class _TftpReadRequest:
             #
             # pylint: disable=raise-missing-from
             raise _TftpReadRequest._InvalidPacket(
-                "Received packet with invalid opcode {}.".format(opcode_num)
+                f"Received packet with invalid opcode {opcode_num}."
             )
         if opcode == Opcode.ACK:
             try:
@@ -860,22 +858,20 @@ class _TftpReadRequest:
                 raise _TftpReadRequest._TransferAborted()
             if error_code is not None and error_message:
                 raise _TftpReadRequest._ClientError(
-                    "Error code {0}: {1}".format(
-                        error_code.value, error_message
-                    )
+                    f"Error code {error_code.value}: {error_message}"
                 )
             if error_code is not None:
                 raise _TftpReadRequest._ClientError(
-                    "Error code {0}.".format(error_code.value)
+                    f"Error code {error_code.value}."
                 )
             if error_message:
                 raise _TftpReadRequest._ClientError(
-                    "Error code unknown: {0}".format(error_message)
+                    f"Error code unknown: {error_message}"
                 )
             raise _TftpReadRequest._ClientError("Unknown error.")
         raise _TftpReadRequest._InvalidPacket(
-            "Received packet with opcode {} when ACK or ERROR was "
-            "expected.".format(opcode.name)
+            f"Received packet with opcode {opcode.name} when ACK or ERROR was "
+            "expected."
         )
 
     def _reset_timeout(self):

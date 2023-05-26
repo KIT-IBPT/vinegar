@@ -90,18 +90,18 @@ def normalize(
         delimiter = "-"
     else:
         raise ValueError(
-            'Invalid delimiter "{0}". Valid values are ":", "-", "colon", '
-            '"dash" or "minus".'.format(delimiter)
+            f'Invalid delimiter "{delimiter}". Valid values are ":", "-", '
+            '"colon", "dash" or "minus".'
         )
     if target_case not in ("lower", "upper"):
         raise ValueError(
-            'Invalid target case "{0}": Valid values are "lower" and '
-            '"upper".'.format(target_case)
+            f'Invalid target case "{target_case}": Valid values are "lower" '
+            'and "upper".'
         )
     match = _MAC_REGEXP.fullmatch(value)
     if match is None:
         if raise_error_if_malformed:
-            raise ValueError("Not a valid MAC address: {0}".format(value))
+            raise ValueError(f"Not a valid MAC address: {value}")
         return value
     # The parts of the string that represent the address bytes are in groups
     # 1, 3, 5, 7, 9, and 11 of the expression.

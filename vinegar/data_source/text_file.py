@@ -355,20 +355,18 @@ class TextFileSource(DataSource):
         )
         if self._duplicate_system_id_action not in ("error", "ignore", "warn"):
             raise ValueError(
-                'Invalid value "{0}" for option duplicate_system_id_action. '
-                'Allowed values are "error", "ignore" and "warn".'.format(
-                    self._duplicate_system_id_action
-                )
+                f'Invalid value "{self._duplicate_system_id_action}" for '
+                "option duplicate_system_id_action. Allowed values are "
+                '"error", "ignore" and "warn".'
             )
         self._file = config["file"]
         self._find_first_match = config.get("find_first_match", False)
         self._mismatch_action = config.get("mismatch_action", "warn")
         if self._mismatch_action not in ("error", "ignore", "warn"):
             raise ValueError(
-                'Invalid value "{0}" for option mismatch_action. Allowed '
-                'values are "error", "ignore", and "warn".'.format(
-                    self._mismatch_action
-                )
+                f'Invalid value "{self._mismatch_action}" for option '
+                'mismatch_action. Allowed values are "error", "ignore", and '
+                '"warn".'
             )
         self._regular_expression = re.compile(config["regular_expression"])
         regular_expression_ignore_text = config.get(
@@ -459,9 +457,7 @@ class TextFileSource(DataSource):
             transform_none_value = config.get("transform_none_value", False)
             if not optional and not transform_none_value:
                 raise ValueError(
-                    "Regular expression group {0} has no value.".format(
-                        group_index
-                    )
+                    f"Regular expression group {group_index} has no value."
                 )
             # Usually, we do not transform a value of None, unless it is
             # requested explicitly.
@@ -472,9 +468,7 @@ class TextFileSource(DataSource):
         value = transform_func(value)
         if value is None and not optional:
             raise ValueError(
-                "Regular expression group {0} has no value.".format(
-                    group_index
-                )
+                f"Regular expression group {group_index} has no value."
             )
         return value
 
@@ -527,10 +521,9 @@ class TextFileSource(DataSource):
                 if match is None:
                     if self._mismatch_action == "error":
                         raise ValueError(
-                            'Error while parsing file {0} line {1}: "{2}" '
-                            "does not match the specified format.".format(
-                                self._file, line_no, line
-                            )
+                            f"Error while parsing file {self._file} line "
+                            f'{line_no}: "{line}" does not match the '
+                            "specified format."
                         )
                     if self._mismatch_action == "ignore":
                         continue
@@ -544,9 +537,7 @@ class TextFileSource(DataSource):
                         )
                         continue
                     raise RuntimeError(
-                        "Invalid mismatch action: {0}".format(
-                            self._mismatch_action
-                        )
+                        f"Invalid mismatch action: {self._mismatch_action}"
                     )
                 # First, we process the system ID. The system ID is always
                 # needed, so it has a separate configuration.
@@ -555,21 +546,15 @@ class TextFileSource(DataSource):
                 )
                 if system_id is None:
                     raise ValueError(
-                        "Error while parsing {0} line {1}: Line does not "
-                        "specify a system ID: {2}".format(
-                            self._file, line_no, line
-                        )
+                        f"Error while parsing {self._file} line {line_no}: "
+                        f"Line does not specify a system ID: {line}"
                     )
                 if system_id in self._system_data:
                     if self._duplicate_system_id_action == "error":
                         raise ValueError(
-                            "Error while parsing file {0} line {1}: System ID "
-                            '"{2}" is already specified in line {3}.'.format(
-                                self._file,
-                                line_no,
-                                system_id,
-                                system_line_no[system_id],
-                            )
+                            f"Error while parsing file {self._file} line "
+                            f'{line_no}: System ID "{system_id}" is already '
+                            f"specified in line {system_line_no[system_id]}."
                         )
                     if self._duplicate_system_id_action == "ignore":
                         continue
@@ -586,9 +571,7 @@ class TextFileSource(DataSource):
                         )
                         continue
                     raise RuntimeError(
-                        "Invalid mismatch action: {0}".format(
-                            self._mismatch_action
-                        )
+                        f"Invalid mismatch action: {self._mismatch_action}"
                     )
                 # Next we generate the data for the system by processing each
                 # of the specified variable definitions.

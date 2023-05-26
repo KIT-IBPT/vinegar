@@ -35,7 +35,7 @@ def net_address(value: str, raise_error_if_malformed: bool = False) -> str:
         if raise_error_if_malformed:
             raise ValueError(
                 "Cannot calculate net address for IP address without subnet "
-                "mask: {0}".format(value)
+                f"mask: {value}"
             )
         return value
     offset = 0
@@ -50,7 +50,7 @@ def net_address(value: str, raise_error_if_malformed: bool = False) -> str:
     for i, _ in enumerate(addr_bytes):
         addr_bytes[i] = (addr_as_int >> offset) & 255
         offset -= 8
-    return "%s/%d" % (socket.inet_ntop(socket.AF_INET6, addr_bytes), mask)
+    return f"{socket.inet_ntop(socket.AF_INET6, addr_bytes)}/{mask}"
 
 
 def normalize(value: str, raise_error_if_malformed: bool = False) -> str:
@@ -93,7 +93,7 @@ def normalize(value: str, raise_error_if_malformed: bool = False) -> str:
         return value
     value = socket.inet_ntop(socket.AF_INET6, addr_bytes)
     if mask is not None:
-        value = "{0}/{1}".format(value, mask)
+        value = f"{value}/{mask}"
     return value
 
 
@@ -139,7 +139,7 @@ def _str_to_addr_bytes_and_mask(
     try:
         addr_bytes = socket.inet_pton(socket.AF_INET6, addr)
     except OSError:
-        raise ValueError("Invalid IPv6 address: %s" % value) from None
+        raise ValueError(f"Invalid IPv6 address: {value}") from None
     if mask is not None:
         try:
             mask = int(mask)
@@ -151,5 +151,5 @@ def _str_to_addr_bytes_and_mask(
             # information.
             #
             # pylint: disable=raise-missing-from
-            raise ValueError("Invalid mask in IPv6 address: {0}".format(value))
+            raise ValueError(f"Invalid mask in IPv6 address: {value}")
     return addr_bytes, mask

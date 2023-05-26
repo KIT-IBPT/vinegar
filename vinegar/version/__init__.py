@@ -24,11 +24,11 @@ def _version_string():
     version_string = ""
     for component in VERSION:
         if component >= 0:
-            version_string += ".%d" % component
+            version_string += f".{component}"
         else:
             # We assume that there is only one negative component in the
             # version number.
-            version_string += "beta%d" % (component - BETA_VERSION_OFFSET)
+            version_string += f"beta{component - BETA_VERSION_OFFSET}"
     return version_string[1:]
 
 

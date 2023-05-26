@@ -41,7 +41,7 @@ def get_http_request_handler(
     :return:
         newly created HTTP request handler.
     """
-    module_name = name if "." in name else "{0}.{1}".format(__name__, name)
+    module_name = name if "." in name else f"{__name__}.{name}"
     data_source_module = importlib.import_module(module_name)
     return data_source_module.get_instance_http(config)
 
@@ -63,6 +63,6 @@ def get_tftp_request_handler(
     :return:
         newly created TFTP request handler.
     """
-    module_name = name if "." in name else "{0}.{1}".format(__name__, name)
+    module_name = name if "." in name else f"{__name__}.{name}"
     data_source_module = importlib.import_module(module_name)
     return data_source_module.get_instance_tftp(config)

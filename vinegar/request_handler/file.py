@@ -471,10 +471,9 @@ class FileRequestHandlerBase(DataSourceAware):
         )
         if self._data_source_error_action not in ("error", "ignore", "warn"):
             raise ValueError(
-                'Invalid data_source_error_action "{0}". Action must be one '
-                'of "error", "ignore", "warn".'.format(
-                    self._data_source_error_action
-                )
+                "Invalid data_source_error_action "
+                f'"{self._data_source_error_action}". Action must be one of '
+                '"error", "ignore", "warn".'
             )
         self._file = config.get("file", None)
         self._lookup_no_result_action = config.get(
@@ -482,10 +481,9 @@ class FileRequestHandlerBase(DataSourceAware):
         )
         if self._lookup_no_result_action not in ("continue", "not_found"):
             raise ValueError(
-                'Invalid lookup_no_result action "{0}". Action must be one of '
-                '"continue", "not_found".'.format(
-                    self._lookup_no_result_action
-                )
+                "Invalid lookup_no_result action "
+                f'"{self._lookup_no_result_action}". Action must be one of '
+                '"continue", "not_found".'
             )
         self._root_dir = config.get("root_dir", None)
         # When neither the "file" nor the "root_dir" key are present in the
@@ -866,8 +864,8 @@ class FileRequestHandlerBase(DataSourceAware):
         # Every valid request path must start with a forward slash.
         if not request_path.startswith("/"):
             raise ValueError(
-                'Invalid request path "{0}": The request path must start with '
-                'a "/".'.format(request_path)
+                f'Invalid request path "{request_path}": The request path '
+                'must start with a "/".'
             )
         # The special request path "/" is replaced with the empty string. That
         # has the effect that the first "/" of an actual request is added to
@@ -879,8 +877,8 @@ class FileRequestHandlerBase(DataSourceAware):
         # The request path must not end with a forward slash.
         if request_path.endswith("/") and request_path != "/":
             raise ValueError(
-                'Invalid request path "{0}": The request path must not end '
-                'with a "/".'.format(request_path)
+                f'Invalid request path "{request_path}": The request path '
+                'must not end with a "/".'
             )
         self._lookup_key = config.get("lookup_key", None)
         self._lookup_value_placeholder = config.get(
@@ -909,13 +907,13 @@ class FileRequestHandlerBase(DataSourceAware):
                         placeholder_index = index
                     else:
                         raise ValueError(
-                            'Request path "{0}" contains placeholder "{1}" '
-                            "more than once.".format(request_path, placeholder)
+                            f'Request path "{request_path}" contains '
+                            f'placeholder "{placeholder}" more than once.'
                         )
             if placeholder_index is None:
                 raise ValueError(
-                    'Request path "{0}" does not contain placeholder '
-                    '"{1}".'.format(request_path, placeholder)
+                    f'Request path "{request_path}" does not contain '
+                    f'placeholder "{placeholder}".'
                 )
             # The path segment
             request_path_placeholder_segment = request_path_segments[
@@ -928,8 +926,8 @@ class FileRequestHandlerBase(DataSourceAware):
             # the split cannot result in less than two components.
             if len(placeholder_segment_sub_components) > 2:
                 raise ValueError(
-                    'Request path "{0}" contains placeholder "{1}" more than '
-                    "once.".format(request_path, placeholder)
+                    f'Request path "{request_path}" contains placeholder '
+                    f'"{placeholder}" more than once.'
                 )
             self._request_path_prefix_segments = request_path_segments[
                 :placeholder_index

@@ -133,7 +133,7 @@ def main():
     )
     args = parser.parse_args()
     if args.version:
-        print("Vinegar server %s" % vinegar.version.VERSION_STRING)
+        print(f"Vinegar server {vinegar.version.VERSION_STRING}")
         sys.exit(0)
     config_file = args.config_file
     config = read_server_config(config_file)
@@ -206,8 +206,8 @@ def run_server(config: typing.Mapping[str, typing.Any]) -> None:
             "WARNING",
         ):
             raise ValueError(
-                'Invalid logging_level "%s". Must be one of CRITICAL, DEBUG, '
-                "ERROR, INFO, WARNING." % logging_level
+                f'Invalid logging_level "{logging_level}". Must be one of '
+                "CRITICAL, DEBUG, ERROR, INFO, WARNING."
             )
         logging_level = getattr(logging, logging_level)
         logging.basicConfig(level=logging_level)
@@ -229,7 +229,7 @@ def _run_server_internal(config):
     if not isinstance(config, collections.abc.Mapping):
         raise TypeError(
             "Configuration object must be a mapping, but got an object of "
-            "type '%s'." % type(config).__name__
+            f"type '{type(config).__name__}'."
         )
     # Configure data sources.
     data_sources = []
@@ -237,14 +237,14 @@ def _run_server_internal(config):
     if not isinstance(data_source_configs, collections.abc.Sequence):
         raise TypeError(
             "Expected a list for the data_sources key, but found an object of "
-            "type '%s'." % type(data_source_configs).__name__
+            f"type '{type(data_source_configs).__name__}'."
         )
     for data_source_config in data_source_configs:
         if not isinstance(data_source_config, collections.abc.Mapping):
             raise TypeError(
                 "Expected a dictionary for the items in the data_sources "
-                "list, but found an object of type '%s'."
-                % type(data_source_configs).__name__
+                "list, but found an object of type "
+                f"'{type(data_source_configs).__name__}'."
             )
         if "name" not in data_source_config:
             raise KeyError("Data source configuration must have a name.")
@@ -263,14 +263,14 @@ def _run_server_internal(config):
     if not isinstance(http_config, collections.abc.Mapping):
         raise TypeError(
             "Expected a dictionary for the http key, but found an object of "
-            "type '%s'." % type(http_config).__name__
+            f"type '{type(http_config).__name__}'."
         )
     http_request_handlers = []
     request_handler_configs = http_config.get("request_handlers", [])
     if not isinstance(request_handler_configs, collections.abc.Sequence):
         raise TypeError(
             "Expected a list for the http:request_handlers key, but found an "
-            "object of type '%s'." % type(request_handler_configs).__name__
+            f"object of type '{type(request_handler_configs).__name__}'."
         )
     for request_handler_config in request_handler_configs:
         if "name" not in request_handler_config:
@@ -298,14 +298,14 @@ def _run_server_internal(config):
     if not isinstance(tftp_config, collections.abc.Mapping):
         raise TypeError(
             "Expected a dictionary for the tftp key, but found an object of "
-            "type '%s'." % type(tftp_config).__name__
+            f"type '{type(tftp_config).__name__}'."
         )
     tftp_request_handlers = []
     request_handler_configs = tftp_config.get("request_handlers", [])
     if not isinstance(request_handler_configs, collections.abc.Sequence):
         raise TypeError(
             "Expected a list for the tftp:request_handlers key, but found an "
-            "object of type '%s'." % type(request_handler_configs).__name__
+            f"object of type '{type(request_handler_configs).__name__}'."
         )
     for request_handler_config in request_handler_configs:
         if "name" not in request_handler_config:

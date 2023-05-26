@@ -73,6 +73,6 @@ def get_template_engine(
     :return:
         newly created template engine.
     """
-    module_name = name if "." in name else "{0}.{1}".format(__name__, name)
+    module_name = name if "." in name else f"{__name__}.{name}"
     template_engine_module = importlib.import_module(module_name)
     return template_engine_module.get_instance(config)

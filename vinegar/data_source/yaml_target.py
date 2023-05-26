@@ -375,10 +375,9 @@ class _DataCompiler:
     def _expression_matches(self, target_expression):
         if not isinstance(target_expression, str):
             raise TypeError(
-                "Invalid target expression in {0}: Expected a string, but got "
-                "an object of type {1}.".format(
-                    self._top_file, type(target_expression).__name__
-                )
+                f"Invalid target expression in { self._top_file}: Expected a "
+                "string, but got an object of type "
+                f"{type(target_expression).__name__}."
             )
         return vinegar.utils.system_matcher.match(
             self._system_id, target_expression
@@ -393,10 +392,9 @@ class _DataCompiler:
                 parent_files[file_index:] + [file_name]
             )
             raise RuntimeError(
-                "Recursion loop detected in file {0}: The file is included by "
-                "itself through the following chain: {1}".format(
-                    file_name, include_chain
-                )
+                f"Recursion loop detected in file {file_name}: The file is "
+                "included by itself through the following chain: "
+                f"{include_chain}"
             )
         # The same file might already have been processed because it is
         # referenced in more than one place. In this case, we prefer the
@@ -423,7 +421,7 @@ class _DataCompiler:
                 file_data = yaml.safe_load(file_yaml)
         except Exception as err:
             raise RuntimeError(
-                "Error processing data file {0}.".format(file_name)
+                f"Error processing data file {file_name}."
             ) from err
         # If the data from the cache is valid, we can simply use it. Otherwise,
         # we have to process the file content.
@@ -444,8 +442,8 @@ class _DataCompiler:
                 file_data, collections.abc.Mapping  # type: ignore
             ):
                 raise TypeError(
-                    "File {0} does not contain a dictionary as its top "
-                    "structure.".format(file_name)
+                    f"File {file_name} does not contain a dictionary as its "
+                    "top structure."
                 )
             (
                 preceding_data,
@@ -500,19 +498,17 @@ class _DataCompiler:
     def _process_data_files(self, parent_files, file_list):
         if not isinstance(file_list, collections.abc.Sequence):
             raise TypeError(
-                "Malformed file list in {0}: Found an object of type {1} "
-                "where a list was expected.".format(
-                    parent_files[-1], type(file_list).__name__
-                )
+                f"Malformed file list in {parent_files[-1]}: Found an object "
+                f"of type {type(file_list).__name__} where a list was "
+                "expected."
             )
         data_files = []
         for file_name in file_list:
             if not isinstance(file_name, str):
                 raise TypeError(
-                    "Malformed file list in {0}: Found an object of type {1} "
-                    "where a string was expected.".format(
-                        parent_files[-1], type(file_name).__name__
-                    )
+                    f"Malformed file list in {parent_files[-1]}: Found an "
+                    f"object of type {type(file_name).__name__} where a "
+                    "string was expected."
                 )
             # Files are specified in the form module1.module2.file, which has
             # to be translated to a path in the form
@@ -538,9 +534,8 @@ class _DataCompiler:
                     )
                 else:
                     raise FileNotFoundError(
-                        "File {0} included by {1} could not be found.".format(
-                            file_name, parent_files[-1]
-                        )
+                        f"File {file_name} included by {parent_files[-1]} "
+                        "could not be found."
                     )
         data_list = []
         for data_file_name, data_file in data_files:
@@ -556,9 +551,7 @@ class _DataCompiler:
     def _process_top(self):
         if not pathlib.Path(self._top_file).exists():
             raise FileNotFoundError(
-                "Could not find top.yaml in {0}.".format(
-                    str(self._root_dir_path)
-                )
+                f"Could not find top.yaml in {self._root_dir_path}."
             )
         try:
             top_yaml = self._render(self._top_file)
@@ -594,10 +587,9 @@ class _DataCompiler:
         for target_expression, file_list in top_data.items():
             if not isinstance(file_list, collections.abc.Sequence):
                 raise TypeError(
-                    "Malformed file list in {0}: Found an object of type {1} "
-                    "where a list was expected.".format(
-                        self._top_file, type(file_list).__name__
-                    )
+                    f"Malformed file list in {self._top_file}: Found an object "
+                    f"of type {type(file_list).__name__} where a list was "
+                    "expected."
                 )
             if self._expression_matches(target_expression):
                 data_files += file_list

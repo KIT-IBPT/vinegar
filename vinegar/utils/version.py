@@ -62,15 +62,9 @@ def version_for_file_path(
     try:
         file_stat = os.stat(file_path)
         file_info = (
-            "file_path={0},ctime={1},mtime={2},dev={3},ino={4},"
-            "size={5}".format(
-                file_path,
-                file_stat.st_ctime_ns,
-                file_stat.st_mtime_ns,
-                file_stat.st_dev,
-                file_stat.st_ino,
-                file_stat.st_size,
-            )
+            f"{file_path=},ctime={file_stat.st_ctime_ns},"
+            f"mtime={file_stat.st_mtime_ns},dev={file_stat.st_dev},"
+            f"ino={file_stat.st_ino},size={file_stat.st_size}"
         )
         return _hash_str(file_info)
     except OSError:
@@ -78,11 +72,7 @@ def version_for_file_path(
         # file path only. We also encode the exception type, so that a file
         # that cannot be found has a different version string than a file that
         # exists but cannot be read.
-        return _hash_str(
-            "file_path={0},exception={1}".format(
-                file_path, str(sys.exc_info()[0])
-            )
-        )
+        return _hash_str(f"{file_path=},exception={sys.exc_info()[0]}")
 
 
 def version_for_str(data: str) -> str:
