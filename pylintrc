@@ -2,7 +2,7 @@
 
 # Minimum Python version to use for version dependent checks. Will default to
 # the version used to run pylint.
-py-version=3.5
+py-version=3.8
 
 [FORMAT]
 

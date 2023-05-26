@@ -13,7 +13,7 @@ setup(
     zip_safe=True,
 
     install_requires=['Jinja2', 'PyYAML'],
-    python_requires='>=3.5',
+    python_requires='>=3.8',
 
     entry_points={
         'console_scripts': [
