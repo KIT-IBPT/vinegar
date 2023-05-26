@@ -114,8 +114,8 @@ The data source provides two context objects to the template engine: The ``id``
 object contains the system ID (as a ``str``) and the ``data`` objects contains
 the data that has been passed to the `~YamlTargetSource.get_data` method as
 ``preceding_data``. The ``data`` object is passed as a
-`~vinegar.utils.smart_dict.SmartLookupOrderedDict` to make it easier to get
-nested values.
+`~vinegar.utils.smart_dict.SmartLookupDict` to make it easier to get nested
+values.
 
 Configuration options
 ---------------------
@@ -176,14 +176,14 @@ import pathlib
 
 from typing import Any, Mapping, Optional, Tuple
 
+import yaml
+
 import vinegar.template
 import vinegar.utils.cache
 import vinegar.utils.system_matcher
 
 from vinegar.data_source import DataSource, merge_data_trees
-from vinegar.utils import oyaml as yaml
-from vinegar.utils.odict import OrderedDict
-from vinegar.utils.smart_dict import SmartLookupOrderedDict
+from vinegar.utils.smart_dict import SmartLookupDict
 from vinegar.utils.version import (
     aggregate_version,
     version_for_str,
@@ -336,7 +336,7 @@ class _DataCompiler:
         # files would never be removed.
         self._context = {
             "id": system_id,
-            "data": SmartLookupOrderedDict(preceding_data),
+            "data": SmartLookupDict(preceding_data),
         }
         self._new_cache = {}
         if old_cache is None:
@@ -481,8 +481,8 @@ class _DataCompiler:
         # If the includes come somewhere in the middle of the file, we have to
         # split the data between the part that comes before the includes and
         # the part that comes after the includes.
-        preceding_data = OrderedDict()
-        following_data = OrderedDict()
+        preceding_data = {}
+        following_data = {}
         before_include = True
         for key, value in file_data.items():
             if key == "include":

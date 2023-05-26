@@ -26,7 +26,6 @@ import importlib
 
 from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
-from vinegar.utils.odict import OrderedDict
 from vinegar.utils.version import aggregate_version
 
 
@@ -47,8 +46,6 @@ class DataSource(abc.ABC):
     provides a convenient tool for such a setup.
 
     If possible, data sources should preserve the key order in dictionaries.
-    The easiest way of achieving this is using the ``OrderedDictionary``
-    provided by `vinegar.utils.odict`.
 
     Each data source has to implement the `get_data` method. This method is
     used to collect the data for a system with a known identifier. It also has
@@ -350,11 +347,7 @@ def merge_data_trees(
 
     The resulting dictionary preserves key order. This means that it first
     contains all keys from the first mapping and then those keys from the
-    second mapping that were not also present in the first mapping. It achieves
-    this by using an instance of the ``OrderedDict`` provided by
-    `vinegar.utils.odict`. Please note that this is not necessarily an instance
-    of ``collections.OrderedDict``, but just a dictionary that preserves
-    insertion order.
+    second mapping that were not also present in the first mapping.
 
     :param tree1:
         mapping that shall be used as a base for the merge process.
@@ -381,7 +374,7 @@ def _merge_data_trees(tree1, tree2, merge_lists, merge_sets, parent_key):
     """
     # We explicitly create a new ordered dict so that we will preserve the
     # order if either of the two dicts has an order.
-    merged = OrderedDict()
+    merged = {}
     for key, value in tree1.items():
         if key in tree2:
             override_value = tree2[key]

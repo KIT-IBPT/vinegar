@@ -27,8 +27,6 @@ import threading
 
 from typing import Any, Mapping, Sequence
 
-from vinegar.utils.odict import OrderedDict
-
 
 class DataStore:
     """
@@ -181,10 +179,7 @@ class DataStore:
                 rows = cursor.fetchall()
             finally:
                 cursor.close()
-        data = {
-            row[0]: json.loads(row[1], object_pairs_hook=OrderedDict)
-            for row in rows
-        }
+        data = {row[0]: json.loads(row[1]) for row in rows}
         return data
 
     def get_value(self, system_id: str, key: str) -> Any:
@@ -214,7 +209,7 @@ class DataStore:
                 cursor.close()
         if row is None:
             raise KeyError(key)
-        return json.loads(row[0], object_pairs_hook=OrderedDict)
+        return json.loads(row[0])
 
     def list_systems(self) -> Sequence[str]:
         """

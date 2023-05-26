@@ -103,13 +103,13 @@ import sys
 import threading
 import typing
 
+import yaml
+
 import vinegar.data_source
 import vinegar.http.server
 import vinegar.request_handler
 import vinegar.tftp.server
 import vinegar.version
-
-from vinegar.utils import oyaml as yaml
 
 
 def main():

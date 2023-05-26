@@ -325,7 +325,6 @@ from typing import Any, Mapping, Optional, Tuple
 
 from vinegar.data_source import DataSource
 from vinegar.transform import get_transformation_chain
-from vinegar.utils.odict import OrderedDict
 from vinegar.utils.version import version_for_file_path, version_for_str
 
 # Logger used by this module.
@@ -593,7 +592,7 @@ class TextFileSource(DataSource):
                     )
                 # Next we generate the data for the system by processing each
                 # of the specified variable definitions.
-                data = OrderedDict()
+                data = {}
                 for key, var_config in self._variables_config.items():
                     value = self._process_variable(var_config, match)
                     # If the variable does not specify add_none_value = True,
@@ -608,9 +607,7 @@ class TextFileSource(DataSource):
                     target_dict = data
                     key_components = key.split(":")
                     for key_component in key_components[:-1]:
-                        target_dict = target_dict.setdefault(
-                            key_component, OrderedDict()
-                        )
+                        target_dict = target_dict.setdefault(key_component, {})
                     target_dict[key_components[-1]] = value
                     # We also add the key-value pair to the index, so that the
                     # system can be found.

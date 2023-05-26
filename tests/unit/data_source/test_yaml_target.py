@@ -13,7 +13,6 @@ import vinegar.data_source.yaml_target
 from tempfile import TemporaryDirectory
 
 from vinegar.data_source.yaml_target import YamlTargetSource
-from vinegar.utils.odict import OrderedDict
 
 
 class TestYamlTargetSource(unittest.TestCase):
@@ -532,7 +531,7 @@ class TestYamlTargetSource(unittest.TestCase):
                 c_from_include: 3
                 """,
             )
-            verify_data = OrderedDict()
+            verify_data = {}
             verify_data["a_before_include"] = 3
             verify_data["a_after_include"] = 2
             verify_data["a_from_include"] = 5
@@ -585,11 +584,11 @@ class TestYamlTargetSource(unittest.TestCase):
 
     def test_key_order(self):
         """
-        Test that the key order is preserved (an ordered dict is used).
+        Test that the key order is preserved.
 
-        This test is not extremely effective when running on Python >= 3.7 (or
-        CPython 3.6) because all dicts are ordered in these versions, but we
-        still include it for older versions of Python.
+        This should always happen because dicts are ordered, but we still test
+        it in order to make sure nothing funny happens in the YAML parser or
+        data-source implementation.
         """
         with TemporaryDirectory() as tmpdir:
             ds = YamlTargetSource({"root_dir": tmpdir})

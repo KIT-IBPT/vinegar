@@ -8,16 +8,14 @@ import pathlib
 import time
 import unittest
 
+from tempfile import TemporaryDirectory
+
 import jinja2.exceptions
 
 import vinegar.template
 import vinegar.template.jinja
 
-from tempfile import TemporaryDirectory
-
-from vinegar.utils.odict import OrderedDict
-
-from vinegar.template.jinja import JinjaEngine, SerializerExtension
+from vinegar.template.jinja import JinjaEngine
 
 
 class TestJinjaEngine(unittest.TestCase):
@@ -379,7 +377,7 @@ class TestSerializersExtension(unittest.TestCase):
                 {{ value | json }}
                 """,
             )
-            value = OrderedDict()
+            value = {}
             value["def"] = 456
             value["abc"] = 123
             self.assertEqual(

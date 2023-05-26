@@ -2,29 +2,21 @@
 Tests for `vinegar.utils.smart_dict`.
 """
 
-import abc
 import unittest
 
-from vinegar.utils.smart_dict import SmartLookupDict, SmartLookupOrderedDict
+from vinegar.utils.smart_dict import SmartLookupDict
 
 
-class TestSmartLookupDictBase(unittest.TestCase, abc.ABC):
+class TestSmartLookupDict(unittest.TestCase):
     """
-    Tests for the `vingear.utils.odict` module.
+    Tests for the `SmartLookupDict` class.
     """
-
-    @abc.abstractmethod
-    def new(self, *args, **kwargs):
-        """
-        Create a new instance of the dictionary to be tested.
-        """
-        raise NotImplementedError()
 
     def test_get(self):
         """
         Test the ``get`` method.
         """
-        d = self.new()
+        d = SmartLookupDict()
         # get raises a KeyError if a key cannot be found and no default value
         # is given. If a default value is given, that value is returned
         # instead.
@@ -97,7 +89,7 @@ class TestSmartLookupDictBase(unittest.TestCase, abc.ABC):
         """
         Test the ``setdefault`` method.
         """
-        d = self.new()
+        d = SmartLookupDict()
         test_value = object()
         test_value2 = object()
         # setdefault should insert a value if the key does not exist yet.
@@ -127,36 +119,3 @@ class TestSmartLookupDictBase(unittest.TestCase, abc.ABC):
             test_value2, d.setdefault("def_ghi_456", test_value2, sep="_")
         )
         self.assertEqual(test_value2, d["def"]["ghi"]["456"])
-
-
-class TestSmartLookupDict(TestSmartLookupDictBase):
-    def new(self, *args, **kwargs):
-        """
-        Create a new instance of `SmartLookupDict`.
-        """
-        return SmartLookupDict(*args, **kwargs)
-
-
-class TestSmartLookupOrderedDict(TestSmartLookupDictBase):
-    def new(self, *args, **kwargs):
-        """
-        Create a new instance of `SmartLookupOrderedDict`.
-        """
-        return SmartLookupOrderedDict(*args, **kwargs)
-
-    def test_preserves_order(self):
-        """
-        Test that the ``SmartLookupOrderedDict`` does in fact preserve the
-        insertion order.
-        """
-        my_dict = SmartLookupOrderedDict()
-        my_list = [5, 1, 12, 2, 3, 6, 4]
-        for i in my_list:
-            my_dict[i] = i
-        self.assertEqual(my_list, list(my_dict.keys()))
-        self.assertEqual(my_list, list(my_dict.values()))
-
-
-# We have to delete the base class because it cannot be instantiated and the
-# automatic test discovery would try to instantiate it.
-del TestSmartLookupDictBase

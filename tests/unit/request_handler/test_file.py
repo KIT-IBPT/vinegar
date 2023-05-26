@@ -519,9 +519,7 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
                     "/test/lookup_value",
                     expect_status=HTTPStatus.NOT_FOUND,
                 )
-                # assert_called_once does not exist in Python 3.5, so we use a
-                # workaround here.
-                self.assertEqual(1, mock_logger.warning.call_count)
+                mock_logger.warning.assert_called_once()
             # Now, we repeat these tests, but we have find_system return a
             # proper value and have get_data raise an exception instead.
             data_source.find_system.return_value = "system"
@@ -565,9 +563,7 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
                     handler, "/test/lookup_value", expect_status=HTTPStatus.OK
                 )
                 self.assertEqual("True:False", file_content.decode())
-                # assert_called_once does not exist in Python 3.5, so we use a
-                # workaround here.
-                self.assertEqual(1, mock_logger.warning.call_count)
+                mock_logger.warning.assert_called_once()
             # We also test that we cannot create a handler when
             # data_source_error_action is set to an invalid value.
             config["data_source_error_action"] = "not_valid"

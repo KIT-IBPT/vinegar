@@ -115,12 +115,10 @@ import jinja2.exceptions
 import jinja2.ext
 import jinja2.nodes
 import jinja2.parser
-
-import vinegar.utils.oyaml as yaml
+import yaml
 
 from vinegar.template import TemplateEngine
 from vinegar.transform import get_transformation_function
-from vinegar.utils.odict import OrderedDict
 from vinegar.utils.version import version_for_file_path
 
 
@@ -440,7 +438,7 @@ class SerializerExtension(jinja2.ext.Extension):
         # This way, the code that renders the template does not receive an
         # unexpected type of exception.
         try:
-            return json.loads(value, object_pairs_hook=OrderedDict)
+            return json.loads(value)
         except Exception as err:
             raise jinja2.exceptions.TemplateRuntimeError(
                 "Could not decode value as JSON: %s" % value

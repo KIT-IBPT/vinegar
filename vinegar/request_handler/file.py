@@ -132,8 +132,8 @@ additionally provides two context objects to the template engine: The ``id``
 object contains the system ID (as a ``str``). The ``data`` object contains the
 data that has been returned from the data source's `~DataSource.get_data`
 method. The ``data`` object is passed as a
-`~vinegar.utils.smart_dict.SmartLookupOrderedDict` to make it easier to get
-nested values.
+`~vinegar.utils.smart_dict.SmartLookupDict` to make it easier to get nested
+values.
 
 The ``data`` object is not available if the data source's ``get_data`` method
 raised an exception. Usually, this will cause the template not even to be
@@ -427,7 +427,7 @@ from vinegar.template import get_template_engine
 from vinegar.tftp.protocol import ErrorCode as TftpErrorCode
 from vinegar.tftp.server import TftpError, TftpRequestHandler
 from vinegar.transform import get_transformation_chain
-from vinegar.utils.smart_dict import SmartLookupOrderedDict
+from vinegar.utils.smart_dict import SmartLookupDict
 from vinegar.utils.socket import contains_ip_address
 
 # Logger used by this module.
@@ -746,11 +746,11 @@ class FileRequestHandlerBase(DataSourceAware):
             # If we have no lookup key, the system ID and data are always None.
             system_id = None
             data = None
-        # If we have system data, we wrap it in a smart-lookup ordered dict,
-        # because there are several places where we expect to be able to do
-        # lookups for nested keys.
+        # If we have system data, we wrap it in a smart-lookup dict, because
+        # there are several places where we expect to be able to do lookups for
+        # nested keys.
         if data is not None:
-            data = SmartLookupOrderedDict(data)
+            data = SmartLookupDict(data)
         # If the client_address_key or client_address_list options have been
         # specified, we have to check access restrictions.
         expected_client_addresses = None

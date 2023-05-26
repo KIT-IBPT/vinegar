@@ -184,19 +184,10 @@ class _ThreadingHTTPServer(
         self.real_request_handlers: typing.List[HttpRequestHandler] = []
 
     def server_bind(self):
-        # socket.IPPROTO_IPV6 is not available when running on Windows and
-        # using Python < 3.8, so we fall back to a fixed value if it is not
-        # available.
+        # If we cannot configure the socket to be dual stack (IPv4 and
+        # IPv6) for some reason, we log a warning but continue.
         try:
-            ipproto_ipv6 = socket.IPPROTO_IPV6
-        except AttributeError:
-            ipproto_ipv6 = 41
-        # socket.IPV6_V6ONLY, on the other hand, should be available on
-        # Windows, at least for the Python versions we care about (>= 3.5). If
-        # it is not available or if the call to setsockopt fails, we log a
-        # warning, but continue.
-        try:
-            self.socket.setsockopt(ipproto_ipv6, socket.IPV6_V6ONLY, 0)
+            self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
         except (AttributeError, OSError):
             logger.warning(
                 "Cannot set IPV6_V6ONLY socket option to 0, socket might not "
