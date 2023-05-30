@@ -1,4 +1,4 @@
-vinegar.tftp.server
+﻿vinegar.tftp.server
 ===================
 
 .. automodule:: vinegar.tftp.server
