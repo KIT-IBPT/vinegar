@@ -7,13 +7,13 @@ are supported now, this module is not needed any longer and is only kept for
 compatibility with the old API.
 
 .. deprecated:: Vinegar 1.3
-   Since Python 3.7, regular ``dict``s are order preserving.
+   Since Python 3.7, the regular ``dict`` is order preserving.
    Will be removed in Vinegar 2.0.
 """
 
 OrderedDict = dict
 """
 .. deprecated:: Vinegar 1.3
-   Since Python 3.7, regular ``dict``s are order preserving.
+   Since Python 3.7, the regular ``dict`` is order preserving.
    Will be removed in Vinegar 2.0.
 """
