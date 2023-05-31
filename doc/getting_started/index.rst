@@ -11,7 +11,7 @@ Getting started
   dhcp
   environment
 
-In order to use vinegar, you have two go through three steps:
+In order to use Vinegar, you have two go through three steps:
 
 First you have to install the Vinegar Boot server and create a basic server
 configuration. This step is described in :ref:`getting_started_install`.
