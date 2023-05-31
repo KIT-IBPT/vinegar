@@ -10,6 +10,9 @@ most useful. That reference does not just document the API (e.g. for writing)
 extensions, but also gives a detailed specification of the configuration options
 supported by the various components.
 
+When upgrading from an older version of Vinegar, please be sure to check the
+:ref:`release_notes`.
+
 .. toctree::
   :maxdepth: 2
   :caption: Contents:
@@ -18,6 +21,7 @@ supported by the various components.
   getting_started/index
   concepts/index
   api/index
+  release_notes/index
 
 Indices and tables
 ==================
