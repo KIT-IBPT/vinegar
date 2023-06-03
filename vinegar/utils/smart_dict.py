@@ -170,11 +170,3 @@ class SmartLookupDict(dict):
         except KeyError:
             nested_value[last_key] = default
             return default
-
-
-SmartLookupOrderedDict = SmartLookupDict
-"""
-.. deprecated:: Vinegar 1.3
-    Use `SmartLookupDict` instead.
-    Will be removed in Vinegar 2.0.
-"""

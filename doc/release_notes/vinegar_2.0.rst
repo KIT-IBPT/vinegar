@@ -92,6 +92,28 @@ slightly changed:
 A new argument with the name ``server_address`` has been added to the
 `~vinegar.tftp.server.TftpRequestHandler.handle` method.
 
+vinegar.utils.odict
+^^^^^^^^^^^^^^^^^^^
+
+The ``vinegar.utils.odict`` module has been removed because starting with
+Python 3.7, the regular ``dict`` always preserves the insertion order.
+
+vinegar.utils.oyaml
+^^^^^^^^^^^^^^^^^^^
+
+The ``vinegar.utils.oyaml`` module has been removed because starting with
+Python 3.7, the regular ``dict`` always preserves the insertion order and thus
+the regular ``yaml`` module has this feature as well, removing the need for the
+``vinegar.utils.oyaml`` module.
+
+vinegar.utils.smart_dict
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The class ``SmartLookupOrderedDict`` has been removed. Starting with
+Python 3.7, the regular ``dict`` preserves insertion order, so
+`~vinegar.utils.smart_dict.SmartLookupDict` now preservers the insertion order
+as well and thus there is no need for ``SmartLookupOrderedDict``  any longer.
+
 vinegar.utils.socket
 ^^^^^^^^^^^^^^^^^^^^
 

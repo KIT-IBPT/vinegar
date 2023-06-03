@@ -14,8 +14,6 @@ Sub modules
   :toctree:
 
   cache
-  odict
-  oyaml
   socket
   smart_dict
   sqlite_store
