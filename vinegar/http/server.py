@@ -187,7 +187,7 @@ class _ThreadingHTTPServer(
         self,
         server_address: InetSocketAddress,
         request_handler_class: typing.Callable[
-            [typing.Any, typing.Any, typing.Self],
+            [typing.Any, typing.Any, "_ThreadingHTTPServer"],
             socketserver.BaseRequestHandler,
         ],
         bind_and_activate: bool = True,
