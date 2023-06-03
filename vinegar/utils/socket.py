@@ -102,6 +102,22 @@ def _parse_ip_address_split_ipv4_ipv6(
     return ip_address_bytes_ipv4, ip_address_bytes_ipv6
 
 
+Inet4SocketAddress = typing.Tuple[str, int]
+"""
+Alias for the address type used with ``AF_INET`` sockets.
+"""
+
+Inet6SocketAddress = typing.Tuple[str, int, int, int]
+"""
+Alias for the address type used with ``AF_INET6`` sockets.
+"""
+
+InetSocketAddress = typing.Union[Inet4SocketAddress, Inet6SocketAddress]
+"""
+Alias for the union of `Inet4SocketAddress` and `Inet6SocketAddress`.
+"""
+
+
 def contains_ip_address(
     ip_address_set: typing.Collection[str],
     ip_address: str,
@@ -215,20 +231,14 @@ def ipv6_address_unwrap(ipv6_address: str) -> str:
     return ipv6_address
 
 
-def socket_address_to_str(socket_address: typing.Tuple) -> str:
+def socket_address_to_str(socket_address: InetSocketAddress) -> str:
     """
     Return the string representation of a socket address.
 
     :param socket_address:
-        tuple representing a socket address. If the tuple contains at least two
-        elements, the first two elements are treated as a host address and a
-        port number. Otherwise, the only element of the tuple is simply
-        converted to a string.
+        tuple representing a socket address.
     """
-    if len(socket_address) < 2:
-        return ipv6_address_unwrap(str(socket_address[0]))
-    host = str(socket_address[0])
-    port = str(socket_address[1])
+    host, port = socket_address[:2]
     # IPv4 addresses might appear as IPv6 address when we use a dual-stack
     # socket. We want to convert such addresses to pure IPv4 addresses.
     host = ipv6_address_unwrap(host)

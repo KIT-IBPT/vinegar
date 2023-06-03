@@ -11,9 +11,11 @@ import unittest
 import unittest.mock
 
 from http import HTTPStatus
+from http.client import HTTPMessage
 from tempfile import TemporaryDirectory
 
 from vinegar.data_source import DataSource
+from vinegar.http.server import HttpRequestInfo
 from vinegar.request_handler.file import (  # pylint: disable=unused-import
     HttpFileRequestHandler,
     TftpFileRequestHandler,
@@ -36,6 +38,7 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
         handler,
         filename,
         client_address=("127.0.0.1", 12345),
+        server_address=("127.0.0.1", 23456),
         expect_can_handle=True,
         expect_status=None,
         expect_headers=None,
@@ -1577,6 +1580,7 @@ class TestHttpFileRequestHandler(TestFileRequestHandlerBase):
         handler,
         filename,
         client_address=("127.0.0.1", 12345),
+        server_address=("127.0.0.1", 23456),
         expect_can_handle=True,
         expect_status=None,
         expect_headers=None,
@@ -1586,12 +1590,16 @@ class TestHttpFileRequestHandler(TestFileRequestHandlerBase):
         can_handle = handler.can_handle(filename, context)
         self.assertEqual(expect_can_handle, can_handle)
         if can_handle:
+            request_info = HttpRequestInfo(
+                client_address=client_address,
+                headers=HTTPMessage(),
+                method=method,
+                server_address=server_address,
+                uri=filename,
+            )
             status, headers, file = handler.handle(
-                filename,
-                method,
-                None,
-                None,
-                client_address,
+                request_info,
+                io.BytesIO(),
                 context,
             )
             try:
@@ -1841,6 +1849,7 @@ class TestTftpFileRequestHandler(TestFileRequestHandlerBase):
         handler,
         filename,
         client_address=("127.0.0.1", 12345),
+        server_address=("127.0.0.1", 23456),
         expect_can_handle=True,
         expect_status=None,
         expect_headers=None,
@@ -1854,7 +1863,9 @@ class TestTftpFileRequestHandler(TestFileRequestHandlerBase):
             forbidden = False
             not_found = False
             try:
-                file = handler.handle(filename, client_address, context)
+                file = handler.handle(
+                    filename, client_address, server_address, context
+                )
             except TftpError as e:
                 file = None
                 ok = False

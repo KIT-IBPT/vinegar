@@ -118,14 +118,8 @@ the name of one of the template engines supported by
 template engine.
 
 A context object with the name ``request_info`` is passed to the template
-engine. This object is a ``dict``, which at the moment contains a single key,
-``client_address``. The value for this key is the tuple that was passed to the
-``handle`` method of the request handler. Please note that this might be
-``None``, if ``None`` was passed to this method. However, Vinegar’s HTTP and
-TFTP server implementation always provide a proper tuple, so unless the
-``handle`` method is called from third-party code, ``None`` should never
-appear. The first item of the tuple typically is the IP address of the client
-and the second item typically is the client-side port number.
+engine. For more information about this object, please refer to
+:ref:`request_handler_file_request_info`.
 
 If the ``lookup_key`` configuration option is also set, the request handler
 additionally provides two context objects to the template engine: The ``id``
@@ -145,6 +139,46 @@ If the data source's `~DataSource.find_system` method returns ``None`` and
 are available. The same applies if ``find_system`` raises an exception and
 ``lookup_no_result_action`` is set to ``continue`` and
 ``data_source_error_action`` is set to ``ignore`` or ``warn``.
+
+.. _request_handler_file_request_info:
+
+Request information
+-------------------
+
+The ``request_info`` object is a ``dict``, which contains the following keys.
+The ``headers`` and ``method`` keys are only present for requests received via
+HTTP. Additional keys might be added in future versions.
+
+``client_address``
+    The value for this key is a two-tuple, where the first element is the IP
+    address of the requesting client (as a ``str``) and the second element is
+    the port number used by the client (as an ``int``).
+
+``headers``
+    The HTTP request headers as an instance of ``http.client.HTTPMessage``.
+
+    **This key is only available for HTTP requests.**
+
+``method``
+    The HTTP request method (e.g. ``GET``, ``POST``, etc.).
+
+    **This key is only available for HTTP requests.**
+
+``server_address``
+    The value for this key is a two-tuple, where the first element is the IP
+    address on which the server received the request (as a ``str``) and the
+    second element is the port number on which the server received the requeset
+    (as an ``int``).
+
+    Please note that for TFTP requests, the server might not be able to
+    determine the address on which a request was received (due to limitations
+    on some platforms). In this case, this will instead be the IP address to
+    which the server’s socket has been bound.
+
+``uri``
+    The full request URI specified by the client in undecoded form. For a TFTP
+    request, this typically is the filename. For an HTTP request, this might
+    also include a query string.
 
 .. _request_handler_file_access_restrictions:
 
@@ -411,7 +445,7 @@ are:
     and thus using the ``content_type`` option is simpler.
 """
 
-import http.client
+import dataclasses
 import io
 import logging
 import os
@@ -422,25 +456,25 @@ from http import HTTPStatus
 from typing import Any, Dict, Mapping, Optional, Tuple
 
 from vinegar.data_source import DataSource, DataSourceAware
-from vinegar.http.server import HttpRequestHandler
+from vinegar.http.server import HttpRequestHandler, HttpRequestInfo
 from vinegar.template import get_template_engine
 from vinegar.tftp.protocol import ErrorCode as TftpErrorCode
 from vinegar.tftp.server import TftpError, TftpRequestHandler
 from vinegar.transform import get_transformation_chain
 from vinegar.utils.smart_dict import SmartLookupDict
-from vinegar.utils.socket import contains_ip_address
+from vinegar.utils.socket import contains_ip_address, InetSocketAddress
 
 # Logger used by this module.
 logger = logging.getLogger(__name__)
 
 
-class FileRequestHandlerBase(DataSourceAware):
+class _FileRequestHandlerBase(DataSourceAware):
     """
     Base class for the `HttpFileRequestHandler` and `TftpFileRequestHandler`.
 
-    This class implements most of the functionality of both handlers. The
-    separate classes only exist due to the slightly different APIs for the two
-    handler types.
+    This class implements most of the functionality of both handlers, but is
+    not intended for direct use by code outside this module. Code outside this
+    module should only use the two child classes.
 
     For information about the configuration options supported by this request
     handler, please refer to the
@@ -520,9 +554,9 @@ class FileRequestHandlerBase(DataSourceAware):
                 "set as well."
             )
 
-    def can_handle(
+    def _can_handle(
         self,
-        filename: str,  # pylint: disable=unused-argument
+        uri: str,  # pylint: disable=unused-argument
         context: Any,
     ) -> bool:
         """
@@ -534,8 +568,8 @@ class FileRequestHandlerBase(DataSourceAware):
         This implementation simply checks whether ``prepare_context`` detected
         a match and returns ``True`` if and only if it did.
 
-        :param filename:
-            filename that has been requested by the client.
+        :param uri:
+            URI that has been requested by the client.
         :param context:
             context object that was returned by ``prepare_context``.
         :return:
@@ -544,140 +578,35 @@ class FileRequestHandlerBase(DataSourceAware):
         """
         return context["matches"]
 
-    def prepare_context(self, filename: str) -> Any:
-        """
-        Prepare a context object for use by ``can_handle`` and ``handle``. This
-        method is called for each request before calling ``can_handle``.
-
-        This method parses the filename and checks whether it matches the
-        configuration of this handler. It saves this information in the
-        returned context for later use by ``can_handle``.
-
-        :param filename:
-            filename that has been requested by the client.
-        :return:
-            context object that is passed to ``can_handle`` and ``handle``.
-        """
-        # We initialize the context so that it signals a mismatch if returned
-        # without changing it.
-        context = {
-            "extra_path": None,
-            "lookup_raw_value": None,
-            "matches": False,
-        }
-        # If the original filename contains a null byte, someone is trying
-        # something nasty and we do not consider the path to match. The same is
-        # true if the null byte is present in URL encoded form.
-        if "\0" in filename or "%00" in filename:
-            return context
-        # We do not use urllib.parse.urlsplit beause that function produces
-        # unexpected results if the filename is not well-formed.
-        path, _, _ = filename.partition("?")
-        path = urllib.parse.unquote(path)
-        # We need special handling for the case where both the configured and
-        # the actual request path is "/" and this handler is registered for a
-        # file. In this case, the regular logic would fail, because we would
-        # generate two empty segments for the actual request path, but only
-        # have one empty segment for the configured request path. Please note
-        # that this only applies when we do not expect a lookup value and we
-        # operate in file mode.
-        if (
-            (path == "/")
-            and (self._request_path_prefix_segments == [""])
-            and (not self._extract_lookup_value)
-            and self._file
-        ):
-            context["matches"] = True
-            return context
-        path_segments = path.split("/")
-        # If the path has fewer segments than our prefix, it cannot match.
-        if len(path_segments) < len(self._request_path_prefix_segments):
-            return context
-        for expected_segment, actual_segment in zip(
-            self._request_path_prefix_segments, path_segments
-        ):
-            if expected_segment != actual_segment:
-                return context
-        # We know that the path matches the prefix, so we can cut all the
-        # segments that we just checked.
-        path_segments = path_segments[
-            len(self._request_path_prefix_segments) :
-        ]
-        # If we have to extract a lookup value, the next path segment must
-        # contain that value.
-        if self._extract_lookup_value:
-            # If there are no remaining path segments, but we need a lookup
-            # value, the path does not match.
-            if not path_segments:
-                return context
-            path_lookup_value_segment = path_segments[0]
-            # The segment must start with the segment prefix and end with the
-            # segment suffix.
-            if not (
-                path_lookup_value_segment.startswith(
-                    self._request_path_placeholder_segment_prefix
-                )
-                and path_lookup_value_segment.endswith(
-                    self._request_path_placeholder_segment_suffix
-                )
-            ):
-                return context
-            # We remove the segment that contains the lookup value and check
-            # that the rest actually matches the suffix.
-            del path_segments[0]
-            # If the path has fewer segments than our suffix, it cannot match.
-            if len(path_segments) < len(self._request_path_suffix_segments):
-                return context
-            for expected_segment, actual_segment in zip(
-                self._request_path_suffix_segments, path_segments
-            ):
-                if expected_segment != actual_segment:
-                    return context
-            # Now we know that the suffix matches, so we can remove if from the
-            # path as well.
-            path_segments = path_segments[
-                len(self._request_path_suffix_segments) :
-            ]
-            # In order to extract the lookup value, we simply remove the prefix
-            # and suffix.
-            lookup_raw_value = path_lookup_value_segment[
-                len(self._request_path_placeholder_segment_prefix) :
-            ]
-            if self._request_path_placeholder_segment_suffix:
-                lookup_raw_value = lookup_raw_value[
-                    : -len(self._request_path_placeholder_segment_suffix)
-                ]
-            # If the lookup value is empty, we do not consider this a match.
-            if not lookup_raw_value:
-                return context
-            context["lookup_raw_value"] = lookup_raw_value
-        # The extra path is defined by the remaining segments. We removed the
-        # leading "/" of the extra path when removing the prefix, so we have to
-        # make sure that it is added again when converting back to a string. We
-        # only have to add the "/" if there are any extra segments at all.
-        if path_segments:
-            # In file mode, there should not be any extra path segments. if
-            # there are, we do not consider this a match.
-            if self._file:
-                return context
-            context["extra_path"] = "/".join([""] + path_segments)
-        else:
-            # In directory mode, we need extra path segments, otherwise we
-            # cannot handle the request.
-            if self._root_dir:
-                return context
-        context["matches"] = True
-        return context
-
-    def set_data_source(self, data_source: DataSource) -> None:
-        self._data_source = data_source
-
     def _handle(
         self,
-        filename: str,  # pylint: disable=unused-argument
+        uri: str,  # pylint: disable=unused-argument
         context: Any,
-        client_address: Optional[Tuple] = None,
+        client_address: InetSocketAddress,
+        request_info: Dict[str, Any],
     ) -> Tuple[Optional[io.BufferedIOBase], Optional[str]]:
+        """
+        Handle the request.
+
+        :param uri:
+            URI that has been requested by the client.
+        :param context:
+            context object that was returned by ``prepare_context``.
+        :param client_address:
+            client address. The structure of the tuple depends on the address
+            family in use, but typically the first element is the client's
+            host address and the second element is the client's port number.
+        :param request_info:
+            additional information about the request that is passed to the
+            template engine, so that it can be used when rendering templates.
+        :return:
+            tuple of the a file-like object that provides the data that is
+            transferred to the client and a string providing the file-system
+            path to the file being served. The file-like object is optional. If
+            it is ``None``, this indicates that the file cannot be found. The
+            path is also optional but may only be ``None`` if the file-like
+            object is ``None``.
+        """
         # We might have to do a lookup.
         if self._extract_lookup_value:
             lookup_key = self._lookup_key
@@ -834,7 +763,7 @@ class FileRequestHandlerBase(DataSourceAware):
                 # requested for the same system, so caching would probably not
                 # bring much benefit.
                 template_context: Dict[str, Any] = {
-                    "request_info": {"client_address": client_address}
+                    "request_info": request_info
                 }
                 if system_id is not None:
                     template_context["id"] = system_id
@@ -945,6 +874,131 @@ class FileRequestHandlerBase(DataSourceAware):
             self._extract_lookup_value = False
             self._request_path_prefix_segments = request_path.split("/")
 
+    def _prepare_context(self, uri: str) -> Any:
+        """
+        Prepare a context object for use by ``can_handle`` and ``handle``. This
+        method is called for each request before calling ``can_handle``.
+
+        This method parses the filename and checks whether it matches the
+        configuration of this handler. It saves this information in the
+        returned context for later use by ``can_handle``.
+
+        :param uri:
+            URI that has been requested by the client.
+        :return:
+            context object that is passed to ``can_handle`` and ``handle``.
+        """
+        # We initialize the context so that it signals a mismatch if returned
+        # without changing it.
+        context = {
+            "extra_path": None,
+            "lookup_raw_value": None,
+            "matches": False,
+        }
+        # If the original filename contains a null byte, someone is trying
+        # something nasty and we do not consider the path to match. The same is
+        # true if the null byte is present in URL encoded form.
+        if "\0" in uri or "%00" in uri:
+            return context
+        # We do not use urllib.parse.urlsplit beause that function produces
+        # unexpected results if the filename is not well-formed.
+        path, _, _ = uri.partition("?")
+        path = urllib.parse.unquote(path)
+        # We need special handling for the case where both the configured and
+        # the actual request path is "/" and this handler is registered for a
+        # file. In this case, the regular logic would fail, because we would
+        # generate two empty segments for the actual request path, but only
+        # have one empty segment for the configured request path. Please note
+        # that this only applies when we do not expect a lookup value and we
+        # operate in file mode.
+        if (
+            (path == "/")
+            and (self._request_path_prefix_segments == [""])
+            and (not self._extract_lookup_value)
+            and self._file
+        ):
+            context["matches"] = True
+            return context
+        path_segments = path.split("/")
+        # If the path has fewer segments than our prefix, it cannot match.
+        if len(path_segments) < len(self._request_path_prefix_segments):
+            return context
+        for expected_segment, actual_segment in zip(
+            self._request_path_prefix_segments, path_segments
+        ):
+            if expected_segment != actual_segment:
+                return context
+        # We know that the path matches the prefix, so we can cut all the
+        # segments that we just checked.
+        path_segments = path_segments[
+            len(self._request_path_prefix_segments) :
+        ]
+        # If we have to extract a lookup value, the next path segment must
+        # contain that value.
+        if self._extract_lookup_value:
+            # If there are no remaining path segments, but we need a lookup
+            # value, the path does not match.
+            if not path_segments:
+                return context
+            path_lookup_value_segment = path_segments[0]
+            # The segment must start with the segment prefix and end with the
+            # segment suffix.
+            if not (
+                path_lookup_value_segment.startswith(
+                    self._request_path_placeholder_segment_prefix
+                )
+                and path_lookup_value_segment.endswith(
+                    self._request_path_placeholder_segment_suffix
+                )
+            ):
+                return context
+            # We remove the segment that contains the lookup value and check
+            # that the rest actually matches the suffix.
+            del path_segments[0]
+            # If the path has fewer segments than our suffix, it cannot match.
+            if len(path_segments) < len(self._request_path_suffix_segments):
+                return context
+            for expected_segment, actual_segment in zip(
+                self._request_path_suffix_segments, path_segments
+            ):
+                if expected_segment != actual_segment:
+                    return context
+            # Now we know that the suffix matches, so we can remove if from the
+            # path as well.
+            path_segments = path_segments[
+                len(self._request_path_suffix_segments) :
+            ]
+            # In order to extract the lookup value, we simply remove the prefix
+            # and suffix.
+            lookup_raw_value = path_lookup_value_segment[
+                len(self._request_path_placeholder_segment_prefix) :
+            ]
+            if self._request_path_placeholder_segment_suffix:
+                lookup_raw_value = lookup_raw_value[
+                    : -len(self._request_path_placeholder_segment_suffix)
+                ]
+            # If the lookup value is empty, we do not consider this a match.
+            if not lookup_raw_value:
+                return context
+            context["lookup_raw_value"] = lookup_raw_value
+        # The extra path is defined by the remaining segments. We removed the
+        # leading "/" of the extra path when removing the prefix, so we have to
+        # make sure that it is added again when converting back to a string. We
+        # only have to add the "/" if there are any extra segments at all.
+        if path_segments:
+            # In file mode, there should not be any extra path segments. if
+            # there are, we do not consider this a match.
+            if self._file:
+                return context
+            context["extra_path"] = "/".join([""] + path_segments)
+        else:
+            # In directory mode, we need extra path segments, otherwise we
+            # cannot handle the request.
+            if self._root_dir:
+                return context
+        context["matches"] = True
+        return context
+
     @staticmethod
     def _translate_path(root_dir, extra_path):
         # There is no good reason why a path should contain a null byte, so we
@@ -989,8 +1043,11 @@ class FileRequestHandlerBase(DataSourceAware):
             return None
         return fs_path
 
+    def set_data_source(self, data_source: DataSource) -> None:
+        self._data_source = data_source
 
-class HttpFileRequestHandler(FileRequestHandlerBase, HttpRequestHandler):
+
+class HttpFileRequestHandler(_FileRequestHandlerBase, HttpRequestHandler):
     """
     HTTP request handler that serves files from the file system.
 
@@ -1028,22 +1085,25 @@ class HttpFileRequestHandler(FileRequestHandlerBase, HttpRequestHandler):
                 "mode."
             )
 
+    def can_handle(self, uri: str, context: Any) -> bool:
+        return self._can_handle(uri, context)
+
     def handle(
         self,
-        filename: str,
-        method: str,
-        headers: http.client.HTTPMessage,
+        request_info: HttpRequestInfo,
         body: io.BufferedIOBase,
-        client_address: Tuple,
         context: Any,
     ) -> Tuple[
         HTTPStatus, Optional[Mapping[str, str]], Optional[io.BufferedIOBase]
     ]:
-        if method not in ("GET", "HEAD"):
+        if request_info.method not in ("GET", "HEAD"):
             return HTTPStatus.METHOD_NOT_ALLOWED, None, None
         try:
             file, file_path = self._handle(
-                filename, context, client_address=client_address
+                request_info.uri,
+                context,
+                client_address=request_info.client_address,
+                request_info=dataclasses.asdict(request_info),
             )
         except PermissionError:
             return HTTPStatus.FORBIDDEN, None, None
@@ -1075,13 +1135,16 @@ class HttpFileRequestHandler(FileRequestHandlerBase, HttpRequestHandler):
             file.seek(fpos, os.SEEK_SET)
         except io.UnsupportedOperation:
             pass
-        if method == "HEAD":
+        if request_info.method == "HEAD":
             file.close()
             file = None
         return HTTPStatus.OK, response_headers, file
 
+    def prepare_context(self, uri: str) -> Any:
+        return self._prepare_context(uri)
 
-class TftpFileRequestHandler(FileRequestHandlerBase, TftpRequestHandler):
+
+class TftpFileRequestHandler(_FileRequestHandlerBase, TftpRequestHandler):
     """
     TFTP request handler that serves files from the file system.
 
@@ -1115,15 +1178,27 @@ class TftpFileRequestHandler(FileRequestHandlerBase, TftpRequestHandler):
 
     def can_handle(self, filename: str, context: Any) -> bool:
         filename = self._rewrite_filename_if_needed(filename)
-        return super().can_handle(filename, context)
+        return self._can_handle(filename, context)
 
     def handle(
-        self, filename: str, client_address: Tuple, context: Any
+        self,
+        filename: str,
+        client_address: InetSocketAddress,
+        server_address: InetSocketAddress,
+        context: Any,
     ) -> io.BufferedIOBase:
         filename = self._rewrite_filename_if_needed(filename)
         try:
+            request_info = {
+                "client_address": client_address,
+                "server_address": server_address,
+                "uri": filename,
+            }
             file, _ = self._handle(
-                filename, context, client_address=client_address
+                filename,
+                context,
+                client_address=client_address,
+                request_info=request_info,
             )
         except PermissionError:
             # We do not include the original exception here because it won’t be
@@ -1138,7 +1213,7 @@ class TftpFileRequestHandler(FileRequestHandlerBase, TftpRequestHandler):
 
     def prepare_context(self, filename: str) -> Any:
         filename = self._rewrite_filename_if_needed(filename)
-        return super().prepare_context(filename)
+        return self._prepare_context(filename)
 
     @staticmethod
     def _rewrite_filename_if_needed(filename):

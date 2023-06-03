@@ -324,13 +324,8 @@ class TestSocket(unittest.TestCase):
         """
         Test the ``socket_address_to_str`` function.
         """
-        # IP address only.
-        self.assertEqual("127.0.0.1", socket_address_to_str(("127.0.0.1",)))
-        self.assertEqual("1.2.3.4", socket_address_to_str(("::ffff:1.2.3.4",)))
-        self.assertEqual("fc00::1234", socket_address_to_str(("fc00::1234",)))
-        # IP address and port number.
         self.assertEqual(
-            "127.0.0.1:123", socket_address_to_str(("127.0.0.1:123",))
+            "127.0.0.1:123", socket_address_to_str(("127.0.0.1", 123))
         )
         self.assertEqual(
             "1.2.3.4:456", socket_address_to_str(("::ffff:1.2.3.4", 456))

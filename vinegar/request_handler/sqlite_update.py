@@ -182,7 +182,7 @@ from http import HTTPStatus
 from typing import Any, Mapping, Optional, Tuple
 
 from vinegar.data_source import DataSource, DataSourceAware
-from vinegar.request_handler import HttpRequestHandler
+from vinegar.http.server import HttpRequestHandler, HttpRequestInfo
 from vinegar.utils.smart_dict import SmartLookupDict
 from vinegar.utils.socket import contains_ip_address
 from vinegar.utils.sqlite_store import open_data_store
@@ -248,7 +248,7 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
         self._data_source: Optional[DataSource] = None
         self._data_store = open_data_store(config["db_file"])
 
-    def can_handle(self, filename: str, context: Any) -> bool:
+    def can_handle(self, uri: str, context: Any) -> bool:
         return context["matches"]
 
     def close(self):
@@ -268,17 +268,14 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
 
     def handle(
         self,
-        filename: str,
-        method: str,
-        headers: http.client.HTTPMessage,
+        request_info: HttpRequestInfo,
         body: io.BufferedIOBase,
-        client_address: Tuple,
         context: Any,
     ) -> Tuple[
         HTTPStatus, Optional[Mapping[str, str]], Optional[io.BufferedIOBase]
     ]:
         # We only allow requests using the POST method.
-        if method != "POST":
+        if request_info.method != "POST":
             return HTTPStatus.METHOD_NOT_ALLOWED, None, None
         system_id = context["system_id"]
         # If the client_address_key or client_address_list options have been
@@ -317,7 +314,7 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
         if expected_client_addresses is not None:
             # The IP address part of the client address is the first element of
             # the tuple.
-            actual_client_address = client_address[0]
+            actual_client_address = request_info.client_address[0]
             # If the client address is not in the set of allowed addresses,
             # the request is not allowed.
             if not contains_ip_address(
@@ -333,7 +330,9 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
             self._data_store.set_value(system_id, self._key, self._value)
         elif self._action == "set_json_value_from_request_body":
             try:
-                body_length = int(headers.get("Content-Length", "0"))
+                body_length = int(
+                    request_info.headers.get("Content-Length", "0")
+                )
                 raw_bytes = body.read(body_length)
                 value = json.load(io.BytesIO(raw_bytes))
             except (OSError, ValueError):
@@ -341,7 +340,9 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
             self._data_store.set_value(system_id, self._key, value)
         elif self._action == "set_text_value_from_request_body":
             try:
-                body_length = int(headers.get("Content-Length", "0"))
+                body_length = int(
+                    request_info.headers.get("Content-Length", "0")
+                )
                 raw_bytes = body.read(body_length)
                 value = raw_bytes.decode()
             except (OSError, ValueError):
@@ -354,18 +355,18 @@ class HttpSQLiteUpdateRequestHandler(HttpRequestHandler, DataSourceAware):
         response_body = io.BytesIO(b"success\n")
         return HTTPStatus.OK, response_headers, response_body
 
-    def prepare_context(self, filename: str) -> Any:
+    def prepare_context(self, uri: str) -> Any:
         # We initialize the context so that it signals a mismatch if returned
         # without changing it.
         context = {"matches": False, "system_id": None}
         # If the original filename contains a null byte, someone is trying
         # something nasty and we do not consider the path to match. The same is
         # true if the null byte is present in URL encoded form.
-        if "\0" in filename or "%00" in filename:
+        if "\0" in uri or "%00" in uri:
             return context
         # We do not use urllib.parse.urlsplit beause that function produces
         # unexpected results if the filename is not well-formed.
-        path, _, _ = filename.partition("?")
+        path, _, _ = uri.partition("?")
         path = urllib.parse.unquote(path)
         if path.startswith(self._request_path):
             system_id = path[len(self._request_path) :]

@@ -14,7 +14,13 @@ import socketserver
 import threading
 import typing
 
-from vinegar.utils.socket import ipv6_address_unwrap, socket_address_to_str
+from dataclasses import dataclass
+
+from vinegar.utils.socket import (
+    InetSocketAddress,
+    ipv6_address_unwrap,
+    socket_address_to_str,
+)
 
 # Logger used by this module
 logger = logging.getLogger(__name__)
@@ -37,7 +43,7 @@ class _DelegatingRequestHandler(http.server.BaseHTTPRequestHandler):
     def __init__(
         self,
         request: socket.socket,
-        client_address: typing.Tuple[typing.Union[str, bytes, bytearray], int],
+        client_address: InetSocketAddress,
         # Probably because it is defined later, Pylance complains that
         # _ThreadingHttpServer is undefined.
         server: "_ThreadingHttpServer",  # type: ignore
@@ -84,17 +90,27 @@ class _DelegatingRequestHandler(http.server.BaseHTTPRequestHandler):
             for handler in self.server.real_request_handlers:
                 context = handler.prepare_context(self.path)
                 if handler.can_handle(self.path, context):
+                    # Type checkers cannot detect that self.headers is an
+                    # instance of HTTPMessage, so we use an assertion in order
+                    # to tell them.
+                    assert isinstance(self.headers, http.client.HTTPMessage)
+                    request_info = HttpRequestInfo(
+                        client_address=self.client_address,
+                        headers=self.headers,
+                        method=self.command,
+                        server_address=self.request.getsockname(),
+                        uri=self.path,
+                    )
+                    # self.rfile is created by calling socket.makefile, which
+                    # creates an instance of io.BufferedReader unless
+                    # self.rbufsize is zero. The BaseHTTPRequestHandler uses an
+                    # rbufsize of -1, and we do not change it, so this
+                    # assertion should always hold.
+                    assert isinstance(self.rfile, io.BufferedIOBase)
                     try:
                         (status, headers, body) = handler.handle(
-                            self.path,
-                            self.command,
-                            # Due to the base class not having property type
-                            # hints, the types cannot be guessed correctly, so
-                            # we have to ignore them in order to avoid
-                            # warnings.
-                            self.headers,  # type: ignore
-                            self.rfile,  # type: ignore
-                            self.client_address,
+                            request_info,
+                            self.rfile,
                             context,
                         )
                     # We really want to catch almost all exceptions here. If we
@@ -169,7 +185,7 @@ class _ThreadingHTTPServer(
 
     def __init__(
         self,
-        server_address: typing.Tuple[typing.Union[str, bytes, bytearray], int],
+        server_address: InetSocketAddress,
         request_handler_class: typing.Callable[
             [typing.Any, typing.Any, typing.Self],
             socketserver.BaseRequestHandler,
@@ -181,7 +197,9 @@ class _ThreadingHTTPServer(
         # setting the address family after calling it does not have any effect.
         self.address_family = socket.AF_INET6
         super().__init__(
-            server_address, request_handler_class, bind_and_activate
+            server_address,  # type: ignore
+            request_handler_class,
+            bind_and_activate,
         )
         self.daemon_threads = True
         self.real_request_handlers: typing.List[HttpRequestHandler] = []
@@ -220,17 +238,17 @@ class HttpRequestHandler(abc.ABC):
     """
 
     @abc.abstractmethod
-    def can_handle(self, filename: str, context: typing.Any) -> bool:
+    def can_handle(self, uri: str, context: typing.Any) -> bool:
         """
         Tell whether the request can be handled by this request handler.
 
         Returns ``True`` if the request can be handled and ``False`` if it
         cannot be handled and the next request handler should be tried.
 
-        :param filename:
-            filename that has been requested by the client. The filename
-            includes the full request path including the query string (if
-            present) and has not been URL decoded.
+        :param uri:
+            URI that has been requested by the client. The URI includes the
+            full request path including the query string (if present) and has
+            not been URL decoded.
         :param context:
             context object that was returned by ``prepare_context``.
         :return:
@@ -242,11 +260,8 @@ class HttpRequestHandler(abc.ABC):
     @abc.abstractmethod
     def handle(
         self,
-        filename: str,
-        method: str,
-        headers: http.client.HTTPMessage,
+        request_info: "HttpRequestInfo",
         body: io.BufferedIOBase,
-        client_address: typing.Tuple,
         context: typing.Any,
     ) -> typing.Tuple[
         http.HTTPStatus,
@@ -262,21 +277,11 @@ class HttpRequestHandler(abc.ABC):
         requested file can be read. The returned file-like object must supply
         its data in binary form.
 
-        :param filename:
-            filename that has been requested by the client. The filename
-            includes the full request path including the query string (if
-            present) and has not been URL decoded.
-        :param method:
-            the HTTP method used for the request (e.g. "GET").
-        :param headers:
-            HTTP headers provided by the client.
+        :param request_info:
+            information about the request that shall be handled.
         :param body:
             file-like object that provides the request body sent by the client.
             This file-like object returns ``bytes`` when reading.
-        :param client_address:
-            client address. The structure of the tuple depends on the address
-            family in use, but typically the first element is the client's
-            host address and the second element is the client's port number.
         :param context:
             context object that was returned by ``prepare_context``.
         :return:
@@ -295,28 +300,94 @@ class HttpRequestHandler(abc.ABC):
 
     def prepare_context(
         self,
-        filename: str,  # pylint: disable=unused-argument
+        uri: str,  # pylint: disable=unused-argument
     ) -> typing.Any:
         """
         Prepare a context object for use by ``can_handle`` and ``handle``. This
         method is called for each request before calling ``can_handle``.
 
         This is useful when both function need to do some processing on the
-        filename or client address. This processing can be implemented in
-        ``prepare_context`` and passed to the two other methods through the
-        context so that it does not have to be done twice.
+        URI. This processing can be implemented in ``prepare_context`` and
+        passed to the two other methods through the context so that it does not
+        have to be done twice.
 
         The return value of this method is passed to ``can_handle`` and
         ``handle``. The default implementation simply returns ``None``.
 
-        :param filename:
-            filename that has been requested by the client. The filename
-            includes the full request path including the query string (if
-            present) and has not been URL decoded.
+        :param uri:
+            URI that has been requested by the client. The URI includes the
+            full request path including the query string (if present) and has
+            not been URL decoded.
         :return:
             context object that is passed to ``can_handle`` and ``handle``.
         """
         return None
+
+
+@dataclass()
+class HttpRequestInfo:
+    """
+    Request information passed to the `HttpRequestHandler`.
+    """
+
+    def __init__(
+        self,
+        *,
+        client_address: InetSocketAddress,
+        headers: http.client.HTTPMessage,
+        method: str,
+        server_address: InetSocketAddress,
+        uri: str,
+    ):
+        # We do not use the generated __init__ method because we want all
+        # arguments to be keyword-only, and @dataclass only supported the
+        # relevant option since Python 3.10.
+        self.client_address = client_address
+        self.headers = headers
+        self.method = method
+        self.server_address = server_address
+        self.uri = uri
+
+    client_address: InetSocketAddress
+    """
+    Socket address of the client side of the connection.
+
+    This always is a tuple, but the number of items and type of the items
+    inside the tuple depends on the address family in use. Typically, the first
+    item is the hostname or IP address of the client and the second item is the
+    port number.
+    """
+
+    headers: http.client.HTTPMessage
+    """
+    HTTP headers provided by the client.
+    """
+
+    method: str
+    """
+    Request method that was specified by the client.
+
+    This is a string like ``GET``, ``POST``, ``PUT``, etc.
+    """
+
+    server_address: InetSocketAddress
+    """
+    Socket address of the server side of the connection.
+
+    This always is a tuple, but the number of items and type of the items
+    inside the tuple depends on the address family in use. Typically, the first
+    item is the hostname or IP address of the server and the second item is the
+    port number.
+    """
+
+    uri: str
+    """
+    Full, undecoded request URI.
+
+    This includes both the path and the query string (if specified).
+
+    Example: ``/path/to/resource?abc=456``
+    """
 
 
 class HttpServer:

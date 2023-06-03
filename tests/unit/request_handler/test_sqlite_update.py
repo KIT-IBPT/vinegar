@@ -13,17 +13,20 @@ from http import HTTPStatus
 from http.client import HTTPMessage
 from tempfile import TemporaryDirectory
 
-from vinegar.data_source import DataSource
+from vinegar.http.server import HttpRequestInfo
+
+# pylint: disable=unused-import
 from vinegar.request_handler.sqlite_update import (
     HttpSQLiteUpdateRequestHandler,
     get_instance_http,
 )
+
 from vinegar.utils.sqlite_store import open_data_store
 
 
 class TestHttpSQLiteRequestHandler(unittest.TestCase):
     """
-    Tests for the `TestHttpSQLiteRequestHandler`.
+    Tests for the `HttpSQLiteRequestHandler`.
     """
 
     def test_config_action(self):
@@ -507,6 +510,7 @@ class TestHttpSQLiteRequestHandler(unittest.TestCase):
         expect_status=None,
         expect_headers=None,
         client_address=("127.0.0.1", 12345),
+        server_address=("127.0.0.1", 23456),
         method="POST",
         headers=None,
         body=None,
@@ -515,16 +519,24 @@ class TestHttpSQLiteRequestHandler(unittest.TestCase):
         Helper method that we use to call ``prepare_context``, ``can_handle``
         and ``handle`` in succession.
         """
-        if headers is None:
-            headers = {}
         if body is None:
             body = io.BytesIO(b"")
         context = handler.prepare_context(filename)
         can_handle = handler.can_handle(filename, context)
         self.assertEqual(expect_can_handle, can_handle)
         if can_handle:
-            status, headers, file = handler.handle(
-                filename, method, headers, body, client_address, context
+            request_info = HttpRequestInfo(
+                client_address=client_address,
+                headers=HTTPMessage(),
+                method=method,
+                server_address=server_address,
+                uri=filename,
+            )
+            if headers:
+                for key, value in headers.items():
+                    request_info.headers[key] = value
+            status, resp_headers, file = handler.handle(
+                request_info, body, context
             )
             try:
                 if expect_status is not None:
@@ -534,10 +546,11 @@ class TestHttpSQLiteRequestHandler(unittest.TestCase):
                 if expect_status == HTTPStatus.NOT_FOUND:
                     self.assertIsNone(file)
                 if expect_headers is not None:
-                    self.assertEqual(expect_headers, headers)
+                    self.assertEqual(expect_headers, resp_headers)
                 elif expect_status == HTTPStatus.OK:
                     self.assertEqual(
-                        {"Content-Type": "text/plain; charset=UTF-8"}, headers
+                        {"Content-Type": "text/plain; charset=UTF-8"},
+                        resp_headers,
                     )
                 if file is None:
                     return None

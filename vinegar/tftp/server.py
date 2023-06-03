@@ -35,7 +35,7 @@ from vinegar.tftp.protocol import (
     options_ack_packet,
 )
 
-from vinegar.utils.socket import socket_address_to_str
+from vinegar.utils.socket import InetSocketAddress, socket_address_to_str
 
 # Logger used by this module
 logger = logging.getLogger(__name__)
@@ -105,7 +105,11 @@ class TftpRequestHandler(abc.ABC):
 
     @abc.abstractmethod
     def handle(
-        self, filename: str, client_address: typing.Tuple, context: typing.Any
+        self,
+        filename: str,
+        client_address: InetSocketAddress,
+        server_address: InetSocketAddress,
+        context: typing.Any,
     ) -> io.BufferedIOBase:
         """
         Handle the request. This method returns a file-like object from which
@@ -122,6 +126,16 @@ class TftpRequestHandler(abc.ABC):
             client address. The structure of the tuple depends on the address
             family in use, but typically the first element is the client's
             host address and the second element is the client's port number.
+        :param server_address:
+            server address. The structure of the tuple depends on the address
+            family in use, but typically the first element is the server's
+            host address and the second element is the server's port number.
+            Please note that determining the actual address specified by the
+            client might not be possible if the sever binds to all interfaces
+            (``::``) and the platform does not support the ``IPV6_PKTINFO``
+            socket option. In this case, this will be the address to which
+            the server is bound and not the address on which the request was
+            actually received.
         :param context:
             context object that was returned by ``prepare_context``.
         :return:
@@ -271,6 +285,7 @@ class TftpServer:
         else:
             self._max_block_size = max_block_size
         self._block_counter_wrap_value = block_counter_wrap_value
+        self._have_pktinfo = False
         self._main_thread: typing.Optional[threading.Thread] = None
         self._running = False
         self._shutdown_requested = False
@@ -308,12 +323,27 @@ class TftpServer:
                         "Cannot set IPV6_V6ONLY socket option to 0, socket "
                         "might not be reachable via IPv4."
                     )
+                # If we can, we want to get additional information about
+                # received packets as described by RFC 3542. In order to so,
+                # we need socket.recvmsg and socket.IPV6_RECVPKTINFO, which
+                # might not be available on all platfroms.
+                try:
+                    if not hasattr(self._socket, "recvmsg"):
+                        raise AttributeError()
+                    self._socket.setsockopt(
+                        socket.IPPROTO_IPV6, socket.IPV6_RECVPKTINFO, 1
+                    )
+                    self._have_pktinfo = True
+                except (AttributeError, OSError):
+                    logger.warning(
+                        "Cannot use IPV6_RECVPKTINFO socket option, "
+                        "information about the address used to contact the "
+                        "TFTP server will not be available."
+                    )
                 self._socket.bind((self._bind_address, self._bind_port))
                 logger.info(
                     "TFTP server is listening on %s.",
-                    socket_address_to_str(
-                        (self._bind_address, self._bind_port)
-                    ),
+                    socket_address_to_str(self._socket.getsockname()),
                 )
                 self._main_thread = threading.Thread(
                     target=self._run, daemon=True
@@ -361,6 +391,7 @@ class TftpServer:
         transfer_mode,
         options,
         client_address,
+        server_address,
         handler_function,
         handler_context,
     ):
@@ -388,6 +419,7 @@ class TftpServer:
             transfer_mode,
             options,
             client_address,
+            server_address,
             handler_function,
             handler_context,
             self._default_timeout,
@@ -412,7 +444,7 @@ class TftpServer:
         )
         self._socket.sendto(data, req_addr)
 
-    def _process_read_request(self, req_data, req_addr):
+    def _process_read_request(self, req_data, req_addr, req_dst_addr):
         # This method should only be called after self._socket has been set.
         assert self._socket is not None
         try:
@@ -455,6 +487,7 @@ class TftpServer:
                     transfer_mode,
                     options,
                     req_addr,
+                    req_dst_addr,
                     request_handler.handle,
                     handler_context,
                 )
@@ -471,7 +504,7 @@ class TftpServer:
         )
         self._socket.sendto(data, req_addr)
 
-    def _process_request(self, req_data, req_addr):
+    def _process_request(self, req_data, req_addr, req_dst_addr):
         # The TFTP specification (RFC 1350) says that a request that is denied
         # should result in an error packet being sent. It also specifies that
         # an invalid packet received as part of a connection should result in
@@ -498,7 +531,7 @@ class TftpServer:
             )
             return
         if opcode == Opcode.READ_REQUEST:
-            self._process_read_request(req_data, req_addr)
+            self._process_read_request(req_data, req_addr, req_dst_addr)
         elif opcode == Opcode.WRITE_REQUEST:
             self._process_write_request(req_addr)
         else:
@@ -527,10 +560,43 @@ class TftpServer:
                     if self._shutdown_requested:
                         break
                 try:
-                    (req_data, req_addr) = self._socket.recvfrom(
-                        MAX_REQUEST_PACKET_SIZE
-                    )
-                    self._process_request(req_data, req_addr)
+                    # We use the address used by our socket as the destination
+                    # address. If we can, we later replace the address part
+                    # with the actual destination address of the packet. This
+                    # is useful when the socket uses the “bind all” address and
+                    # thus the address specified by the socket is not directly
+                    # usable as a target address.
+                    req_dst_addr = self._socket.getsockname()
+                    if self._have_pktinfo:
+                        req_data, anc_data, _, req_addr = self._socket.recvmsg(
+                            MAX_REQUEST_PACKET_SIZE, socket.CMSG_SPACE(20)
+                        )
+                        for cmsg_level, cmsg_type, cmsg_data in anc_data:
+                            if (
+                                cmsg_level == socket.IPPROTO_IPV6
+                                and cmsg_type == socket.IPV6_PKTINFO
+                            ):
+                                # According to RFC 3542, we expect 20 bytes.
+                                # The first 16 bytes are the IPv6 address. The
+                                # remaining four bytes are the interface index,
+                                # in which we are not interested.
+                                # Please note that strictly speaking, RFC 3542
+                                # defines C data structures, so in theory the
+                                # data might look different due to alignment.
+                                # However, the 16 bytes of the IPv6 address
+                                # should align with the memory structure used
+                                # by virtually every architecture in use.
+                                req_dst_addr = tuple(
+                                    socket.inet_ntop(
+                                        socket.AF_INET6, cmsg_data[:16]
+                                    ),
+                                    *req_dst_addr[2:],
+                                )
+                    else:
+                        (req_data, req_addr) = self._socket.recvfrom(
+                            MAX_REQUEST_PACKET_SIZE
+                        )
+                    self._process_request(req_data, req_addr, req_dst_addr)
                 except socket.timeout:
                     # A timeout is not an error, it just means that we should
                     # check the _shutdown_requested flag again.
@@ -580,6 +646,7 @@ class _TftpReadRequest:
         transfer_mode,
         options,
         client_address,
+        server_address,
         handler_function,
         handler_context,
         default_timeout,
@@ -596,6 +663,7 @@ class _TftpReadRequest:
         else:
             raise ValueError(f"Unsupported transfer mode: {transfer_mode}")
         self._client_address = client_address
+        self._server_address = server_address
         self._handler_function = handler_function
         self._handler_context = handler_context
         self._max_retries = max_retries
@@ -905,7 +973,10 @@ class _TftpReadRequest:
                 pass
             try:
                 self._file = self._handler_function(
-                    self._filename, self._client_address, self._handler_context
+                    self._filename,
+                    self._client_address,
+                    self._server_address,
+                    self._handler_context,
                 )
             except TftpError as err:
                 # A TftpError is not necessarily a "real" error, so we only log
