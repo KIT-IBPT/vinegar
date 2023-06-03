@@ -176,10 +176,13 @@ class _ThreadingHTTPServer(
         ],
         bind_and_activate: bool = True,
     ) -> None:
+        # We have to set the address_family before calling the __init__ method
+        # of the super class. The socket is created by that __init__method, so
+        # setting the address family after calling it does not have any effect.
+        self.address_family = socket.AF_INET6
         super().__init__(
             server_address, request_handler_class, bind_and_activate
         )
-        self.address_family = socket.AF_INET6
         self.daemon_threads = True
         self.real_request_handlers: typing.List[HttpRequestHandler] = []
 
