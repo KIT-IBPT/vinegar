@@ -37,6 +37,8 @@ class TestMatch(unittest.TestCase):
             match("some-name", "some-* or (abc")
         with self.assertRaises(ValueError):
             match("some-name", "some-* or abc)")
+        with self.assertRaises(ValueError):
+            match("some-name", "abc def)")
 
     def test_operator_precedence(self):
         """
