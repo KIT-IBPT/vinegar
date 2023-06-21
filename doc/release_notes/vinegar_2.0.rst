@@ -15,6 +15,16 @@ Configuration changes
 
 TODO Document all changes to the configuration file.
 
+vingar.data_source.yaml_target
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Due to changes in the `vinegar.utils.system_matcher` module, the syntax for the
+target matching expressions in the ``top.yaml`` file have changed. As a
+consequence expressions that contain the symbol ``@`` must now be quoted.
+
+The matching syntax has been extended significantly, allow for much more
+complex matching expressions.
+
 vinegar.request_handler.file
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -128,3 +138,17 @@ Three new type aliases have been introduced:
 `~vingar.utils.socket.Inet6SocketAddress`, and
 `~vingar.utils.socket.InetSocketAddress`. These are aliases for the types of
 tuples that may be encountered when dealing with IPv4 or IPv6 socket addresses.
+
+vinegar.utils.system_matcher
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The syntax of the expressions supported by the `vinegar.utils.system_matcher`
+module has been extended. This has two consequences which break backward
+compatibility:
+
+* Expressions that contain the ``@`` character must no be wrapped in quotes.
+* The signatures of the `~vinegar.utils.system_matcher.match` function and the
+  `~vinegar.utils.system_matcher.Matcher.matches` method have changed. They
+  expect a dict for the system data in addition to the system ID now, and the
+  ``case_sensitive`` argument has been removed, because case sensitivity can
+  now be explicitly configured for each sub-expression.

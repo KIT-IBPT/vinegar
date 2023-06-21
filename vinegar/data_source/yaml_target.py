@@ -48,10 +48,12 @@ directory, one can create a sub-directory with a file called ``init.yaml``.
 For example, the reference to ``example`` would be resolved to
 ``example/init.yaml`` if ``example.yaml`` does not exist.
 
-Keys in ``top.yaml`` can be system IDs or patterns matching system IDs, but
-they can also be combinations of several such patterns using logical
-expressions. Please refer to the documentation of the
-`vinegar.utils.system_matcher` for details.
+Keys in ``top.yaml`` patterns matching system IDs or data from preceding data
+sources, but they can also be combinations of several such patterns using
+logical expressions. Please refer to the documentation of the
+`vinegar.utils.system_matcher` for details. The dict passed to the matcher is a
+`~vinegar.utils.smart_dict.SmartLookupDict`, so nested keys may be used in
+matching expressions.
 
 Each data file (e.g. ``common/file1.yaml`` in the example above) is a simple
 YAML file that provides configuration data.
@@ -261,7 +263,7 @@ class YamlTargetSource(DataSource):
         )
         old_cache_item = self._cache.get(system_id, None)
         data, data_version, new_cache_item = data_compiler.compile_data(
-            system_id, preceding_data, old_cache_item
+            system_id, preceding_data, preceding_data_version, old_cache_item
         )
         # If we have a new version of the cache item, we have to update the
         # cache. Obviously, there is a race condition when updating the cache,
@@ -313,15 +315,20 @@ class _DataCompiler:
     # methods can still be sure that these attributes exist.
     #
     # pylint: disable=attribute-defined-outside-init
-    def compile_data(self, system_id, preceding_data, old_cache):
+    def compile_data(
+        self, system_id, preceding_data, preceding_data_version, old_cache
+    ):
         """
         Compiles the data for the specified system ID and preceding data.
 
         :param system_id:
             system for which the data shall be compiled.
         :param preceding_data:
-            data supplied by the preceding data sources. This data is passed as
-            part of the context when rendering templates.
+            data supplied by the preceding data sources. This data is used for
+            matching and passed as part of the context when rendering
+            templates.
+        :param preceding_data_version:
+            version string for ``preceding_data``.
         :param old_cache:
             cache returned by an earlier call to this function or ``None`` if
             this is the first call to this function for the specified system
@@ -334,16 +341,18 @@ class _DataCompiler:
         # changes, they might result in files not being part of the tree any
         # longer and if we simply updated the old cache, the data for these
         # files would never be removed.
+        self._system_id = system_id
+        self._preceding_data = SmartLookupDict(preceding_data)
+        self._preceding_data_version = preceding_data_version
         self._context = {
-            "id": system_id,
-            "data": SmartLookupDict(preceding_data),
+            "id": self._system_id,
+            "data": self._preceding_data,
         }
         self._new_cache = {}
         if old_cache is None:
             self._old_cache = {}
         else:
             self._old_cache = old_cache
-        self._system_id = system_id
         data_files = self._process_top()
         # We process each of the files that were listed in top.yaml.
         if data_files:
@@ -380,7 +389,9 @@ class _DataCompiler:
                 f"{type(target_expression).__name__}."
             )
         return vinegar.utils.system_matcher.match(
-            self._system_id, target_expression
+            target_expression,
+            system_id=self._system_id,
+            system_data=self._preceding_data,
         )
 
     def _process_data_file(self, parent_files, file_name, file_path):
@@ -556,6 +567,13 @@ class _DataCompiler:
         try:
             top_yaml = self._render(self._top_file)
             top_version = version_for_str(top_yaml)
+            # We allow matching on data from preceding data sources in the top
+            # file, so we have to include the preceding data version in the
+            # version string for our top data. Otherwise, we might use an
+            # outdated list of data files when the preceding data changes.
+            top_version = aggregate_version(
+                (top_version, self._preceding_data_version)
+            )
             # If we have a cache entry for top.yaml and the version has not
             # changed, we can simply use the cached data instead of parsing the
             # YAML again.

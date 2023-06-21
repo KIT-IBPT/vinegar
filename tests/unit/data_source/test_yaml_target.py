@@ -7,10 +7,10 @@ import pathlib
 import time
 import unittest
 
+from tempfile import TemporaryDirectory
+
 import vinegar.data_source
 import vinegar.data_source.yaml_target
-
-from tempfile import TemporaryDirectory
 
 from vinegar.data_source.yaml_target import YamlTargetSource
 
@@ -728,7 +728,7 @@ class TestYamlTargetSource(unittest.TestCase):
                     - domain.net
                 'db-* or database-*':
                     - app.db
-                'www.* or web.*':
+                'www.* or web.* or @data_glob/i:roles:web@true':
                     - app.web
                 """,
             )
@@ -810,6 +810,30 @@ class TestYamlTargetSource(unittest.TestCase):
                     "dnsdomain": "example.com",
                 },
                 ds.get_data("www.example.com", {}, "")[0],
+            )
+            # The system should also be treated as a web server if the
+            # roles:web flag is set in the system data from the preceding
+            # sources.
+            self.assertEqual(
+                {
+                    "disks": {"home": "200G", "root": "16G", "var": "100G"},
+                    "dnsdomain": "example.net",
+                },
+                ds.get_data(
+                    "some-server.example.net", {"roles": {"web": True}}, "v1"
+                )[0],
+            )
+            # If the flag is not set, the system should not be treated as a web
+            # server. We have to given a different version string in order to
+            # avoid using a cached result.
+            self.assertEqual(
+                {
+                    "disks": {"root": "16G", "var": "100G"},
+                    "dnsdomain": "example.net",
+                },
+                ds.get_data(
+                    "some-server.example.net", {"roles": {"web": False}}, "v2"
+                )[0],
             )
 
 

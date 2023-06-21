@@ -16,12 +16,12 @@ def _and_expression(
     ``True`` if both its left and right expression evaluate to ``True``.
     """
 
-    def evaluate(name: str) -> bool:
+    def evaluate(system_id: str, system_data: dict) -> bool:
         # If the left expression evaluates to False, we can skip the evaluation
         # of the right expression.
-        if not left_expression(name):
+        if not left_expression(system_id, system_data):
             return False
-        return right_expression(name)
+        return right_expression(system_id, system_data)
 
     return evaluate
 
@@ -32,8 +32,8 @@ def _not_expression(expression: Expression) -> Expression:
     sub-expression.
     """
 
-    def evaluate(name: str) -> bool:
-        return not expression(name)
+    def evaluate(system_id: str, system_data: dict) -> bool:
+        return not expression(system_id, system_data)
 
     return evaluate
 
@@ -46,12 +46,12 @@ def _or_expression(
     ``True`` if either its left or its right expression evaluate to ``True``.
     """
 
-    def evaluate(name):
+    def evaluate(system_id: str, system_data: dict) -> bool:
         # If the left expression evaluates to True, we can skip the evaluation
         # of the right expression.
-        if left_expression(name):
+        if left_expression(system_id, system_data):
             return True
-        return right_expression(name)
+        return right_expression(system_id, system_data)
 
     return evaluate
 
@@ -60,22 +60,6 @@ class CompoundExpressionParser(ParserBase):
     """
     Parser for a compound matching expression.
     """
-
-    def __init__(self, input_str: str, /, *, case_sensitive: bool = False):
-        """
-        Create a parser for the input.
-
-        :param input_str:
-            input that shall be parsed.
-        :param case_sensitive:
-            tells whether patterns should be treated as case sensitive when
-            matching.
-        """
-        super().__init__(input_str)
-        self._case_sensitive = case_sensitive
-        """
-        Indicates that patterns should be treated as case sensitive.
-        """
 
     def _accept_keyword(
         self, accepted_keywords: typing.Sequence[str] = ("and", "not", "or")
@@ -89,11 +73,18 @@ class CompoundExpressionParser(ParserBase):
         strings that start with a keyword but do not represent a keyword are
         not accidentally treated as this keyword.
 
+        If a keyword is found, but it is not at the start of the string and not
+        preceded by whitespace or a closing parenthesis, an exception is
+        raised.
+
         :param accepted_keywords:
             sequence of keywords that shall be accepted.
         :return:
             the accepted keyword or ``None`` if none of the accepted keywords
             is present at the current location.
+        :raise ParseError:
+            if a keyword is found, but it is not at the start of the string and
+            not preceded by a closing parenthesis or whitespace.
         """
         keyword = self._peek_keyword(accepted_keywords)
         if keyword:
@@ -199,9 +190,7 @@ class CompoundExpressionParser(ParserBase):
         left_expression = expect_subexpression()
         # Before the next keyword and after the last expression, there may be
         # whitespace. In fact, if there is a keyword, it must be preceded by
-        # whitespace or a closing parenthesis, but if it wasn’t this part of
-        # the string would already have been consumed when calling
-        # expect_subexpression().
+        # whitespace or a closing parenthesis.
         self._accept_whitespace()
         while not self.end_of_string:
             # Between the subexpressions, only the specified keyword is
@@ -221,9 +210,7 @@ class CompoundExpressionParser(ParserBase):
             )
             # Before the next keyword and after the last expression, there may
             # be whitespace. In fact, if there is a keyword, it must be
-            # preceded by whitespace or a closing parenthesis, but if it wasn’t
-            # this part of the string would already have been consumed when
-            # calling expect_subexpression().
+            # preceded by whitespace or a closing parenthesis.
             self._accept_whitespace()
         return left_expression
 
@@ -237,9 +224,7 @@ class CompoundExpressionParser(ParserBase):
         :return:
             consumed expression.
         """
-        parser = SimpleExpressionParser(
-            self.remaining_input, case_sensitive=self._case_sensitive
-        )
+        parser = SimpleExpressionParser(self.remaining_input)
         expression = parser.parse(ignore_extra_input=True)
         self._skip(len(parser.consumed_input))
         return expression
@@ -270,7 +255,7 @@ class CompoundExpressionParser(ParserBase):
         if keyword:
             # No other keyword is allowed here.
             raise ParseError(
-                f"Expected '(', keyword 'not', or simple expression, but "
+                f"Expected '(', keyword 'not', or simple expression but "
                 f"found {self._excerpt()}.",
                 position=self._position,
             )
@@ -291,7 +276,7 @@ class CompoundExpressionParser(ParserBase):
         whitespace = self._accept_whitespace()
         if not whitespace:
             raise ParseError(
-                f"Expected whitespace, but found {self._excerpt()}.",
+                f"Expected whitespace but found {self._excerpt()}.",
                 position=self._position,
             )
         return whitespace
@@ -311,6 +296,9 @@ class CompoundExpressionParser(ParserBase):
         :return:
             the accepted keyword or ``None`` if none of the accepted keywords
             is present at the current location.
+        :raise ParseError:
+            if a keyword is found, but it is not at the start of the string and
+            not preceded by a closing parenthesis or whitespace.
         """
         # In order to decide whether there is a keyword, we have to look one
         # character past the keyword’s length, so we retrieve one more
@@ -319,15 +307,38 @@ class CompoundExpressionParser(ParserBase):
         for keyword in accepted_keywords:
             max_keyword_len = max(max_keyword_len, len(keyword))
         candidate_keyword = self._peek(max_keyword_len + 1)
+        found_keyword = None
         for keyword in accepted_keywords:
             if candidate_keyword.startswith(keyword):
                 keyword_len = len(keyword)
                 if len(candidate_keyword) == keyword_len:
-                    return keyword
+                    found_keyword = keyword
+                    break
                 following_char = candidate_keyword[keyword_len]
                 if following_char == "(" or following_char.isspace():
-                    return keyword
-        return None
+                    found_keyword = keyword
+                    break
+        if found_keyword is not None:
+            # We look back at the last consumed character. If it was not
+            # whitespace or a parenthesis, this expression is invalid because
+            # keywords must be separated by whitespace or parentheses. Of
+            # course we only perform this check if the keyword was not right at
+            # the start of the string.
+            if self._position > 0:
+                preceding_char = self._input_str[self._position - 1]
+                if not preceding_char.isspace() and preceding_char not in (
+                    "(",
+                    ")",
+                ):
+                    # In the error message, we only complain about the missing
+                    # whitespace. If a closing parenthesis was missing, this
+                    # should already have been detected when parsing the
+                    # parentheses expression.
+                    raise ParseError(
+                        f"Expected whitespace but found {self._excerpt()}.",
+                        position=self._position,
+                    )
+        return found_keyword
 
     def parse(self, *, ignore_extra_input: bool = False) -> Expression:
         """
@@ -354,34 +365,31 @@ class CompoundExpressionParser(ParserBase):
         # The expressions that we support are described by the following
         # (simplified) grammar:
         #
-        # EXPRESSION = OR_EXPRESSION ;
+        # COMPOUND_EXPRESSION = OR_EXPRESSION ;
         #
-        # PARANTHESES_EXPRESSION = "(" , EXPRESSION , ")" ;
+        # PARANTHESES_EXPRESSION = "(" , COMPOUND_EXPRESSION , ")" ;
         #
         # NOT_EXPRESSION = "not" , UNARY_EXPRESSION ;
         #
         # UNARY_EXPRESSION = PARANTHESES_EXPRESSION
         #                  | NOT_EXPRESSION
-        #                  | PATTERN ;
+        #                  | SIMPLE_EXPRESSION ;
         #
-        # AND_EXPRESSION = { UNARY_EXPRESSION , "and" , AND_EXPRESSION }
-        #                | UNARY_EXPRESSION ;
+        # AND_EXPRESSION = UNARY_EXPRESSION { "and" , UNARY_EXPRESSION } ;
         #
-        # OR_EXPRESSION = { AND_EXPRESSION , "or" , OR_EXPRESSION }
-        #               | AND_EXPRESSION ;
+        # OR_EXPRESSION = AND_EXPRESSION , { "or" , AND_EXPRESSION } ;
         #
         # This grammar describes tokens, not characters. Tokens have to be
         # separated by whitespace, except for parentheses. This grammar does
-        # not describe the internal structure of patterns either, but it is
-        # simply assumed that everything that is not a keyword and does not
-        # contain parantheses or whitespace is a pattern.
+        # not describe the internal structure of SIMPLE_EXPRESSION either.
+        # That grammer is is described in the SimpleExpressionParser.
         expression = self._expect_compound_or_expression()
         if not ignore_extra_input and not self.end_of_string:
             # When we reached the end of the compound expression, this is
             # because there wasn’t another “and” or “or” keyword.
             raise ParseError(
                 f"Expected any of the keywords ['and', 'or'] or "
-                f"end-of-string, but found {self._excerpt()}.",
+                f"end-of-string but found {self._excerpt()}.",
                 position=self._position,
             )
         return expression

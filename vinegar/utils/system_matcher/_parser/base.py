@@ -4,10 +4,15 @@ Base code for all expressions and parsers.
 
 import typing
 
-
-Expression = typing.Callable[[str], bool]
+Expression = typing.Callable[[str, dict], bool]
 """
 Type alias for a function representing an expression that can be evaluated.
+
+The first argument is the system ID and the second argument is the system data
+as provided by the data source(s).
+
+If the expression matches the provided information ``True`` is returned,
+otherwise ``False`` is returned.
 """
 
 
@@ -153,7 +158,7 @@ class ParserBase:
         """
         if not self._accept(expected_str):
             raise ParseError(
-                f"Expected {repr(expected_str)}, but found {self._excerpt()}.",
+                f"Expected {repr(expected_str)} but found {self._excerpt()}.",
                 position=self._position,
             )
 
@@ -201,7 +206,7 @@ class ParserBase:
             if self._accept(accepted_str):
                 return accepted_str
         raise ParseError(
-            f"Expected any of {expected_strs}, but found {self._excerpt()}.",
+            f"Expected any of {expected_strs} but found {self._excerpt()}.",
             position=self._position,
         )
 
@@ -216,7 +221,7 @@ class ParserBase:
         """
         if not self.end_of_string:
             raise ParseError(
-                f"Expected end-of-string, but found {self._excerpt()}.",
+                f"Expected end-of-string but found {self._excerpt()}.",
                 position=self._position,
             )
 
