@@ -173,7 +173,6 @@ can be used to control its behavior.
     set to ``set_value``, this option must be specified.
 """
 
-import http.client
 import io
 import json
 import urllib.parse
