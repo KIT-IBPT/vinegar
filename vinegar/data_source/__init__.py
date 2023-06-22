@@ -129,7 +129,6 @@ class DataSource(abc.ABC):
             tuple where the first element is the data associated with the
             specified system and the second element is a version string that
             changes whenver the returned data changes (for the same system).
-
         """
         raise NotImplementedError()
 
