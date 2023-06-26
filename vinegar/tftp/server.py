@@ -586,7 +586,7 @@ class TftpServer:
                                 # However, the 16 bytes of the IPv6 address
                                 # should align with the memory structure used
                                 # by virtually every architecture in use.
-                                req_dst_addr = tuple(
+                                req_dst_addr = (
                                     socket.inet_ntop(
                                         socket.AF_INET6, cmsg_data[:16]
                                     ),
