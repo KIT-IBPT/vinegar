@@ -35,10 +35,6 @@ behavior is as before.
 If using the ``template`` option, a new context object called ``request_info``
 is now available while rendering the template.
 
-The request handler also supports the new ``template_context`` configuration
-option. If specified, this adds additional context objects (or overrides
-default ones, when specifying one of the predefined names).
-
 Please refer to the API documentation for
 `vinegar.request_handler.file` for more information.
 

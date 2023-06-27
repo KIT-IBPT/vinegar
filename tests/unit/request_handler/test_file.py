@@ -1316,45 +1316,6 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
             )
             self.assertEqual("test_id", file_content.decode())
 
-    def test_config_template_context(self):
-        """
-        Test the ``template_context`` configuration option.
-        """
-        with TemporaryDirectory() as tmpdir:
-            # We create a single file that can be served by the handler.
-            temp_path = pathlib.Path(tmpdir)
-            file_path = temp_path / "test.txt"
-            # The easiest thing that we can test is that replacing the variable
-            # start and end strings (default '{{' and '}}') has the expected
-            # effect.
-            _write_file(file_path, "{{ id }}:{{ data['test'] }}")
-            # We set lookup_key to ":system_id:" so that we do not have to mock
-            # find_system.
-            config = {
-                "file": str(file_path),
-                "lookup_key": ":system_id:",
-                "request_path": "/test/...",
-                "template": "jinja",
-                "template_context": {},
-            }
-            data_source = unittest.mock.Mock(spec=DataSource)
-            data_source.get_data.return_value = ({"test": "abc"}, "")
-            handler = self.get_request_handler(config, data_source)
-            # When we do not override any context variables, data should
-            # contain the value from our data source.
-            file_content = self.call_handle(
-                handler, "/test/test_id", expect_status=HTTPStatus.OK
-            )
-            self.assertEqual("test_id:abc", file_content.decode())
-            # If we override the data variable, the value from the
-            # configuration should be used.
-            config["template_context"] = {"data": {"test": "123"}}
-            handler = self.get_request_handler(config, data_source)
-            file_content = self.call_handle(
-                handler, "/test/test_id", expect_status=HTTPStatus.OK
-            )
-            self.assertEqual("test_id:123", file_content.decode())
-
     def test_path_security(self):
         """
         Test that that the request handler is not vulnerable to path
