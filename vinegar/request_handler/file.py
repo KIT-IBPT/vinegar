@@ -417,6 +417,15 @@ The common options are:
     configuration for the template engine. The default is an empty dictionary
     (``{}``). This configuration is passed on to the template engine as is.
 
+:``template_context`` (optional):
+    Variables that shall be passed to the template engine when rendering a
+    template. The default is an empty dict. All keys used in this dict must be
+    strings, otherwise the template engine might not be able to handle them.
+    Please note that variables defined in this dict override the context
+    variables usually available in the template. For example, if this dict
+    contains the key ``request_info``, the regular ``request_info`` is not
+    going to be available inside the template.
+
 The configuration options specific to the HTTP version of the request handler
 are:
 
@@ -445,6 +454,7 @@ are:
     and thus using the ``content_type`` option is simpler.
 """
 
+import copy
 import dataclasses
 import io
 import logging
@@ -537,6 +547,7 @@ class _FileRequestHandlerBase(DataSourceAware):
             )
         template = config.get("template", None)
         template_config = config.get("template_config", {})
+        self._template_context = config.get("template_context", {})
         if template:
             self._template_engine = get_template_engine(
                 template, template_config
@@ -762,13 +773,20 @@ class _FileRequestHandlerBase(DataSourceAware):
                 # process. It is unlikely that the same file is repeatedly
                 # requested for the same system, so caching would probably not
                 # bring much benefit.
-                template_context: Dict[str, Any] = {
-                    "request_info": request_info
-                }
-                if system_id is not None:
-                    template_context["id"] = system_id
+                #
+                # We use a copy of the user-specified template context as the
+                # basis. We use a copy instead of the original object so that
+                # changes made by the template do not affect future rendering
+                # processes. We use setdefault(…) for adding our context
+                # objects so that user-specified attributes are not
+                # overwritten. This way, we can add more attributes in the
+                # future without breaking backwards compatibility.
+                template_context = copy.deepcopy(self._template_context)
                 if data is not None:
-                    template_context["data"] = data
+                    template_context.setdefault("data", data)
+                if system_id is not None:
+                    template_context.setdefault("id", system_id)
+                template_context.setdefault("request_info", request_info)
                 render_result = self._template_engine.render(
                     file, template_context
                 )
