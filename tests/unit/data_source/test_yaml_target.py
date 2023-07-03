@@ -237,6 +237,82 @@ class TestYamlTargetSource(unittest.TestCase):
             (data, _) = ds.get_data("dummy", {"input": 2}, "1")
             self.assertEqual({"key": 2}, data)
 
+    def test_config_file_extension(self):
+        """
+        Test the ``file_extension`` configuration option.
+
+        This option can be specified in order to use a different file extension
+        than ``.yaml``.
+        """
+        # We do not test the default “.yaml” extension as this is already
+        # extensively tested by other tests.
+        with TemporaryDirectory() as tmpdir:
+            ds = YamlTargetSource(
+                {"file_extension": ".my", "root_dir": tmpdir}
+            )
+            # We have to fill the configuration directory with files that the
+            # data source can read.
+            root_dir_path = pathlib.Path(tmpdir)
+            _write_file(
+                root_dir_path / "top.my",
+                """
+                '*':
+                    - a
+                """,
+            )
+            _write_file(
+                root_dir_path / "a.my",
+                """
+                include:
+                    - .b
+                """,
+            )
+            (root_dir_path / "b").mkdir()
+            _write_file(
+                root_dir_path / "b" / "init.my",
+                """
+                test_key: some value
+                """,
+            )
+            verify_data = {"test_key": "some value"}
+            data = ds.get_data("dummy", {}, "")[0]
+            self.assertEqual(verify_data, data)
+        # The file extension can be the empty string.
+        with TemporaryDirectory() as tmpdir:
+            ds = YamlTargetSource({"file_extension": "", "root_dir": tmpdir})
+            # We have to fill the configuration directory with files that the
+            # data source can read.
+            root_dir_path = pathlib.Path(tmpdir)
+            _write_file(
+                root_dir_path / "top",
+                """
+                '*':
+                    - a
+                """,
+            )
+            _write_file(
+                root_dir_path / "a",
+                """
+                include:
+                    - .b
+                """,
+            )
+            (root_dir_path / "b").mkdir()
+            _write_file(
+                root_dir_path / "b" / "init",
+                """
+                some_key: 123
+                """,
+            )
+            verify_data = {"some_key": 123}
+            data = ds.get_data("dummy", {}, "")[0]
+            self.assertEqual(verify_data, data)
+        # While an empty string is allowed, the file extension must be a
+        # string, so a value of None is not allowed.
+        with TemporaryDirectory() as tmpdir:
+            with self.assertRaises(TypeError):
+                YamlTargetSource({"file_extension": None, "root_dir": tmpdir})
+
     def test_config_merge_lists(self):
         """
         Test the 'merge_lists' configuration option.
