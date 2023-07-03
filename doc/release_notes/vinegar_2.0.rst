@@ -22,8 +22,12 @@ Due to changes in the `vinegar.utils.system_matcher` module, the syntax for the
 target matching expressions in the ``top.yaml`` file have changed. As a
 consequence expressions that contain the symbol ``@`` must now be quoted.
 
-The matching syntax has been extended significantly, allow for much more
+The matching syntax has been extended significantly, now allowing much more
 complex matching expressions.
+
+The location of YAML files that are included from other files can now be
+specified relative to the location of the file where they are included by
+starting the name of the included file with a dot (``.``).
 
 vinegar.request_handler.file
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

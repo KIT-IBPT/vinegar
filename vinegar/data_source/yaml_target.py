@@ -75,6 +75,24 @@ This has the same effect as if the content of that file was pasted at the
 position of the include, with one difference: Duplicate keys will not cause a
 parsing errors. Instead, they are going to be merged (see below).
 
+Included files can also be specified in a relative fashion. The following
+example includes a file called ``other.yaml`` that is in the same directory as
+the file where the include is specified::
+
+  include:
+    - .other
+
+This also works for files in parent directories (and parent directories of
+parent directories, etc.)::
+
+  include:
+    - ..some
+    - ...file
+
+This example includes the file ``some.yaml`` in the parent directory of the
+directoy where the current file is located and ``file.yaml`` in the parent
+directory of that directory.
+
 Merging multiple data files
 ---------------------------
 
@@ -394,7 +412,13 @@ class _DataCompiler:
             system_data=self._preceding_data,
         )
 
-    def _process_data_file(self, parent_files, file_name, file_path):
+    def _process_data_file(
+        self,
+        parent_files,
+        file_name,
+        file_name_for_include_resolution,
+        file_path,
+    ):
         # If a file recursively includes itself (directly or indirectly), we
         # end up in an infinite loop, so we have to detect such a situation.
         if file_name in parent_files:
@@ -468,6 +492,12 @@ class _DataCompiler:
         if preceding_data:
             data_list += [(preceding_data, file_version)]
         if include_files:
+            include_files = [
+                self._resolve_relative_include(
+                    include_file, file_name_for_include_resolution, file_name
+                )
+                for include_file in include_files
+            ]
             data_list += self._process_data_files(
                 parent_files + [file_name], include_files
             )
@@ -535,13 +565,21 @@ class _DataCompiler:
             file_path_yaml = file_path.with_suffix(".yaml")
             if file_path_yaml.exists():
                 data_files.append(
-                    (file_name, os.path.abspath(str(file_path_yaml)))
+                    (
+                        file_name,
+                        file_name,
+                        os.path.abspath(str(file_path_yaml)),
+                    )
                 )
             else:
                 file_path_init_yaml = file_path / "init.yaml"
                 if file_path_init_yaml.exists():
                     data_files.append(
-                        (file_name, os.path.abspath(str(file_path_init_yaml)))
+                        (
+                            file_name,
+                            f"{file_name}.init",
+                            os.path.abspath(str(file_path_init_yaml)),
+                        )
                     )
                 else:
                     raise FileNotFoundError(
@@ -549,12 +587,19 @@ class _DataCompiler:
                         "could not be found."
                     )
         data_list = []
-        for data_file_name, data_file in data_files:
+        for (
+            data_file_name,
+            data_file_name_for_include_resolution,
+            data_file,
+        ) in data_files:
             # _process_data_file returns a list of tuples. Each of this tuples
             # contains the data that shall later be merged into the result and
             # the version of the file that provided that data.
             data_file_data_list = self._process_data_file(
-                parent_files, data_file_name, data_file
+                parent_files,
+                data_file_name,
+                data_file_name_for_include_resolution,
+                data_file,
             )
             data_list += data_file_data_list
         return data_list
@@ -609,6 +654,12 @@ class _DataCompiler:
                     f"of type {type(file_list).__name__} where a list was "
                     "expected."
                 )
+            if "" in file_list:
+                raise RuntimeError(
+                    f"Invalid file list in {self._top_file} for target "
+                    f"expression {target_expression!r}: The list contains an "
+                    "empty string, which is not allowed."
+                )
             if self._expression_matches(target_expression):
                 data_files += file_list
         self._new_cache["top"] = _CachedData(data_files, top_version)
@@ -622,6 +673,61 @@ class _DataCompiler:
             return self._template_engine.render(
                 template_path, copy.deepcopy(self._context)
             )
+
+    @staticmethod
+    def _resolve_relative_include(
+        include_file_name: str,
+        parent_file_name: str,
+        parent_file_name_for_error_message: str,
+    ):
+        # If the include file name was empty, using split() would result in the
+        # list [""], which would lead to a misleading error message later, so
+        # we rather catch this case here.
+        if not include_file_name:
+            raise RuntimeError(
+                "Invalid reference in include section of file "
+                f"{parent_file_name_for_error_message}: The name of an "
+                "include file must not be empty."
+            )
+        # If the file name does not start with a dot, the name is absolute and
+        # we do not have to do anything.
+        if not include_file_name.startswith("."):
+            return include_file_name
+        # For each leading dot in the include name, we remove one component
+        # from the parent name.
+        include_file_name_split = include_file_name.split(".")
+        parent_file_name_split = parent_file_name.split(".")
+        while include_file_name_split and not include_file_name_split[0]:
+            include_file_name_split = include_file_name_split[1:]
+            if not parent_file_name_split:
+                raise RuntimeError(
+                    "Invalid reference in include section of file "
+                    f"{parent_file_name_for_error_message}: The include file "
+                    f"name {include_file_name!r} references a file outside "
+                    "the root of the data-source file tree."
+                )
+            parent_file_name_split = parent_file_name_split[:-1]
+        # We do not allow an include file name that only consists of dots. The
+        # reason is that there is no implict way of referencing the root of the
+        # directory tree (a file with the name “init.yaml” in the root of the
+        # file tree cannot be referenced by specifying an empty name). So, we
+        # could allow to reference “.” from a file “a/b.yaml”, but not from
+        # “c.yaml”, but such a reference only being allowed depending on where
+        # it is used would not be very intuitive, so we rather disallow it
+        # everywhere.
+        # This does not keep the user from reference an “init.yaml” file in the
+        # hierarchy above the current file, it just means that “.init” has to
+        # be included instead of “.” and “..init” instead of “..”, etc.
+        if not include_file_name_split:
+            raise RuntimeError(
+                "Invalid reference in include section of file "
+                f"{parent_file_name_for_error_message}: The include file name "
+                f"{include_file_name!r} is invalid: The file name must not "
+                "only consist of dots."
+            )
+        # We combine the reduced parent file name with the include file name in
+        # order to get the absolute name of the include file.
+        return ".".join(parent_file_name_split + include_file_name_split)
 
 
 def get_instance(config: Mapping[Any, Any]) -> YamlTargetSource:

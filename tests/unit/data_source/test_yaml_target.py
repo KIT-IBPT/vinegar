@@ -3,6 +3,7 @@ Tests for `vinegar.data_source.yaml_target`.
 """
 
 import inspect
+import os
 import pathlib
 import time
 import unittest
@@ -463,6 +464,95 @@ class TestYamlTargetSource(unittest.TestCase):
             )
             self.assertIsInstance(ds, YamlTargetSource)
 
+    def test_include_dot_only(self):
+        """
+        Test that an include name must not only contain dots.
+        """
+        with TemporaryDirectory() as tmpdir:
+            ds = YamlTargetSource({"root_dir": tmpdir})
+            # We have to fill the configuration directory with files that the
+            # data source can read.
+            root_dir_path = pathlib.Path(tmpdir)
+            _write_file(
+                root_dir_path / "top.yaml",
+                """
+                '*':
+                    - a.b
+                """,
+            )
+            (root_dir_path / "a").mkdir()
+            _write_file(
+                root_dir_path / "a" / "init.yaml",
+                """
+                some_key: 123
+                """,
+            )
+            (root_dir_path / "a" / "b").mkdir()
+            _write_file(
+                root_dir_path / "a" / "b" / "init.yaml",
+                """
+                include:
+                    - ..
+                """,
+            )
+            # We expect a RuntimeError because ".." is not a valid reference
+            # (it only consits of dots).
+            with self.assertRaises(RuntimeError) as assertion:
+                ds.get_data("dummy", {}, "")
+            self.assertTrue(
+                str(assertion.exception).startswith(
+                    "Invalid reference in include section "
+                )
+            )
+
+    def test_include_empty_name(self):
+        """
+        Test that an include name must not be empty.
+        """
+        with TemporaryDirectory() as tmpdir:
+            tmpdir_path = pathlib.Path(tmpdir)
+            root_dir = tmpdir_path / "root"
+            root_dir.mkdir()
+            ds = YamlTargetSource({"root_dir": tmpdir})
+            # We have to fill the configuration directory with files that the
+            # data source can read.
+            root_dir_path = pathlib.Path(tmpdir)
+            _write_file(
+                root_dir_path / "top.yaml",
+                """
+                '*':
+                    - a
+                """,
+            )
+            _write_file(
+                root_dir_path / "a.yaml",
+                """
+                include:
+                    - ''
+                """,
+            )
+            _write_file(
+                tmpdir_path / ".yaml",
+                """
+                some_key: 123
+                """,
+            )
+            _write_file(
+                tmpdir_path / "init.yaml",
+                """
+                some_key: 456
+                """,
+            )
+            # We expect a RuntimeError because the file name in the include
+            # section is empty.
+            with self.assertRaises(RuntimeError) as assertion:
+                ds.get_data("dummy", {}, "")
+            self.assertTrue(
+                str(assertion.exception).startswith(
+                    "Invalid reference in include section "
+                )
+            )
+
     def test_include_merging(self):
         """
         Test that the precedence order is maintained when merging included
@@ -666,6 +756,169 @@ class TestYamlTargetSource(unittest.TestCase):
                 str(assertion.exception).startswith("Recursion loop detected")
             )
 
+    def test_recursion_loop_with_init_file(self):
+        """
+        Test that an ``init.yaml`` file cannot include itself.
+        """
+        with TemporaryDirectory() as tmpdir:
+            ds = YamlTargetSource({"root_dir": tmpdir})
+            # We have to fill the configuration directory with files that the
+            # data source can read.
+            root_dir_path = pathlib.Path(tmpdir)
+            _write_file(
+                root_dir_path / "top.yaml",
+                """
+                '*':
+                    - a
+                """,
+            )
+            (root_dir_path / "a").mkdir()
+            _write_file(
+                root_dir_path / "a" / "init.yaml",
+                """
+                include:
+                    - a.init
+
+                some_key: abc
+                """,
+            )
+            # We expect a RuntimeError because of the include loop.
+            with self.assertRaises(RuntimeError) as assertion:
+                ds.get_data("dummy", {}, "")
+            self.assertTrue(
+                str(assertion.exception).startswith("Recursion loop detected")
+            )
+        # We test the same thing again, but this time we use “a.init” the top
+        # file and “a” in the includes list.
+        with TemporaryDirectory() as tmpdir:
+            ds = YamlTargetSource({"root_dir": tmpdir})
+            # We have to fill the configuration directory with files that the
+            # data source can read.
+            root_dir_path = pathlib.Path(tmpdir)
+            _write_file(
+                root_dir_path / "top.yaml",
+                """
+                '*':
+                    - a.init
+                """,
+            )
+            (root_dir_path / "a").mkdir()
+            _write_file(
+                root_dir_path / "a" / "init.yaml",
+                """
+                include:
+                    - a
+
+                some_key: abc
+                """,
+            )
+            # We expect a RuntimeError because of the include loop.
+            with self.assertRaises(RuntimeError) as assertion:
+                ds.get_data("dummy", {}, "")
+            self.assertTrue(
+                str(assertion.exception).startswith("Recursion loop detected")
+            )
+
+    def test_relative_include(self):
+        """
+        Test that relative include names can be used.
+        """
+        with TemporaryDirectory() as tmpdir:
+            ds = YamlTargetSource({"root_dir": tmpdir})
+            # We have to fill the configuration directory with files that the
+            # data source can read.
+            root_dir_path = pathlib.Path(tmpdir)
+            _write_file(
+                root_dir_path / "top.yaml",
+                """
+                '*':
+                    - a
+                """,
+            )
+            (root_dir_path / "a").mkdir()
+            _write_file(
+                root_dir_path / "a" / "init.yaml",
+                """
+                include:
+                    - ..b.sub1
+                """,
+            )
+            (root_dir_path / "b").mkdir()
+            _write_file(
+                root_dir_path / "b" / "sub1.yaml",
+                """
+                include:
+                  - .sub2
+                """,
+            )
+            _write_file(
+                root_dir_path / "b" / "sub2.yaml",
+                """
+                include:
+                  - .init
+                """,
+            )
+            _write_file(
+                root_dir_path / "b" / "init.yaml",
+                """
+                include:
+                  - ..c
+                """,
+            )
+            _write_file(
+                root_dir_path / "c.yaml",
+                """
+                test_key: 12345
+                """,
+            )
+            verify_data = {"test_key": 12345}
+            data = ds.get_data("dummy", {}, "")[0]
+            self.assertEqual(verify_data, data)
+
+    def test_relative_include_outside_root(self):
+        """
+        Test that a relative include cannot point outside the file tree.
+        """
+        with TemporaryDirectory() as tmpdir:
+            tmpdir_path = pathlib.Path(tmpdir)
+            root_dir_path = tmpdir_path / "root"
+            root_dir_path.mkdir()
+            ds = YamlTargetSource({"root_dir": os.fspath(root_dir_path)})
+            # We have to fill the configuration directory with files that the
+            # data source can read.
+            _write_file(
+                root_dir_path / "top.yaml",
+                """
+                '*':
+                    - a.b
+                """,
+            )
+            (root_dir_path / "a").mkdir()
+            _write_file(
+                root_dir_path / "a" / "b.yaml",
+                """
+                include:
+                    - ...c
+
+                some_key: abc
+                """,
+            )
+            _write_file(
+                tmpdir_path / "c.yaml",
+                """
+                some_key: 123
+                """,
+            )
+            # We expect a RuntimeError because "...c" references a file that is
+            # outside the root directory of the file tree.
+            with self.assertRaises(RuntimeError) as assertion:
+                ds.get_data("dummy", {}, "")
+            self.assertTrue(
+                str(assertion.exception).startswith(
+                    "Invalid reference in include section "
+                )
+            )
+
     def test_template_context(self):
         """
         Test that the template gets the expected context objects.
@@ -696,6 +949,42 @@ class TestYamlTargetSource(unittest.TestCase):
             self.assertEqual(
                 {"id": "dummy", "data": 123},
                 ds.get_data("dummy", input_data, "1")[0],
+            )
+
+    def test_top_empty_name(self):
+        """
+        Test that the top file must not reference an empty file name.
+        """
+        with TemporaryDirectory() as tmpdir:
+            ds = YamlTargetSource({"root_dir": tmpdir})
+            # We have to fill the configuration directory with files that the
+            # data source can read.
+            root_dir_path = pathlib.Path(tmpdir)
+            _write_file(
+                root_dir_path / "top.yaml",
+                """
+                '*':
+                    - ''
+                """,
+            )
+            _write_file(
+                root_dir_path / ".yaml",
+                """
+                some_key: 123
+                """,
+            )
+            _write_file(
+                root_dir_path / "init.yaml",
+                """
+                some_key: 456
+                """,
+            )
+            # We expect a RuntimeError because the file name in the include
+            # section is empty.
+            with self.assertRaises(RuntimeError) as assertion:
+                ds.get_data("dummy", {}, "")
+            self.assertTrue(
+                str(assertion.exception).startswith("Invalid file list in ")
             )
 
     def test_top_targeting(self):
