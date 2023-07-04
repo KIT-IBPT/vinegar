@@ -107,10 +107,10 @@ data_sources:
 http:
   # The HTTP server binds to all local interfaces by default.
   # bind_address: '::'
-  
+
   # The HTTP server binds to port 80 by default.
   # bind_port: 80
-  
+
   # The list of request handlers is processed in order, using the first handler
   # that matches.
   request_handlers:
@@ -167,12 +167,12 @@ logging_config_file: /etc/vinegar/vinegar-server-logging.ini
 tftp:
   # The TFTP server binds to all local interfaces by default.
   # bind_address: '::'
-  
+
   # The TFTP server binds to port 69 by default. While you can change this port
   # number, most PXE clients will only use that port, so it will usually not be
   # useful to bind to a different one.
   # bind_port: 69
-  
+
   # The list of request handlers is processed in order, using the first handler
   # that matches.
   request_handlers:
