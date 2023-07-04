@@ -456,6 +456,96 @@ class TestFileRequestHandlerBase(unittest.TestCase, abc.ABC):
             with self.assertRaises(KeyError):
                 handler = self.get_request_handler(config)
 
+    def test_config_file_suffix(self):
+        """
+        Test the ``file_suffix`` configuration option.
+        """
+        with TemporaryDirectory() as tmpdir:
+            # We create a directory that contains files with different
+            # suffixes, so that we can test that the correct file is being
+            # served.
+            temp_path = pathlib.Path(tmpdir)
+            _write_file(temp_path / "test.txt", "test.txt")
+            _write_file(temp_path / "test.txt.abc", "test.txt.abc")
+            _write_file(temp_path / "test.txt.xyz", "test.txt.xyz")
+            _write_file(temp_path / ".abc", ".abc")
+            _write_file(temp_path / ".xyz", ".xyz")
+            sub_dir_path = temp_path / "sub"
+            sub_dir_path.mkdir()
+            _write_file(sub_dir_path / "file.xml", "sub/file.xml")
+            _write_file(sub_dir_path / "file.xml.abc", "sub/file.xml.abc")
+            _write_file(sub_dir_path / "file.xml.xyz", "sub/file.xml.xyz")
+            _write_file(sub_dir_path / ".abc", "sub/.abc")
+            _write_file(sub_dir_path / ".xyz", "sub/.xyz")
+            # First, we test without any suffix.
+            config = {"request_path": "/", "root_dir": str(temp_path)}
+            handler = self.get_request_handler(config)
+            file_content = self.call_handle(handler, "/test.txt")
+            self.assertEqual("test.txt", file_content.decode())
+            file_content = self.call_handle(handler, "/sub/file.xml")
+            self.assertEqual("sub/file.xml", file_content.decode())
+            # Next, we test with the .abc suffix.
+            config = {
+                "file_suffix": ".abc",
+                "request_path": "/",
+                "root_dir": str(temp_path),
+            }
+            handler = self.get_request_handler(config)
+            file_content = self.call_handle(handler, "/test.txt")
+            self.assertEqual("test.txt.abc", file_content.decode())
+            file_content = self.call_handle(handler, "/sub/file.xml")
+            self.assertEqual("sub/file.xml.abc", file_content.decode())
+            self.call_handle(
+                handler,
+                "/",
+                expect_status=HTTPStatus.NOT_FOUND,
+            )
+            self.call_handle(
+                handler,
+                "/sub",
+                expect_status=HTTPStatus.NOT_FOUND,
+            )
+            self.call_handle(
+                handler,
+                "/sub/",
+                expect_status=HTTPStatus.NOT_FOUND,
+            )
+            # Next, we test with the .xyz suffix.
+            config = {
+                "file_suffix": ".xyz",
+                "request_path": "/",
+                "root_dir": str(temp_path),
+            }
+            handler = self.get_request_handler(config)
+            file_content = self.call_handle(handler, "/test.txt")
+            self.assertEqual("test.txt.xyz", file_content.decode())
+            file_content = self.call_handle(handler, "/sub/file.xml")
+            self.assertEqual("sub/file.xml.xyz", file_content.decode())
+            self.call_handle(
+                handler,
+                "/",
+                expect_status=HTTPStatus.NOT_FOUND,
+            )
+            self.call_handle(
+                handler,
+                "/sub",
+                expect_status=HTTPStatus.NOT_FOUND,
+            )
+            self.call_handle(
+                handler,
+                "/sub/",
+                expect_status=HTTPStatus.NOT_FOUND,
+            )
+            # Finally, we test that the file_suffix option cannot be used in
+            # combination with the file option.
+            config = {
+                "file": str(temp_path / "test.txt"),
+                "file_suffix": ".abc",
+                "request_path": "/",
+            }
+            with self.assertRaises(ValueError):
+                handler = self.get_request_handler(config)
+
     def test_config_data_source_error_action(self):
         """
         Test the ``data_source_error_action`` configuration option.
@@ -1799,6 +1889,115 @@ class TestHttpFileRequestHandler(TestFileRequestHandlerBase):
             config["file"] = str(text_path)
             with self.assertRaises(ValueError):
                 self.get_request_handler(config)
+
+    def test_config_content_type_map_with_file_suffix(self):
+        """
+        Test the ``content_type_map`` in combination with the ``file_suffix``
+        configuration option.
+        """
+        with TemporaryDirectory() as tmpdir:
+            # We create three different files with different extensions. We
+            # need this to test the different content types.
+            temp_path = pathlib.Path(tmpdir)
+            text_path = temp_path / "test.txt.abc"
+            _write_file(text_path, "Test 123")
+            bin_path = temp_path / "test.bin.abc"
+            _write_file(bin_path, "Test 123")
+            html_path = temp_path / "test.html.abc"
+            _write_file(html_path, "Test 123")
+            special_path = temp_path / "special_file.abc"
+            _write_file(special_path, "Test 123")
+            config = {
+                "file_suffix": ".abc",
+                "request_path": "/test",
+                "root_dir": str(temp_path),
+            }
+            handler = self.get_request_handler(config)
+            # If the content_type_map option is not set, everything should
+            # default to the content_type option, which is
+            # "application/octet-stream" by default if no template engine is
+            # used.
+            self.call_handle(
+                handler,
+                "/test/test.txt",
+                expect_headers={
+                    "Content-Type": "application/octet-stream",
+                    "Content-Length": "8",
+                },
+                expect_status=HTTPStatus.OK,
+            )
+            self.call_handle(
+                handler,
+                "/test/test.bin",
+                expect_headers={
+                    "Content-Type": "application/octet-stream",
+                    "Content-Length": "8",
+                },
+                expect_status=HTTPStatus.OK,
+            )
+            self.call_handle(
+                handler,
+                "/test/test.html",
+                expect_headers={
+                    "Content-Type": "application/octet-stream",
+                    "Content-Length": "8",
+                },
+                expect_status=HTTPStatus.OK,
+            )
+            self.call_handle(
+                handler,
+                "/test/special_file",
+                expect_headers={
+                    "Content-Type": "application/octet-stream",
+                    "Content-Length": "8",
+                },
+                expect_status=HTTPStatus.OK,
+            )
+            # If we use a content_type_map, the value of content_type should
+            # only be used for files that do not match any of the patterns in
+            # the map.
+            config["content_type_map"] = {
+                ".txt": "text/plain; charset=UTF-8",
+                ".html": "text/html; charset=UTF-8",
+                "special_file": "application/x-super-special",
+            }
+            handler = self.get_request_handler(config)
+            self.call_handle(
+                handler,
+                "/test/test.txt",
+                expect_headers={
+                    "Content-Type": "text/plain; charset=UTF-8",
+                    "Content-Length": "8",
+                },
+                expect_status=HTTPStatus.OK,
+            )
+            self.call_handle(
+                handler,
+                "/test/test.bin",
+                expect_headers={
+                    "Content-Type": "application/octet-stream",
+                    "Content-Length": "8",
+                },
+                expect_status=HTTPStatus.OK,
+            )
+            self.call_handle(
+                handler,
+                "/test/test.html",
+                expect_headers={
+                    "Content-Type": "text/html; charset=UTF-8",
+                    "Content-Length": "8",
+                },
+                expect_status=HTTPStatus.OK,
+            )
+            self.call_handle(
+                handler,
+                "/test/special_file",
+                expect_headers={
+                    "Content-Type": "application/x-super-special",
+                    "Content-Length": "8",
+                },
+                expect_status=HTTPStatus.OK,
+            )
 
     def test_config_file(self):
         """

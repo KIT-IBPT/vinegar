@@ -377,6 +377,18 @@ The common options are:
     as for the the ``ignore`` action are taken, but the exception is also
     logged.
 
+:``file_suffix`` (optional):
+    File name suffix that is added to the requested file name when operating in
+    directory mode. For example, when this is set to ``.xyz`` and the file name
+    in the request URI is `abc.txt`, the handler looks for the file
+    ``abc.txt.xyz`` on the file system. By default, this option is set to the
+    empty string, so that the file name on the file system must be the same one
+    as in the request. Setting this option to a non-empty value is particularly
+    useful when using a template engine, so that the files on the file system
+    can use a suffix appropriate for this template engine, helping editors with
+    using the correct type of syntax highlighting. This option can only be used
+    in  combination with the ``root_dir`` option, not with the ``file`` option.
+
 :``lookup_key`` (optional):
     Name of the lookup key that shall be used when calling ``find_system``. If
     ``None`` or empty (the default), no system-specifc data is retrieved and
@@ -510,6 +522,7 @@ class _FileRequestHandlerBase(DataSourceAware):
                 '"error", "ignore", "warn".'
             )
         self._file = config.get("file", None)
+        self._file_suffix = config.get("file_suffix", None)
         self._lookup_no_result_action = config.get(
             "lookup_no_result_action", "not_found"
         )
@@ -535,6 +548,15 @@ class _FileRequestHandlerBase(DataSourceAware):
                 "Only one of the file and the root_dir configuration options "
                 "must be set."
             )
+        if self._root_dir:
+            if self._file_suffix is None:
+                self._file_suffix = ""
+        else:
+            if self._file_suffix:
+                raise ValueError(
+                    "The file_suffix option can only be used when root_dir is "
+                    "also set."
+                )
         template = config.get("template", None)
         template_config = config.get("template_config", {})
         if template:
@@ -749,7 +771,7 @@ class _FileRequestHandlerBase(DataSourceAware):
         # When we are operating in directory mode, we have to find out whether
         # the extra path matches a file in the root_dir.
         if self._root_dir:
-            file = self._translate_path(self._root_dir, extra_path)
+            file = self._translate_path(extra_path)
         else:
             file = self._file
         # If the file could not be resolved, we treat it like it does not
@@ -999,8 +1021,11 @@ class _FileRequestHandlerBase(DataSourceAware):
         context["matches"] = True
         return context
 
-    @staticmethod
-    def _translate_path(root_dir, extra_path):
+    def _translate_path(self, extra_path):
+        # The _file_suffix and _root_dir must be set when this method is
+        # called.
+        assert self._file_suffix is not None
+        assert self._root_dir is not None
         # There is no good reason why a path should contain a null byte, so we
         # can be pretty sure someone is trying something nasty, if it does.
         # Actually, this case should already be caught in prepare_context, but
@@ -1034,12 +1059,14 @@ class _FileRequestHandlerBase(DataSourceAware):
         if ("." in extra_path_segments) or (".." in extra_path_segments):
             return None
         # Now we can construct the path on the file system.
-        fs_path = os.path.join(root_dir, *extra_path_segments)
+        fs_path = os.path.join(self._root_dir, *extra_path_segments)
         fs_path = os.path.normpath(fs_path)
+        # We add the suffix to the file path.
+        fs_path += self._file_suffix
         # The next check is kind of redundant: Due to the previous checks, it
         # should not be possible to construct a path that points outside the
         # root_dir. We still use this check to be extra sure.
-        if not fs_path.startswith(root_dir):
+        if not fs_path.startswith(self._root_dir):
             return None
         return fs_path
 
@@ -1117,6 +1144,18 @@ class HttpFileRequestHandler(_FileRequestHandlerBase, HttpRequestHandler):
         # content_type_map and go to the content_type setting directly.
         if self._root_dir:
             file_basename = os.path.basename(file_path)
+            # We do not want to use the file suffix that we added to the name,
+            # so we have to remove this first. The suffix should always be set
+            # (though it might be empty) and the filename should always end
+            # with the suffix, so we only use assertions to check these two
+            # assumptions.
+            assert self._file_suffix is not None
+            assert file_basename.endswith(self._file_suffix)
+            # We can only remove the file suffix if it has a non-zero length.
+            # Otherwise, we would replace the whole file name with the empty
+            # string.
+            if self._file_suffix:
+                file_basename = file_basename[: -len(self._file_suffix)]
             _, _, file_extension = file_basename.rpartition(".")
             content_type = self._content_type_map.get(
                 file_basename,

@@ -41,6 +41,10 @@ The file request handler supports the new ``client_address_key`` and
 ``client_address_list`` configuration options. If they are not specified, the
 behavior is as before.
 
+There also is a new ``file_suffix`` option that can be used to add a suffix to
+the file name being looked up (this only works when operating in ``root_dir``
+mode).
+
 If using the ``template`` option, a new context object called ``request_info``
 is now available while rendering the template.
 
