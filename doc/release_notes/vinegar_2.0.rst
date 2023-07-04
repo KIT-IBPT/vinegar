@@ -29,10 +29,10 @@ The location of YAML files that are included from other files can now be
 specified relative to the location of the file where they are included by
 starting the name of the included file with a dot (``.``).
 
-Finally, the file name extension used for all the configuration files that are
+Finally, the file name suffix used for all the configuration files that are
 used by the YAML target source can now be specified through the
-``file_extension`` configuration option. ``.yaml`` is still the default, so
-this change is fully backwards compatible.
+``file_suffix`` configuration option. ``.yaml`` is still the default, so this
+change is fully backwards compatible.
 
 vinegar.request_handler.file
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

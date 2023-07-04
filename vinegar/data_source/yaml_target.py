@@ -165,8 +165,8 @@ specified. All other options have default values.
     Please refer to the documentation for the template engine in use to see
     whether it uses a cache and how it can be disabled.
 
-:``file_extension``:
-    The file extension that is used when constructing the names of the YAML
+:``file_suffix``:
+    The file name suffix that is used when constructing the names of the YAML
     files (e.g. ``top.yaml``). The default is ``.yaml``. Changing this to
     something else can be useful when using a template engine. In this case,
     using a file extension specific to the template engine (e.g.
@@ -238,13 +238,13 @@ class YamlTargetSource(DataSource):
             of supported options.
         """
         self._allow_empty_top = config.get("allow_empty_top", False)
-        self._file_extension = config.get("file_extension", ".yaml")
-        # We allow an empty file extension, but the value must always be a
-        # string (e.g. None is not allowed).
-        if not isinstance(self._file_extension, str):
+        self._file_suffix = config.get("file_suffix", ".yaml")
+        # We allow an empty file suffix, but the value must always be a string
+        # (e.g. None is not allowed).
+        if not isinstance(self._file_suffix, str):
             raise TypeError(
-                "Expected a str for the file_extension option but found an "
-                f"object of type {type(self._file_extension).__name__}."
+                "Expected a str for the file_suffix option but found an "
+                f"object of type {type(self._file_suffix).__name__}."
             )
         self._root_dir_path = pathlib.Path(config["root_dir"])
         self._merge_lists = config.get("merge_lists", False)
@@ -254,7 +254,7 @@ class YamlTargetSource(DataSource):
         # this class so that we can detect it more easily when two path names
         # refer to the same file.
         self._top_file = os.path.abspath(
-            str(self._root_dir_path / f"top{self._file_extension}")
+            str(self._root_dir_path / f"top{self._file_suffix}")
         )
         # We create a cache where we can save results of earlier calls to
         # get_data(...). As the data source has to be thread safe, the cache
@@ -291,7 +291,7 @@ class YamlTargetSource(DataSource):
     ) -> Tuple[Mapping[Any, Any], str]:
         data_compiler = _DataCompiler(
             self._allow_empty_top,
-            self._file_extension,
+            self._file_suffix,
             self._merge_lists,
             self._merge_sets,
             self._root_dir_path,
@@ -334,7 +334,7 @@ class _DataCompiler:
     def __init__(
         self,
         allow_empty_top,
-        file_extension,
+        _file_suffix,
         merge_lists,
         merge_sets,
         root_dir_path,
@@ -342,7 +342,7 @@ class _DataCompiler:
         top_file,
     ):
         self._allow_empty_top = allow_empty_top
-        self._file_extension = file_extension
+        self._file_suffix = _file_suffix
         self._merge_lists = merge_lists
         self._merge_sets = merge_sets
         self._root_dir_path = root_dir_path
@@ -583,7 +583,7 @@ class _DataCompiler:
             while file_path_segments:
                 file_path = file_path / file_path_segments.pop(0)
             # Look for a YAML file with the name:
-            file_path_yaml = file_path.with_suffix(self._file_extension)
+            file_path_yaml = file_path.with_suffix(self._file_suffix)
             if file_path_yaml.exists() and not file_path_yaml.is_dir():
                 data_files.append(
                     (
@@ -593,7 +593,7 @@ class _DataCompiler:
                     )
                 )
             else:
-                file_path_init_yaml = file_path / f"init{self._file_extension}"
+                file_path_init_yaml = file_path / f"init{self._file_suffix}"
                 if file_path_init_yaml.exists():
                     data_files.append(
                         (
@@ -628,7 +628,7 @@ class _DataCompiler:
     def _process_top(self):
         if not pathlib.Path(self._top_file).exists():
             raise FileNotFoundError(
-                f"Could not find top{self._file_extension} in "
+                f"Could not find top{self._file_suffix} in "
                 f"{self._root_dir_path}."
             )
         try:

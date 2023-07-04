@@ -237,19 +237,17 @@ class TestYamlTargetSource(unittest.TestCase):
             (data, _) = ds.get_data("dummy", {"input": 2}, "1")
             self.assertEqual({"key": 2}, data)
 
-    def test_config_file_extension(self):
+    def test_config_file_suffix(self):
         """
-        Test the ``file_extension`` configuration option.
+        Test the ``file_suffix`` configuration option.
 
-        This option can be specified in order to use a different file extension
-        than ``.yaml``.
+        This option can be specified in order to use a different file name
+        suffix than ``.yaml``.
         """
-        # We do not test the default “.yaml” extension as this is already
+        # We do not test the default “.yaml” suffix as this is already
         # extensively tested by other tests.
         with TemporaryDirectory() as tmpdir:
-            ds = YamlTargetSource(
-                {"file_extension": ".my", "root_dir": tmpdir}
-            )
+            ds = YamlTargetSource({"file_suffix": ".my", "root_dir": tmpdir})
             # We have to fill the configuration directory with files that the
             # data source can read.
             root_dir_path = pathlib.Path(tmpdir)
@@ -277,9 +275,9 @@ class TestYamlTargetSource(unittest.TestCase):
             verify_data = {"test_key": "some value"}
             data = ds.get_data("dummy", {}, "")[0]
             self.assertEqual(verify_data, data)
-        # The file extension can be the empty string.
+        # The file suffix can be the empty string.
         with TemporaryDirectory() as tmpdir:
-            ds = YamlTargetSource({"file_extension": "", "root_dir": tmpdir})
+            ds = YamlTargetSource({"file_suffix": "", "root_dir": tmpdir})
             # We have to fill the configuration directory with files that the
             # data source can read.
             root_dir_path = pathlib.Path(tmpdir)
@@ -307,11 +305,11 @@ class TestYamlTargetSource(unittest.TestCase):
             verify_data = {"some_key": 123}
             data = ds.get_data("dummy", {}, "")[0]
             self.assertEqual(verify_data, data)
-        # While an empty string is allowed, the file extension must be a
+        # While an empty string is allowed, the file name suffix must be a
         # string, so a value of None is not allowed.
         with TemporaryDirectory() as tmpdir:
             with self.assertRaises(TypeError):
-                YamlTargetSource({"file_extension": None, "root_dir": tmpdir})
+                YamlTargetSource({"file_suffix": None, "root_dir": tmpdir})
 
     def test_config_merge_lists(self):
         """
