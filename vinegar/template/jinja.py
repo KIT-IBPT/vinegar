@@ -157,7 +157,7 @@ class JinjaEngine(TemplateEngine):
             # current working directory.
             # For this reason, we overload join_path so that includes get
             # resolved relative to the including template.
-            return os.path.join(parent, "..", template)
+            return os.path.normpath(os.path.join(parent, "..", template))
 
     class _Loader(jinja2.BaseLoader):
         """

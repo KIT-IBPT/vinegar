@@ -240,6 +240,32 @@ class TestJinjaEngine(unittest.TestCase):
                 "this is from the included template",
                 engine.render("/testdir/test.jinja", {}),
             )
+            # We also have to test using relative includes when root_dir is
+            # set.
+            config = {"relative_includes": True, "root_dir": tmpdir}
+            engine = JinjaEngine(config)
+            # First, we test specifying the path relatively.
+            _write_file(
+                template_path,
+                """
+                {% include '../include1.jinja' %}
+                """,
+            )
+            self.assertEqual(
+                "this is from the included template",
+                engine.render("testdir/test.jinja", {}),
+            )
+            # Second, we test specifying the path absolutely.
+            _write_file(
+                template_path,
+                """
+                {% include '/include1.jinja' %}
+                """,
+            )
+            self.assertEqual(
+                "this is from the included template",
+                engine.render("testdir/test.jinja", {}),
+            )
 
     def test_file_not_found(self):
         """
