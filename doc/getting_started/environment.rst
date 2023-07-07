@@ -16,10 +16,25 @@ We are going to use `GRUB 2 <https://www.gnu.org/software/grub/>`_ as the boot
 loader. GRUB 2 is a boot loader that works both for a traditional BIOS-based
 boot process and the UEFI boot process used by newer systems.
 
-As an example for this documentation, we are going to create a configuration
-that installs Ubuntu 18.04 LTS. Of course, this configuration can easily be
-adapted for other releases of Ubuntu or even for completely different Linux
-distributions.
+.. note::
+  This section discusses how to install Ubuntu 18.04 using the Debian installer
+  and the GRUB boot loader. Newer versions of Ubuntu use the
+  `Subiquity installer <https://github.com/canonical/subiquity>`_, which uses
+  an entirely different `file syntax
+  <https://ubuntu.com/server/docs/install/autoinstall>`_, which is based on
+  `cloud-init <https://cloudinit.readthedocs.io/en/latest/reference/>`_.
+
+  However, the primary intention of this section is not to explain how to
+  install a certain operationg system (there simply are too many different
+  operating systems in the first place, so the documentation for the respective
+  system has to be studied for information on that), but rather to show how the
+  various parts of Vinegar can be used to generate and serve the necessary
+  files for setting up an auto-installation environment.
+
+  For example, Vinegar is known to be successfully used to automatically
+  install Windows systems using the `iPXE <https://ipxe.org/>`_ and `wimboot 
+  <https://ipxe.org/wimboot>`_ boot-loaders and serving
+  an ``unattend.xml`` file for Windows setup.
 
 Installing GRUB 2
 -----------------
