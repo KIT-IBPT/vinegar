@@ -46,5 +46,12 @@ If you are using a different kind of DHCP server, you have to refer to its
 documentation in order to find out how to set the IP address of the boot server
 and the architecture-dependent path to the boot loader.
 
+If you cannot modify the configuration of an existing DHCP server, you might
+want to consider using [dnsmasq](https://thekelleys.org.uk/dnsmasq/doc.html).
+dnsmasq can operator in proxyDHCP mode, meaning that it will be able to give
+information about the boot server to PXE clients without interfering with the
+operation of the regular DHCP server. Please refer to the dnsmasq documentation
+in order to learn how to configure proxyDHCP mode.
+
 We are going to set up the boot loader (GRUB 2) in the :ref:`next section
 <getting_started_environment>`.
