@@ -13,8 +13,6 @@ supported any longer.
 Configuration changes
 ---------------------
 
-TODO Document all changes to the configuration file.
-
 vingar.data_source.yaml_target
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -66,8 +64,6 @@ Please refer to the API documentation for
 
 API changes
 -----------
-
-TODO Document all changes to the API.
 
 vinegar.http.server
 ^^^^^^^^^^^^^^^^^^^
