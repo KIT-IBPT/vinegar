@@ -112,6 +112,25 @@ class TestSmartLookupDict(unittest.TestCase):
         # An invalid index into a sequence should result in a key error.
         with self.assertRaises(KeyError):
             d.get("key:3")
+        # We should not be able to access an item of a string-like object.
+        d = SmartLookupDict(
+            {
+                "key": [
+                    "abc",
+                    b"def",
+                    bytearray(b"ghi"),
+                ],
+            }
+        )
+        self.assertEqual("abc", d.get("key:0"))
+        self.assertEqual(b"def", d.get("key:1"))
+        self.assertEqual(b"ghi", d.get("key:2"))
+        with self.assertRaises(TypeError):
+            d.get("key:0:0")
+        with self.assertRaises(TypeError):
+            d.get("key:1:0")
+        with self.assertRaises(TypeError):
+            d.get("key:2:0")
 
     def test_setdefault(self):
         """

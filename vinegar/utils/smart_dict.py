@@ -80,8 +80,7 @@ def _get_nested_value(container, key):
         if (
             isinstance(container, collections.abc.Sequence)
             and _RE_INT.fullmatch(key)
-            and not isinstance(container, bytearray)
-            and not isinstance(container, bytes)
+            and not isinstance(container, collections.abc.ByteString)
             and not isinstance(container, str)
         ):
             try:
