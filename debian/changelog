@@ -1,3 +1,9 @@
+vinegar (2.0.1b1) stable; urgency=low
+
+  Next bugfix release of Vinegar 2.0.
+
+ -- Sebastian Marsching <sebastian.marsching-git-2016@aquenos.com>  Sat, 15 Jul 2023 20:47:05 +0200
+
 vinegar (2.0.0) stable; urgency=low
 
   Vinegar 2.0 is a major feature release that introduces some changes that are
