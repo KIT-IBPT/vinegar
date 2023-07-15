@@ -1,8 +1,23 @@
-vinegar (2.0~b1) unstable; urgency=low
+vinegar (2.0.0) stable; urgency=low
 
-  * Next feature release of Vinegar.
+  Vinegar 2.0 is a major feature release that introduces some changes that are
+  not fully compatible with earlier releases.
 
- -- Sebastian Marsching <sebastian.marsching-git-2016@aquenos.com>  Wed, 31 May 2023 12:26:19 +0200
+  Changes include but are not limited to:
+
+  * Compatibility with Jinja 3.x (in addition to 2.x).
+  * New module vinegar.transform.ip_address.
+  * Support for additional access restrictions in request handlers.
+  * More information available when rendering templates.
+  * Significantly enhanced matching syntax in the YAML-target data source.
+  * Many minor bugfixes and additional improvements.
+
+  Some of these changes necessitated changes to the API, so please be sure to
+  check the release notes in the documentation before migrating to this release.
+
+  Vinegar now only runs with Python 3.8 or later.
+
+ -- Sebastian Marsching <sebastian.marsching-git-2016@aquenos.com>  Sat, 15 Jul 2023 20:26:39 +0200
 
 vinegar (1.2.0) stable; urgency=low
 
