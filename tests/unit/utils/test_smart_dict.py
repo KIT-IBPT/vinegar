@@ -85,6 +85,34 @@ class TestSmartLookupDict(unittest.TestCase):
         with self.assertRaises(TypeError):
             d.get("key_test", dummy="dummy")
 
+    def test_get_numeric_keys(self):
+        """
+        Test the ``get`` method with numeric keys.
+
+        This tests that nested lists are handled correctly in addition to
+        nested dicts.
+        """
+        d = SmartLookupDict(
+            {
+                "key1": [
+                    "a",
+                    "b",
+                    {
+                        "123": "abc",
+                        "456": "def",
+                    },
+                ],
+                "key2": 123,
+            }
+        )
+        self.assertEqual("a", d.get("key1:0"))
+        self.assertEqual("b", d.get("key1:1"))
+        self.assertEqual("abc", d.get("key1:2:123"))
+        self.assertEqual("def", d.get("key1:2:456"))
+        # An invalid index into a sequence should result in a key error.
+        with self.assertRaises(KeyError):
+            d.get("key:3")
+
     def test_setdefault(self):
         """
         Test the ``setdefault`` method.
@@ -119,3 +147,35 @@ class TestSmartLookupDict(unittest.TestCase):
             test_value2, d.setdefault("def_ghi_456", test_value2, sep="_")
         )
         self.assertEqual(test_value2, d["def"]["ghi"]["456"])
+
+    def test_setdefault_numeric(self):
+        """
+        Test the ``setdefault`` method with numeric keys.
+
+        This tests that nested lists are handled correctly in addition to
+        nested dicts.
+        """
+        d = SmartLookupDict(
+            {
+                "key1": [
+                    "a",
+                    "b",
+                    {
+                        "123": "abc",
+                        "456": "def",
+                    },
+                ],
+                "key2": 123,
+            }
+        )
+        test_value = object()
+        # setdefault should be able to traverse lists.
+        self.assertEqual("abc", d.setdefault("key1:2:123", test_value))
+        self.assertEqual("abc", d["key1"][2]["123"])
+        self.assertEqual(test_value, d.setdefault("key1:2:789", test_value))
+        self.assertEqual(test_value, d["key1"][2]["789"])
+        # But it cannot insert a new item into a list.
+        with self.assertRaises(TypeError):
+            d.setdefault("key1:3", "test1")
+        with self.assertRaises(TypeError):
+            d.setdefault("key1:3:nested_key", "test2")

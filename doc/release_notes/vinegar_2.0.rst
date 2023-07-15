@@ -137,6 +137,12 @@ Python 3.7, the regular ``dict`` preserves insertion order, so
 `~vinegar.utils.smart_dict.SmartLookupDict` now preservers the insertion order
 as well and thus there is no need for ``SmartLookupOrderedDict``  any longer.
 
+In addition to these changes, the ``SmartLookupDict`` now allows access to the
+items of nested lists. In general, this change is backwards compatible, the
+only effect is that attempts to access an item in a nested list that would
+previously have resulted in a ``KeyError`` or the default value being returned
+will now return an actual value.
+
 vinegar.utils.socket
 ^^^^^^^^^^^^^^^^^^^^
 

@@ -41,14 +41,62 @@ changed by specifying the ``sep`` argument::
 
     value = smart_dict.get('key1_key2_key3', 'default value', sep='_')
 
+In addition to handling nested dicts, the smart-lookup dict can also handle
+nested lists. For example, consider a dictionary with the following content:
+
+    {'key1': ['a', 'b', {'nested_key': 123}]}
+
+The nested values can be looked up in the following way:
+
+    smart_dict.get('key1:0')
+    smart_dict.get('key1:2:nested_key')
+
 In addition to the ``get`` method, the ``setdefault`` method is overriden, so
-that it automatically inserts nested dictionaries if needed.
+that it automatically inserts nested dictionaries if needed. Please note that
+``setdefault`` can handle traversing lists, but it cannot handle inserting a
+new item into a list.
 
 The implementation of ``get`` provided by the smart lookup dictionaries also
 differs from the one for regular dictionaries in that it do not use a default
 value of ``None`` by default. Instead, it raises a ``KeyError`` if the key is
 not found and no default value is provided.
 """
+
+import collections.abc
+import re
+
+_RE_INT = re.compile("[0-9]+")
+
+
+def _get_nested_value(container, key):
+    try:
+        return container[key]
+    except TypeError:
+        # We might encounter a TypeError because the container is a sequence
+        # and not a mapping. In this case, we try again, using a numeric key
+        # this time. We only do this if certain conditions are met (e.g. the
+        # key is actually numeric and the container is not a string-like
+        # object).
+        if (
+            isinstance(container, collections.abc.Sequence)
+            and _RE_INT.fullmatch(key)
+            and not isinstance(container, bytearray)
+            and not isinstance(container, bytes)
+            and not isinstance(container, str)
+        ):
+            try:
+                return container[int(key)]
+            except IndexError as err:
+                # We convert an IndexError to a KeyError so that it can be
+                # handled correctly in the calling code. Code using a dict’s
+                # get method might not expect an IndexError, so it is better to
+                # signal this as a KeyError.
+                raise KeyError(int(key)) from err
+            except TypeError:
+                pass
+        # If we could cannot use the specified key as a numeric key either, we
+        # raise the original exception.
+        raise
 
 
 class SmartLookupDict(dict):
@@ -121,7 +169,7 @@ class SmartLookupDict(dict):
         nested_value = self
         try:
             for key_part in keys:
-                nested_value = nested_value[key_part]
+                nested_value = _get_nested_value(nested_value, key_part)
         except KeyError:
             if have_default:
                 return default  # type: ignore
@@ -161,7 +209,7 @@ class SmartLookupDict(dict):
         nested_value = self
         for key_part in keys:
             try:
-                nested_value = nested_value[key_part]
+                nested_value = _get_nested_value(nested_value, key_part)
             except KeyError:
                 nested_value[key_part] = dict_type()
                 nested_value = nested_value[key_part]
