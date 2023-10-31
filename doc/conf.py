@@ -14,19 +14,19 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 import os
-import pkg_resources
 import sys
-sys.path.insert(0, os.path.abspath('..'))
+
+sys.path.insert(0, os.path.abspath(".."))
 
 import vinegar.version
 
-on_rtd = os.environ.get('READTHEDOCS') == 'True'
+on_rtd = os.environ.get("READTHEDOCS") == "True"
 
 # -- Project information -----------------------------------------------------
 
-project = 'Vinegar Boot'
-copyright = '2019 The Vinegar Project Team'
-author = 'Sebastian Marsching'
+project = "Vinegar Boot"
+copyright = "2019 The Vinegar Project Team"
+author = "Sebastian Marsching"
 
 # The full version, including alpha/beta/rc tags
 release = vinegar.version.VERSION_STRING
@@ -38,12 +38,12 @@ release = vinegar.version.VERSION_STRING
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-  'sphinx.ext.autodoc',
-  'sphinx.ext.autosummary',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -54,12 +54,12 @@ exclude_patterns = []
 autosummary_generate = True
 
 # Default role to be used with `keyword` syntax if no explicit role is given.
-default_role = 'py:obj'
+default_role = "py:obj"
 
 # Name of the master document. index is already the default for newer versions
 # of Sphinx, but older ones expect a file named 'contents.rst' if we do not set
 # this option explicitly.
-master_doc = 'index'
+master_doc = "index"
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -70,6 +70,7 @@ master_doc = 'index'
 # the “nature” theme.
 try:
     import sphinx_rtd_theme as _
+
     extensions += ["sphinx_rtd_theme"]
     html_theme = "sphinx_rtd_theme"
 except ImportError:
@@ -78,4 +79,4 @@ except ImportError:
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ["_static"]
