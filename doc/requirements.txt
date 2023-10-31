@@ -6,3 +6,4 @@ Jinja2>=2.10.1
 passlib>=1.7
 PyYAML>=5.1
 Sphinx==6.*
+sphinx-rtd-theme>=1.3
