@@ -66,17 +66,14 @@ master_doc = 'index'
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-if on_rtd:
-    html_theme = 'default'
-else:
-    # If the Read the Docs Sphinx theme is available, use it. Otherwise, use
-    # the “nature” theme.
-    try:
-        import sphinx_rtd_theme as _
-        extensions += ["sphinx_rtd_theme"]
-        html_theme = "sphinx_rtd_theme"
-    except ImportError:
-      html_theme = 'nature'
+# If the Read the Docs Sphinx theme is available, use it. Otherwise, use
+# the “nature” theme.
+try:
+    import sphinx_rtd_theme as _
+    extensions += ["sphinx_rtd_theme"]
+    html_theme = "sphinx_rtd_theme"
+except ImportError:
+    html_theme = "nature"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
