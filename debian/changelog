@@ -1,3 +1,9 @@
+vinegar (2.1.1~b1) stable; urgency=low
+
+  Next bugfix release of Vinegar.
+
+ -- Sebastian Marsching <sebastian.marsching-git-2016@aquenos.com>  Tue, 31 Oct 2023 14:31:16 +0100
+
 vinegar (2.1.0) stable; urgency=low
 
   * Added support for the provide_python_modules configuration parameter to the
