@@ -76,6 +76,20 @@ options that can be passed through the ``config`` dictionary that is passed to
     ``True``. The ``loader`` is also created automatically based on the
     ``root_dir`` configuration option.
 
+:``provide_python_modules``:
+    This option (``None``, a ``str``, or a sequence of ``str``) specifies which
+    Python module should be made available through the ``python`` object that
+    is added to the context. If ``None`` or empty (the default), the ``python``
+    object is not added to the context at all. Each of the strings can either
+    be a module name, a wildcard match all sub-modules (e.g.
+    ``parent_module.*``), or the global wildcard ``*``, which matches all
+    module names. In a template, the attributes of a module that has been
+    allowed through this option can be accessed by specifying the combination
+    of the module name and the attribute name as an index to the ``python``
+    object. For example, if access to the ``os`` module is allowed, the
+    following expression can be used in a template:
+    ``python["os.stat"]("/path/to/file")``
+
 :``provide_transform_functions``:
     This option (a ``bool``) specifies whether an object with the name
     ``transform`` is added to the context. If ``True`` (the default), the
@@ -105,6 +119,8 @@ options that can be passed through the ``config`` dictionary that is passed to
     specified through the ``env`` option. It is an error to specify this option
     when also specifying a custom loader.
 """
+import functools
+import importlib
 import json
 import os.path
 import typing
@@ -208,6 +224,78 @@ class JinjaEngine(TemplateEngine):
                 else up_to_date_no_cache,
             )
 
+    class _PythonHelper:
+        """
+        Object that is added to the context under the ``python`` key. This
+        object allows access to attributes of Python modules by spcecifying the
+        module and attribute name as an index to this object.
+
+        Only modules that have been explicitly allowed can be accessed.
+
+        Example::
+
+            python['os.stat']('/path/to/file')
+        """
+
+        def __init__(
+            self, allowed_module_names: typing.Union[str, typing.Sequence[str]]
+        ):
+            if isinstance(allowed_module_names, str):
+                allowed_module_names = [allowed_module_names]
+            self._allowed_module_names = allowed_module_names
+            self._cache: typing.Dict[str, bool] = {}
+
+        def __getitem__(self, key):
+            if not isinstance(key, str):
+                raise TypeError(f"Invalid key {key!r}: Key must be a str.")
+            try:
+                module_name, attribute_name = key.rsplit(".", 1)
+            except ValueError:
+                raise ValueError(  # pylint: disable=raise-missing-from
+                    f"Invalid key {key!r}: Key must have the format "
+                    "<module name>.<attribute name>."
+                )
+            self._check_access(module_name)
+            python_module = importlib.import_module(module_name)
+            return getattr(python_module, attribute_name)
+
+        def _check_access(self, module_name: str):
+            try:
+                # If the check result has been cached, we use the cached
+                # result.
+                allowed = self._cache[module_name]
+            except KeyError:
+                # If the check for the module is not cached, we check whether
+                # the module is allowed according to the configuration.
+                allowed = False
+                for allowed_module_name in self._allowed_module_names:
+                    if allowed_module_name == "*":
+                        allowed = True
+                        break
+                    if allowed_module_name.endswith(".*"):
+                        if module_name.startswith(allowed_module_name[:-1]):
+                            allowed = True
+                            break
+                    else:
+                        if allowed_module_name == module_name:
+                            allowed = True
+                            break
+                # We want to cache the check result. If the cache would grow
+                # beyond 1024 entries, we clean it. This is not as efficient as
+                # using an LRU cache, but we do not expect to hit this limit in
+                # any practical application. and as long as we do not hit the
+                # limit, it is more efficient than an LRU cache, because we do
+                # not need the logic for updating statistics about cache usage.
+                # So, this limit only exists as a safety measure in case of
+                # gross misuse.
+                if len(self._cache) >= 1024:
+                    self._cache.clear()
+                self._cache[module_name] = allowed
+            if not allowed:
+                raise RuntimeError(
+                    f"Access to module {module_name!r} is not allowed."
+                )
+
     class _TransformHelper:
         """
         Object that is added to the context under the ``transform`` key. This
@@ -278,6 +366,11 @@ class JinjaEngine(TemplateEngine):
         else:
             self._environment = jinja2.Environment(**env_options)
         self._environment.globals["raise"] = self._raise_template_error
+        allowed_python_modules = config.get("provide_python_modules", None)
+        if allowed_python_modules:
+            self._environment.globals["python"] = self._PythonHelper(
+                allowed_python_modules
+            )
         if config.get("provide_transform_functions", True):
             self._environment.globals["transform"] = self._TransformHelper()
         self._base_context = config.get("context", {})

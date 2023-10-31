@@ -5,6 +5,7 @@ Tests for `vinegar.template.jinja`.
 import inspect
 import os.path
 import pathlib
+import string
 import time
 import unittest
 
@@ -112,6 +113,130 @@ class TestJinjaEngine(unittest.TestCase):
             self.assertEqual(
                 "some text", engine.render(str(template_path), {})
             )
+
+    def test_config_provide_python_modules(self):
+        """
+        Test the ``provide_python_modules`` configuration option.
+        """
+        with TemporaryDirectory() as tmpdir:
+            # We have to generate a template file that can be read by the
+            # template engine.
+            tmpdir_path = pathlib.Path(tmpdir)
+            template_path = tmpdir_path / "test.jinja"
+            _write_file(
+                template_path,
+                """
+                {{ python['string.ascii_letters'] }}
+                """,
+            )
+            # We disable the cache for this test because it causes problems
+            # when we rapidly change files.
+            engine = JinjaEngine({"cache_enabled": False})
+            # As no modules have been allowed, the “python” object should not
+            # exist.
+            with self.assertRaises(jinja2.exceptions.UndefinedError):
+                engine.render(str(template_path), {})
+            # When we specify an empty list, this should not make a difference.
+            engine = JinjaEngine(
+                {"cache_enabled": False, "provide_python_modules": []}
+            )
+            with self.assertRaises(jinja2.exceptions.UndefinedError):
+                engine.render(str(template_path), {})
+            # If we allow the “string” module, the code should run.
+            engine = JinjaEngine(
+                {"cache_enabled": False, "provide_python_modules": "string"}
+            )
+            self.assertEqual(
+                string.ascii_letters, engine.render(str(template_path), {})
+            )
+            # We can also allow the module as a list item.
+            engine = JinjaEngine(
+                {
+                    "cache_enabled": False,
+                    "provide_python_modules": ["string", "time"],
+                }
+            )
+            self.assertEqual(
+                string.ascii_letters, engine.render(str(template_path), {})
+            )
+            # We should also be able to use the module if we allow access to
+            # all modules.
+            engine = JinjaEngine(
+                {"cache_enabled": False, "provide_python_modules": "*"}
+            )
+            self.assertEqual(
+                string.ascii_letters, engine.render(str(template_path), {})
+            )
+            # We should not be able to use the “string” module if we only allow
+            # other modules. The specification “string.*” only allows
+            # submodules of “string”, not the “string” module itself.
+            engine = JinjaEngine(
+                {
+                    "cache_enabled": False,
+                    "provide_python_modules": [
+                        "os",
+                        "os.*",
+                        "string.*",
+                        "time",
+                    ],
+                }
+            )
+            with self.assertRaises(RuntimeError):
+                engine.render(str(template_path), {})
+            # If both “string” and “time” is allowed, we should be able to
+            # access the time module as well.
+            _write_file(
+                template_path,
+                """
+                {{ python['time.monotonic']() }}
+                """,
+            )
+            now = time.monotonic()
+            engine = JinjaEngine(
+                {
+                    "cache_enabled": False,
+                    "provide_python_modules": ["string", "time"],
+                }
+            )
+            self.assertGreaterEqual(
+                float(engine.render(str(template_path), {})), now
+            )
+            # If only “string” is specificed, we should not be able to use the
+            # “time” module.
+            engine = JinjaEngine(
+                {"cache_enabled": False, "provide_python_modules": ["string"]}
+            )
+            with self.assertRaises(RuntimeError):
+                engine.render(str(template_path), {})
+            # If we allow “urllib.*”, we should be able to use the
+            # “urllib.parse” module.
+            _write_file(
+                template_path,
+                """
+                {{
+                    python['urllib.parse.urlparse'](
+                        'http://example.com'
+                    ).scheme
+                }}
+                """,
+            )
+            engine = JinjaEngine(
+                {
+                    "cache_enabled": False,
+                    "provide_python_modules": ["urllib.*"],
+                }
+            )
+            self.assertEqual(
+                "http",
+                engine.render(str(template_path), {}),
+            )
+            # This should not work, when only allowing the urllib module
+            # (no “.*”).
+            engine = JinjaEngine(
+                {"cache_enabled": False, "provide_python_modules": ["urllib"]}
+            )
+            with self.assertRaises(RuntimeError):
+                engine.render(str(template_path), {})
 
     def test_config_provide_transform_functions(self):
         """
