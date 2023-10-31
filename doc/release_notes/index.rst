@@ -8,6 +8,7 @@ Release notes
   :caption: Contents:
 
   vinegar_2.0
+  vinegar_2.1
 
 Vinegar uses semantic versioning. This means that upgrades keeping the major
 version (e.g. from 1.0.0 to 1.2.0) can be done without any special
