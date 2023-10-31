@@ -21,6 +21,11 @@ Unless disabled by setting ``provide_transform_functions`` to ``False``, this
 template engine provides a ``transform`` object that can be used to access
 functions from the ``vinegar.transform`` package.
 
+Optionally, access to selected Python modules can be enabled through the
+``provide_python_modules`` setting. If this setting is non-empty, a object
+with the name ``python`` is added to the template context. This object can then
+be used to access the explicitly allowed Python modules.
+
 This template engine also provides a ``raise`` function that can be used to
 raise a ``TemplateError`` from within templates. That function is added to the
 globals so that it is also available in templates that are imported without the
