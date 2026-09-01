@@ -27,8 +27,15 @@ jobs:
           ca-certificates \
           fakeroot \
           debhelper \
-          dh-python
-
+          dh-python \
+          python3-all \
+          python3-passlib \
+          python3-docutils \
+          python3-passlib \
+          python3-jinja2 \
+          python3-setuptools \
+          python3-sphinx \
+          python3-yaml
     - name: Set up environment
       run: |
         # Set maintainer info for changelog
