@@ -2,9 +2,7 @@ name: Build Debian Package
 
 on:
   push:
-    branches: [ "master", "add-ci" ]
-    #tags:
-    #  - 'v*'
+    branches: [ "**" ]
   pull_request:
     branches: [ "master" ]
 
@@ -19,7 +17,7 @@ jobs:
       with:
         fetch-depth: 0  # Needed for proper changelog generation
 
-    - name: Install build dependencies
+    - name: Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y \
@@ -36,21 +34,6 @@ jobs:
           python3-setuptools \
           python3-sphinx \
           python3-yaml
-    - name: Set up environment
-      run: |
-        # Set maintainer info for changelog
-        export DEBEMAIL="github-actions@github.com"
-        export DEBFULLNAME="GitHub Actions Bot"
-
-        # Extract version from git tag or use short commit hash
-        if [[ "${{ github.ref }}" == refs/tags/* ]]; then
-          PACKAGE_VERSION=${GITHUB_REF#refs/tags/}
-          echo "Building from tag: $PACKAGE_VERSION"
-        else
-          PACKAGE_VERSION="0.1.${{ github.run_number }}+git$(git rev-parse --short HEAD)"
-          echo "Using commit-based version: $PACKAGE_VERSION"
-        fi
-        echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
 
     - name: Build package
       run: |
@@ -60,7 +43,7 @@ jobs:
         cp ../*.buildinfo /tmp/deb_dist/ || true
         cp ../*.changes /tmp/deb_dist/ || true
 
-    - name: Upload Debian artifacts
+    - name: Upload artifacts
       uses: actions/upload-artifact@v7
       with:
         name: debian-packages
