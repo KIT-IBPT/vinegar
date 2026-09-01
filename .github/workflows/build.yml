@@ -1,0 +1,60 @@
+name: Build Debian Package
+
+on:
+  push:
+    branches: [ "master", "add-ci" ]
+    #tags:
+    #  - 'v*'
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    name: Build Debian packages 
+    runs-on: ubuntu-26.04
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Needed for proper changelog generation
+
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          ca-certificates \
+          fakeroot \
+          debhelper \
+          dh-python
+
+    - name: Set up environment
+      run: |
+        # Set maintainer info for changelog
+        export DEBEMAIL="github-actions@github.com"
+        export DEBFULLNAME="GitHub Actions Bot"
+
+        # Extract version from git tag or use short commit hash
+        if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          PACKAGE_VERSION=${GITHUB_REF#refs/tags/}
+          echo "Building from tag: $PACKAGE_VERSION"
+        else
+          PACKAGE_VERSION="0.1.${{ github.run_number }}+git$(git rev-parse --short HEAD)"
+          echo "Using commit-based version: $PACKAGE_VERSION"
+        fi
+        echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
+
+    - name: Build package
+      run: |
+        dpkg-buildpackage --build=binary --root-command=fakeroot --no-sign
+
+    - name: Upload Debian artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: debian-packages
+        path: |
+          ../*.deb
+          ../*.buildinfo
+          ../*.changes
+        retention-days: 7
