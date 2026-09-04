@@ -21,7 +21,6 @@ jobs:
           debhelper \
           dh-python \
           python3-all \
-          python3-passlib \
           python3-docutils \
           python3-passlib \
           python3-jinja2 \
