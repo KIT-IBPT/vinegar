@@ -1,0 +1,44 @@
+name: Build Debian Package
+
+on: push
+
+jobs:
+  build:
+    name: Build Debian packages 
+    runs-on: ubuntu-26.04
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v7
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          ca-certificates \
+          fakeroot \
+          debhelper \
+          dh-python \
+          python3-all \
+          python3-docutils \
+          python3-passlib \
+          python3-jinja2 \
+          python3-setuptools \
+          python3-sphinx \
+          python3-yaml
+
+    - name: Build package
+      run: |
+        mkdir -p /tmp/deb_dist
+        dpkg-buildpackage --build=binary --root-command=fakeroot --no-sign
+        cp ../*.deb /tmp/deb_dist/ || true
+        cp ../*.buildinfo /tmp/deb_dist/ || true
+        cp ../*.changes /tmp/deb_dist/ || true
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v7
+      with:
+        name: debian-packages
+        path: /tmp/deb_dist/*
+        retention-days: 7
