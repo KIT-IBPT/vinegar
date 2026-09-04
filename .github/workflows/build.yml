@@ -10,8 +10,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v7
-      with:
-        fetch-depth: 0  # Needed for proper changelog generation
 
     - name: Install dependencies
       run: |
